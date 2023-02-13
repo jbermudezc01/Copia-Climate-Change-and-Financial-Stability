@@ -22,6 +22,10 @@ fra_csv <- read.csv("C:/Users/jpber/OneDrive/Documents/BanRep/Replicacion/Bases/
 deu_csv <- read.csv("C:/Users/jpber/OneDrive/Documents/BanRep/Replicacion/Bases/Indices_completos/Stocks_Germany.csv")
 hkg_csv <- read.csv("C:/Users/jpber/OneDrive/Documents/BanRep/Replicacion/Bases/Indices_completos/Stocks_HongKong.csv") 
 ind_csv <- read.csv("C:/Users/jpber/OneDrive/Documents/BanRep/Replicacion/Bases/Indices_completos/Stocks_India.csv")
+idn_csv <- read.csv("C:/Users/jpber/OneDrive/Documents/BanRep/Replicacion/Bases/Indices_completos/Stocks_Indonesia.csv")
+mex_csv <- read.csv("C:/Users/jpber/OneDrive/Documents/BanRep/Replicacion/Bases/Indices_completos/Stocks_Mexico.csv")
+nor_csv <- read.csv("C:/Users/jpber/OneDrive/Documents/BanRep/Replicacion/Bases/Indices_completos/Stocks_Norway.csv")
+nld_csv <- read.csv("C:/Users/jpber/OneDrive/Documents/BanRep/Replicacion/Bases/Indices_completos/Stocks_Netherlands.csv")
   
 ## Date class
 #aus_csv$Date <- as.Date(aus_csv$Date, "%m/%d/%Y")
@@ -35,6 +39,11 @@ fra_csv$Date <- as.Date(fra_csv$Date, "%m/%d/%Y")
 deu_csv$Date <- as.Date(deu_csv$Date, "%m/%d/%Y")
 hkg_csv$Date <- as.Date(hkg_csv$Date, "%m/%d/%Y")
 ind_csv$Date <- as.Date(ind_csv$Date, "%m/%d/%Y")
+idn_csv$Date <- as.Date(idn_csv$Date, "%m/%d/%Y")
+mex_csv$Date <- as.Date(mex_csv$Date, "%m/%d/%Y")
+nor_csv$Date <- as.Date(nor_csv$Date, "%m/%d/%Y")
+nld_csv$Date <- as.Date(nld_csv$Date, "%m/%d/%Y")
+
 
 
 ## Convert to xts (time series)
@@ -49,14 +58,19 @@ fra_xts <- xts(fra_csv$Price, fra_csv$Date)
 deu_xts <- xts(deu_csv$Price, deu_csv$Date)
 hkg_xts <- xts(hkg_csv$Price, hkg_csv$Date)
 ind_xts <- xts(ind_csv$Price, ind_csv$Date)
+idn_xts <- xts(idn_csv$Price, idn_csv$Date)
+mex_xts <- xts(mex_csv$Price, mex_csv$Date)
+nor_xts <- xts(nor_csv$Price, nor_csv$Date)
+nld_xts <- xts(nld_csv$Price, nld_csv$Date)
 
 #base_test <- merge(aus_xts,belgium_xts,brazil_xts,can_xts)
-base_test <- merge(bel_xts,bra_xts,can_xts,chl_xts,dnk_xts,fin_xts,fra_xts,deu_xts,hkg_xts,ind_xts)
+base_test <- merge(bel_xts,bra_xts,can_xts,chl_xts,dnk_xts,fin_xts,fra_xts,deu_xts,hkg_xts,ind_xts,idn_xts,mex_xts,
+                   nor_xts, nld_xts)
 
 #base <- na.locf(base_test$aus_xts)
 base <- na.locf(base_test$bel_xts)
 
-for(i in 2:10){base <- merge(base,na.locf(base_test[,i]))}
+for(i in 2:11){base <- merge(base,na.locf(base_test[,i]))}
 View(base)
 
 
