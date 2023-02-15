@@ -85,7 +85,20 @@ for(i in 2:length(countries))
 
 base_precios <- base[complete.cases(base),]
 
-base_retornos <- diff(log(base_precios))
+base_retornos <- diff(log(base_precios))[2:nrow(base_precios),]
 
 
 
+### Count the days per year =============================================================
+
+counts <- list()
+
+for (year in 2001:2019) {
+  count <- 0
+  for (i in index(base_retornos)) {
+    if (substr(format(as.Date(i), "%Y"), start = 1, stop = 4) == as.character(year)) {
+      count <- count + 1
+    }
+  }
+  counts[[as.character(year)]] <- count
+}
