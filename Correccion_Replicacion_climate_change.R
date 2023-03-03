@@ -5,7 +5,6 @@ cat("\014")
 
 ## Prueba
 
-
 ### Libraries ====
 
 library(lubridate)
