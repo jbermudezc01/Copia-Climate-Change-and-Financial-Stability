@@ -3,6 +3,8 @@ rm(list = ls())
 setwd('C:/Users/jpber/OneDrive/Documents/BanRep/Replicacion/Bases')
 cat("\014")
 
+## Prueba
+
 ### Libraries ====
 
 library(lubridate)
