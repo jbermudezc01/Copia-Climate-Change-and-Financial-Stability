@@ -1,11 +1,9 @@
 
 rm(list = ls())
-setwd('C:/Users/jpber/OneDrive/Documents/BanRep/Replicacion/Bases')
-cat("\014")
+#setwd('C:/Users/jpber/OneDrive/Documents/BanRep/Replicacion/Bases')
+setwd('/Users/lumelo/archivos/Climate-Change-and-Financial-Stability/Github/Climate-Change-and-Financial-Stability/Bases')
 
-## Prueba
-## segunda prueba
-## tercera prueba
+cat("\014")
 
 ### Libraries ====
 
@@ -114,6 +112,7 @@ mov_average_base <- do.call(merge,mov_average_list)
 #se le ira concatenando la media por cada dia, y luego generar un objeto xts con estos valores
 mean_mov_average <- c()
 for(row in 1:nrow(mov_average_base)){mean_mov_average <- c(mean_mov_average,mean(mov_average_base[row,]))}
+
 mean_mov_average_xts <- xts(mean_mov_average,order.by = index(mov_average_base))
 colnames(mean_mov_average_xts) <- c("Mean moving average")
 
@@ -500,7 +499,7 @@ for (i in 1:ncol(base_retornos)) {
     correlacionados <- c(correlacionados,colnames(base_retornos[,i]))
   }else{
     no_correlacionados <- c(no_correlacionados,colnames(base_retornos[,i]))
-    }
+  }
 }
 
 ##### Agregar rezagos a las ecuaciones ===========
@@ -520,7 +519,10 @@ arma_seleccion_df = function(ts_object, AR.m, MA.m, d, bool, metodo){
     for (q in 0:MA.m)  {
       fitp <- arima(ts_object, order = c(p, d, q), include.mean = bool, 
                     method = metodo)
-      df[index,] = c(p, d, q, AIC(fitp), BIC(fitp))
+      T.model = length(resid(fitp))
+      Aic = T.model*log(sum(resid(fitp)^2)) + 2*(p+q+1)
+      Bic = T.model*log(sum(resid(fitp)^2)) + T.model*(p+q+1)  
+      df[index,] = c(p, d, q, Aic, Bic)
       index = index + 1
     }
   }  
@@ -548,48 +550,41 @@ model_equation <- function(country){
   #Utilizamos las funciones arma_seleccion_df y arma_min_AIc para obtener el rezago para incluir en la ecuacion
   #segun el criterio de Akaike
   #mod         <- arma_seleccion_df(base_retornos[,number],20,0,d=0,TRUE,"CSS-ML")
-  mod         <- arma_seleccion_df(base_retornos[,country],AR.m=20, MA.m=0, d=0, bool=TRUE, metodo="CSS")
-  min_aic_mod <- arma_min_AIC(mod)
-  p           <- min_aic_mod$p
+  mod         <- arma_seleccion_df(ts_object=base_retornos[,country], AR.m=20, MA.m=0, d=0, bool=TRUE, metodo="CSS")
+  #min_aic_mod <- arma_min_AIC(mod)
+  #p           <- min_aic_mod$p
+  p = mod[which.min(mod$AIC),'p']
   
   #generamos una base de datos que genere columnas de rezagos, el numero de columnas sera el mismo que el orden 
   #obtenido en el procedimiento anterior
-  lags_df <- lag(as.vector(base_retornos[,country]),1)
+  #lags_df <- lag(as.vector(base_retornos[,country]),1)
+  lags_df <- timeSeries::lag((base_retornos[,country]),c(1:p))
   
-  for(i in 2:p){
-    lag_vec <- lag(as.vector(base_retornos[,country]),i)
-    lags_df <- cbind(lags_df,lag_vec)
-  }
-  
-  #como xts
-  lags_xts <- as.xts(lags_df,order.by = index(base_retornos))
   #Lo colocamos desde el 8 de febrero para cuadrar con el indice de la base de datos principal
-  lags_reduced <- muestra_paper(lags_xts)
+  lags_reduced <- muestra_paper(lags_df)
   
   #nombre de las columnas de rezagos
-  names <- c()
-  for(i in 1:ncol(lags_reduced)){
-    column_name <- paste("lag",i,sep="_")
-    names <- c(names, column_name)
-  }
-  colnames(lags_reduced) <- names
+  #names <- c()
+  #for(i in 1:ncol(lags_reduced)){
+  #  column_name <- paste("lag",i,sep="_")
+  #  names <- c(names, column_name)
+  #}
+  colnames(lags_reduced) <- paste0(country,'.l',1:p) 
   
   #Busca las variables para el gdp y el fdi
   gdp_variable <- paste("gdp",country,sep="_")
   fdi_variable <- paste("gfdi",country,sep="_")
-  number1 <- which(colnames(base_datos) == gdp_variable)
-  number2 <- which(colnames(base_datos) == fdi_variable)
   #Genera la ecuacion n.4 por el país country
-  eq  <- base_datos[,number]  ~ bio_exo + base_datos[,number1]  + base_datos[,number2] + lags_reduced
+  eq  <- base_datos[,country]  ~ bio_exo + base_datos[,gdp_variable]  + base_datos[,fdi_variable] + lags_reduced
   return(eq)
 }
 
 ### Realizar for loop a lo largo de todos los paises para obtener las ecuaciones a estimar
 #se demoro 42 min
 eqsystem <- list()
-for(country in countries){
+for(country in countries)
   eqsystem[[country]] <- model_equation(country)
-}
+
 
 #Genera un sistema de ecuaciones con todas las ecuaciones que tenemos, para luego ser estimadas con el
 #modelo SUR usando el paquete systemfit
@@ -602,13 +597,13 @@ coefs <- coef(fitsur)
 
 #Creamos una lista de los coeficientes t_0 para cada pais
 coefficients <- list()
-for (country in countries[1:5]) {
+for (country in countries) {
   coefficient_key <- paste0(country, "_bio_exobiological_t_0")
   coefficients[[coefficient_key]] <- coefs[coefficient_key]
 }
 
 #Por último es necesario crear las graficas de densidad kernel, por lo cual se usa la funcion density
-dens_bio_t_0 <- density(coefficients)
+dens_bio_t_0 <- density(as.numeric(coefficients))
 x11()
 plot(dens_bio_t_0,main="Kernel density of biological AR t_0",col="blue",lwd=2)
 
