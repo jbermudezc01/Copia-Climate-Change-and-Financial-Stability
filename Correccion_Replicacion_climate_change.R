@@ -116,7 +116,7 @@ mean_mov_average <- c()
 for(row in 1:nrow(mov_average_base)){mean_mov_average <- c(mean_mov_average,mean(mov_average_base[row,]))}
 
 mean_mov_average_xts <- xts(mean_mov_average,order.by = index(mov_average_base))
-colnames(mean_mov_average_xts) <- c("Mean moving average")
+colnames(mean_mov_average_xts) <- c("Mean_Returns_Moving_Averages")
 
 #Hay que tener en cuenta que la muestra que se utiliza en el paper no es la misma que la que se tiene en las bases,
 #por lo que se reduce la base para los datos del febrero 08 2001 a diciembre 30 2019.
@@ -442,7 +442,7 @@ colnames(climatological_dummies) <- paste("climatological",colnames(climatologic
 interaction_function <- function(df){
   interaction <- c()
   for(i in 1:nrow(df)){
-    interaction <- c(interaction, as.numeric(mean_mov_average_xts[i])*as.numeric((df[,ncol(df)])[i]))
+    interaction <- c(interaction, as.numeric(Promedio_movil[i])*as.numeric((df[,ncol(df)])[i]))
   }
   interaction_xts <- xts(interaction, order.by = index(df))
   return(interaction_xts)
@@ -481,29 +481,26 @@ base_final <- cbind(Date,base_df)
 # desastre
 ###
 
-bio_exo <- with(base_datos, cbind(Mean.moving.average,interaction_biological,biological_t_0,
+bio_exo <- with(base_datos, cbind(interaction_biological,biological_t_0,
                                   biological_t_1,biological_t_2,biological_t_3,
                                   biological_t_4))
   
   
-cli_exo <- with(base_datos, cbind(Mean.moving.average, interaction_climatological, climatological_t_0,
+cli_exo <- with(base_datos, cbind(interaction_climatological, climatological_t_0,
                                   climatological_t_1, climatological_t_2, climatological_t_3,
                                   climatological_t_4))
 
-hyd_exo <- with(base_datos, cbind(Mean.moving.average, interaction_hydrological, hydrological_t_0,
+hyd_exo <- with(base_datos, cbind(interaction_hydrological, hydrological_t_0,
                                   hydrological_t_1, hydrological_t_2, hydrological_t_3,
                                   hydrological_t_4))
 
-geo_exo <- with(base_datos, cbind(Mean.moving.average, interaction_geophysical, geophysical_t_0,
+geo_exo <- with(base_datos, cbind(interaction_geophysical, geophysical_t_0,
                                   geophysical_t_1, geophysical_t_2, geophysical_t_3,
                                   geophysical_t_4))
 
-met_exo <- with(base_datos, cbind(Mean.moving.average,interaction_meteorological,meteorological_t_0,
+met_exo <- with(base_datos, cbind(interaction_meteorological,meteorological_t_0,
                                   meteorological_t_1,meteorological_t_2,meteorological_t_3,
                                   meteorological_t_4))
-
-
-
 
 
 ##### Revisar autocorrelacion serial ============
@@ -525,6 +522,7 @@ for (i in 1:ncol(base_retornos)) {
     no_correlacionados <- c(no_correlacionados,colnames(base_retornos[,i]))
   }
 }
+## No hay ningun indice que tanto para 50, 100 o n/4 rezagos sea no correlacionado.
 
 ##### Agregar rezagos a las ecuaciones ===========
 
@@ -604,7 +602,8 @@ model_equation <- function(country,exo){
   fdi_variable <- paste("gfdi",country,sep="_")
   
   #Genera la ecuacion n.4 por el país country
-  eq  <- base_datos[,country]  ~ exo + base_datos[,gdp_variable]  + base_datos[,fdi_variable] + lags_df
+  eq  <- base_datos[,country]  ~ base_datos[,Promedio_movil]+exo + base_datos[,gdp_variable] +
+                                 base_datos[,fdi_variable] + lags_df
   return(eq)
 }
 
@@ -613,7 +612,7 @@ model_equation <- function(country,exo){
 
 eqsystem = list()
 
-disasters_exo = c("bio_exo","cli_exo","hyd_exo","geo_exo","met_exo")
+disasters_exo = c("bio_exo","cli_exo","hyd_exo","geo_exo","met_exo") 
 
 # El siguiente for genera una estimacion para cada uno de los 5 tipos de desastres, los cuales tomaran
 # los nombres de fitsur_bio, fitsur_cli, fitsur_hyd, fitsur_geo, fitsur_met.
@@ -631,7 +630,7 @@ for(disaster in disasters_exo){
   assign(name,systemfit(eqsystem,method="SUR"))
 } 
 
-##Generamos una funcion que genere la densidad de los coeficientes dependiendo cuantos pasos 
+##Generamos una funcion que genere la densidad de los coeficientes dependiendo cuantos pasos en
 # adelante este
 
 dens <- function(fit, step){
@@ -659,19 +658,67 @@ for(step in steps){
   }
 }
 
+##Por otro lado, necesitamos hacer la gráfica de los CAR, que es la suma de los retornos anormales.
+
+car_coefficients <- c()
+
+for(model in fitted_models){
+  var_name <- paste0("coef_list_",model)
+  coef_list <- c
+  for(step in steps){
+    coefs <- coef(get(model))
+    interest_indices <- grep(step,names(coefs))
+    interest_coefficients <- coefs[interest_indices]
+    coef_list <- c(coef_list, interest_coefficients)
+  }
+  assign(var_name, coef_list)
+}
+
+densidad_CAR <- function(x){
+  CAR <- c()
+  for(country in countries){
+    start_with <- paste0("^",country)
+    sum_of_coefficients <- sum(as.numeric(x[grep(start_with, names(x))]))
+    CAR <- c(CAR,sum_of_coefficients)
+  }
+  densidad_C <- density(CAR)
+  return(densidad_C)
+}
+
+densidad_CAR_bio <- densidad_CAR(coef_list_fitsur_bio)
+densidad_CAR_cli <- densidad_CAR(coef_list_fitsur_cli)
+densidad_CAR_geo <- densidad_CAR(coef_list_fitsur_geo)
+densidad_CAR_hyd <- densidad_CAR(coef_list_fitsur_hyd)
+densidad_CAR_met <- densidad_CAR(coef_list_fitsur_met)
+
+labels <- c("Biological","Climatological","Geophysical","Hydrological","Meteorological")
+
+limite0 <- max(max(densidad_CAR_bio$y),max(densidad_CAR_cli$y),max(densidad_CAR_geo$y),
+               max(densidad_CAR_hyd$y),max(densidad_CAR_met$y))
+x11()
+plot(densidad_CAR_bio,main = "Kernel density of CAR", col="blue",lwd=2,ylim=c(0,limite0))
+lines(densidad_CAR_cli,col="red",lwd = 2)
+lines(densidad_CAR_geo,col="orange",lwd = 2)
+lines(densidad_CAR_hyd,col="purple",lwd = 2)
+lines(densidad_CAR_met,col="green",lwd = 2)
+legend("topright",legend = labels,col = c("blue", "red", "orange", "purple", "green"), lwd = 2)
 
 ##Ya con lo anterior podemos hacer las graficas para los 5 tipos de desastres para todos los t pasos
 # adelante
 
-limite <- max(max(dens_fitsur_bio_t_0$y),max(dens_fitsur_cli_t_0$y),max(dens_fitsur_geo_t_0$y),
+##t_0
+
+limite1 <- max(max(dens_fitsur_bio_t_0$y),max(dens_fitsur_cli_t_0$y),max(dens_fitsur_geo_t_0$y),
               max(dens_fitsur_hyd_t_0$y),max(dens_fitsur_met_t_0$y))
 X11()
-plot(dens_fitsur_bio_t_0, main = "Kernel density of AR t_0", col ="blue",lwd=2,ylim=c(0,limite))
+plot(dens_fitsur_bio_t_0, main = "Kernel density of AR t_0", col ="blue",lwd=2,ylim=c(0,limite1))
 lines(dens_fitsur_cli_t_0,col="red",lwd = 2)
 lines(dens_fitsur_geo_t_0,col="orange",lwd = 2)
 lines(dens_fitsur_hyd_t_0,col="purple",lwd = 2)
 lines(dens_fitsur_met_t_0,col="green",lwd = 2)
+legend("topright",legend = labels,col = c("blue", "red", "orange", "purple", "green"), lwd = 2)
 
+##t_1
 
 limite_2 <- max(max(dens_fitsur_bio_t_1$y),max(dens_fitsur_cli_t_1$y),max(dens_fitsur_geo_t_1$y),
               max(dens_fitsur_hyd_t_1$y),max(dens_fitsur_met_t_1$y))
@@ -681,6 +728,9 @@ lines(dens_fitsur_cli_t_1,col="red",lwd = 2)
 lines(dens_fitsur_geo_t_1,col="orange",lwd = 2)
 lines(dens_fitsur_hyd_t_1,col="purple",lwd = 2)
 lines(dens_fitsur_met_t_1,col="green",lwd = 2)
+legend("topright",legend = labels,col = c("blue", "red", "orange", "purple", "green"), lwd = 2)
+
+##t_2
 
 limite_3 <- max(max(dens_fitsur_bio_t_2$y),max(dens_fitsur_cli_t_2$y),max(dens_fitsur_geo_t_2$y),
                 max(dens_fitsur_hyd_t_2$y),max(dens_fitsur_met_t_2$y))
@@ -690,6 +740,9 @@ lines(dens_fitsur_cli_t_2,col="red",lwd = 2)
 lines(dens_fitsur_geo_t_2,col="orange",lwd = 2)
 lines(dens_fitsur_hyd_t_2,col="purple",lwd = 2)
 lines(dens_fitsur_met_t_2,col="green",lwd = 2)
+legend("topright",legend = labels,col = c("blue", "red", "orange", "purple", "green"), lwd = 2)
+
+##t_3
 
 limite_4 <- max(max(dens_fitsur_bio_t_3$y),max(dens_fitsur_cli_t_3$y),max(dens_fitsur_geo_t_3$y),
                 max(dens_fitsur_hyd_t_3$y),max(dens_fitsur_met_t_3$y))
@@ -699,6 +752,10 @@ lines(dens_fitsur_cli_t_3,col="red",lwd = 2)
 lines(dens_fitsur_geo_t_3,col="orange",lwd = 2)
 lines(dens_fitsur_hyd_t_3,col="purple",lwd = 2)
 lines(dens_fitsur_met_t_3,col="green",lwd = 2)
+legend("topright",legend = labels,col = c("blue", "red", "orange", "purple", "green"), lwd = 2)
+
+
+##t_4
 
 limite_5 <- max(max(dens_fitsur_bio_t_4$y),max(dens_fitsur_cli_t_4$y),max(dens_fitsur_geo_t_4$y),
                 max(dens_fitsur_hyd_t_4$y),max(dens_fitsur_met_t_4$y))
@@ -708,11 +765,14 @@ lines(dens_fitsur_cli_t_4,col="red",lwd = 2)
 lines(dens_fitsur_geo_t_4,col="orange",lwd = 2)
 lines(dens_fitsur_hyd_t_4,col="purple",lwd = 2)
 lines(dens_fitsur_met_t_4,col="green",lwd = 2)
+legend("topright",legend = labels,col = c("blue", "red", "orange", "purple", "green"), lwd = 2)
+
+
+
 
 ## Falta CAR y manera mas facil de graficar.
 
+coef <- coef(get("fitsur_met"))[grep("t_0",names(coef(get("fitsur_met"))))]
+cdf <- ecdf(as.numeric(coef))
+plot(cdf,col="blue")
 
-cdf <- ecdf(as.numeric(coefficients))
-x11()
-plot(dens_bio_t_0,col="red")
-lines(cdf, col="blue")
