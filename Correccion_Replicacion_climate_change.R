@@ -697,11 +697,11 @@ limite0 <- max(max(densidad_CAR_bio$y),max(densidad_CAR_cli$y),max(densidad_CAR_
                max(densidad_CAR_hyd$y),max(densidad_CAR_met$y))
 x11()
 plot(densidad_CAR_bio,main = "Kernel density of CAR", col="blue",lwd=2,ylim=c(0,limite0))
-lines(densidad_CAR_cli,col="red",lwd = 2)
+lines(densidad_CAR_cli,col="tomato",lwd = 2)
 lines(densidad_CAR_geo,col="orange",lwd = 2)
 lines(densidad_CAR_hyd,col="purple",lwd = 2)
 lines(densidad_CAR_met,col="green",lwd = 2)
-legend("topright",legend = labels,col = c("blue", "red", "orange", "purple", "green"), lwd = 2)
+legend("topright",legend = labels,col = c("blue", "tomato", "orange", "purple", "green"), lwd = 2)
 
 ##Ya con lo anterior podemos hacer las graficas para los 5 tipos de desastres para todos los t pasos
 # adelante
