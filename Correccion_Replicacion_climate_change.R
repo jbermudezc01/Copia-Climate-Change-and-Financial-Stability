@@ -1,7 +1,8 @@
 
 rm(list = ls())
-setwd('C:/Users/jpber/OneDrive/Documents/Codigo_compartido_Melo/Climate_Change_and_Financial_Stability/Climate-Change-and-Financial-Stability/Bases')
-#setwd('/Users/lumelo/archivos/Climate-Change-and-Financial-Stability/Github/Climate-Change-and-Financial-Stability/Bases')
+#setwd('C:/Users/jpber/OneDrive/Documents/Codigo_compartido_Melo/Climate_Change_and_Financial_Stability/Climate-Change-and-Financial-Stability')
+setwd('/Users/lumelo/archivos/Climate-Change-and-Financial-Stability/Github/Climate-Change-and-Financial-Stability')
+
 
 cat("\014")
 
@@ -35,26 +36,10 @@ library(dynlm)
 library(systemfit)
 library(ks)
 
+#--- Carga de funciones ---#
+source('Functions_Climate_change.r')
+
 ### Lectura de datos ======
-
-## Se crea una funcion que va a leer los csv para los indices bursatiles, genera una lista de los indices bursatiles
-## en formato xts. 
-read_csv_files <- function(countries) {
-  xts_list     <- list()
-  for (country in countries) {
-    csv_file <- paste0("Stocks_", country, ".csv")
-    csv      <- read.csv(csv_file, header = TRUE, sep = ";", quote = "\"", col.names = c("Date","Price", "Open", 
-                                                                                         "High","Low","Vol.","Change%"))
-    colnames <- names(csv)
-    for (colname in colnames[2:length(colnames)]) {
-      csv[, colname] <- as.numeric(gsub(",","",csv[, colname]))
-    } ## Muestra warning() ya quehay una columna que contiene caracteres "M" 
-    csv$Date <- as.Date(csv$Date, "%m/%d/%Y")
-    xts_list[[country]] <- xts(csv$Price, csv$Date)
-  }
-  return(xts_list)
-}
-
 
 # Se genera un vector con el nombre de los paises de los cuales se tiene datos de indice bursatil
 countries <- c("Australia","Belgium", "Brazil", "Canada", "Chile", "Denmark", "Finland",
@@ -63,7 +48,8 @@ countries <- c("Australia","Belgium", "Brazil", "Canada", "Chile", "Denmark", "F
                "UnitedKingdom","USA1","USA2")
 
 # Corre la funcion dando una lista con los indices bursatiles
-xts_list <- read_csv_files(countries)
+Dir      = paste0(getwd(),'/Bases/') #Directorio de datos, se supone que el subdirectorio <Bases> existe
+xts_list = read_csv_files(Dir,countries)
 
 # Genera una base de datos de los indices en formato xts
 base_test <- do.call(merge, xts_list)
