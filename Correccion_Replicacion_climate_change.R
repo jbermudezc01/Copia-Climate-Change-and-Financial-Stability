@@ -1,7 +1,7 @@
 
 rm(list = ls())
-#setwd('C:/Users/jpber/OneDrive/Documents/BanRep/Replicacion/Bases')
-setwd('/Users/lumelo/archivos/Climate-Change-and-Financial-Stability/Github/Climate-Change-and-Financial-Stability/Bases')
+setwd('C:/Users/jpber/OneDrive/Documents/Codigo_compartido_Melo/Climate_Change_and_Financial_Stability/Climate-Change-and-Financial-Stability/Bases')
+#setwd('/Users/lumelo/archivos/Climate-Change-and-Financial-Stability/Github/Climate-Change-and-Financial-Stability/Bases')
 
 cat("\014")
 
@@ -33,6 +33,7 @@ library(vars)
 library(smoots)
 library(dynlm)
 library(systemfit)
+library(ks)
 
 ### Lectura de datos ======
 
@@ -47,12 +48,13 @@ read_csv_files <- function(countries) {
     colnames <- names(csv)
     for (colname in colnames[2:length(colnames)]) {
       csv[, colname] <- as.numeric(gsub(",","",csv[, colname]))
-    }
+    } ## Muestra warning() ya quehay una columna que contiene caracteres "M" 
     csv$Date <- as.Date(csv$Date, "%m/%d/%Y")
     xts_list[[country]] <- xts(csv$Price, csv$Date)
   }
   return(xts_list)
 }
+
 
 # Se genera un vector con el nombre de los paises de los cuales se tiene datos de indice bursatil
 countries <- c("Australia","Belgium", "Brazil", "Canada", "Chile", "Denmark", "Finland",
@@ -117,18 +119,22 @@ mean_mov_average_xts <- xts(mean_mov_average,order.by = index(mov_average_base))
 colnames(mean_mov_average_xts) <- c("Mean moving average")
 
 #Hay que tener en cuenta que la muestra que se utiliza en el paper no es la misma que la que se tiene en las bases,
-#por lo que se reduce la base para los datos del febrero 08 2001 a diciembre 30 2019
+#por lo que se reduce la base para los datos del febrero 08 2001 a diciembre 30 2019.
+#La funcion muestra_paper va a seleccionar desde un cierto dia, el cual elegimos 08 febrero 2001
+#siguiendo el paper.
 
-muestra_paper <- function(obj){
-  indice <- index(obj)
-  base_start <- which(indice == "2001-02-08")
-  obj <- obj[base_start:nrow(obj),]
+dia <- "2001-02-08"
+
+muestra_paper <- function(obj,x){
+  indice           <- index(obj)
+  base_start       <- which(indice == x)
+  obj              <- obj[base_start:nrow(obj),]
   return(obj)
 }
 
 #Utilizamos la funcion para las bases
-Retornos <- muestra_paper(base_retornos)
-Promedio_movil <- muestra_paper(mean_mov_average_xts)
+Retornos <- muestra_paper(base_retornos,dia)
+Promedio_movil <- muestra_paper(mean_mov_average_xts,dia)
 
 ### Table 1 de Pagnottoni: Estadistica descriptivas ===============
 
@@ -288,7 +294,8 @@ fdi_agregacion_matriz  <- matrix(0, nrow = fdi_rows, ncol = ncols)
 
 #con este ciclo generamos la matriz de agregacion, colocando uno a los dias que pertenezcan al año correspondiente.
 #Por ejemplo en la primera fila tendran uno aquellos dias que pertenezcan al 2001
-for(i in 2001:2019){
+
+for(i in as.numeric(unique(substr(dates,1,4)))){
   for(date in dates){
     if(substr(date,1,4)==i){
       pos <- which(dates == date)
@@ -296,6 +303,7 @@ for(i in 2001:2019){
     }
   }
 }
+
 
 # El vector constante depende del numero de dias a los cuales se quiere desagregar, que son los mismos por lo que se
 # puede utilizar la variable w. para alfa sirve alpha_fast. la matriz de varianzas y covarianzas tambien 
@@ -310,8 +318,8 @@ colnames(fdi_growth_base) <- paste("gfdi",colnames(fdi_growth_base),sep="_")
 #Por otro lado, tambien es necesario reducir la muestra a las bases para que concuerden con la muestra de paper
 #Podemos usar la funcion que estaba anteriormente especificada
 
-Crecimiento_PIB <- muestra_paper(gdp_growth_base)
-Crecimiento_FDI <- muestra_paper(fdi_growth_base)
+Crecimiento_PIB <- muestra_paper(gdp_growth_base,dia)
+Crecimiento_FDI <- muestra_paper(fdi_growth_base,dia)
 
 ### Dummies =====
 
@@ -472,15 +480,31 @@ base_final <- cbind(Date,base_df)
 # El siguiente codigo genera las variables exogenas que seran tenidas en cuenta en cada regresion para cada tipo de 
 # desastre
 ###
-colnames(base_datos)
 
-bio_exo <- cbind(base_datos$Mean.moving.average,base_datos$interaction_biological,base_datos$biological_t_0,
-                 base_datos$biological_t_1,base_datos$biological_t_2,base_datos$biological_t_3,
-                 base_datos$biological_t_4)
+bio_exo <- with(base_datos, cbind(Mean.moving.average,interaction_biological,biological_t_0,
+                                  biological_t_1,biological_t_2,biological_t_3,
+                                  biological_t_4))
+  
+  
+cli_exo <- with(base_datos, cbind(Mean.moving.average, interaction_climatological, climatological_t_0,
+                                  climatological_t_1, climatological_t_2, climatological_t_3,
+                                  climatological_t_4))
 
-cli_exo <- cbind(base_datos$Mean.moving.average,base_datos$interaction_climatological,base_datos$climatological_t_0,
-                 base_datos$climatological_t_1,base_datos$climatological_t_2,base_datos$climatological_t_3,
-                 base_datos$climatological_t_4)
+hyd_exo <- with(base_datos, cbind(Mean.moving.average, interaction_hydrological, hydrological_t_0,
+                                  hydrological_t_1, hydrological_t_2, hydrological_t_3,
+                                  hydrological_t_4))
+
+geo_exo <- with(base_datos, cbind(Mean.moving.average, interaction_geophysical, geophysical_t_0,
+                                  geophysical_t_1, geophysical_t_2, geophysical_t_3,
+                                  geophysical_t_4))
+
+met_exo <- with(base_datos, cbind(Mean.moving.average,interaction_meteorological,meteorological_t_0,
+                                  meteorological_t_1,meteorological_t_2,meteorological_t_3,
+                                  meteorological_t_4))
+
+
+
+
 
 ##### Revisar autocorrelacion serial ============
 
@@ -520,7 +544,7 @@ arma_seleccion_df = function(ts_object, AR.m, MA.m, d, bool, metodo){
       fitp <- arima(ts_object, order = c(p, d, q), include.mean = bool, 
                     method = metodo)
       T.model = length(resid(fitp))
-      Aic = T.model*log(sum(resid(fitp)^2)) + 2*(p+q+1)
+      Aic = T.model*log(sum(resid(fitp)^2))+ 2*(p+q+1)   ## De acuerdo con Enders 2014.
       Bic = T.model*log(sum(resid(fitp)^2)) + T.model*(p+q+1)  
       df[index,] = c(p, d, q, Aic, Bic)
       index = index + 1
@@ -529,120 +553,166 @@ arma_seleccion_df = function(ts_object, AR.m, MA.m, d, bool, metodo){
   return(df)
 }
 
-## Esta funcion va a generar el modelo con el criterio minimo de Akaike
-arma_min_AIC = function(df){
-  df2 = df %>% 
-    filter(AIC == min(AIC))
-  return(df2)
+## Posteriormente, generamos una funcion que encuentre los rezagos optimos para cada pais utilizando el
+# criterio de Akaike. Además, la función tambien va a generar los rezagos y agregandolos a un dataframe
+# Vamos a usar un for loop para generar un dataframe de rezagos para cada pais 
+
+lag_function <- function(country){
+  
+  #Utilizamos las funciones arma_seleccion_df y arma_min_AIc para obtener el rezago para incluir en la ecuacion
+  #segun el criterio de Akaike
+  mod <- arma_seleccion_df(ts_object=base_retornos[,country], AR.m=20, MA.m=0, d=0, bool=TRUE, metodo="CSS")
+  p   <- mod[which.min(mod$AIC),'p']
+  
+  #generamos una base de datos que genere columnas de rezagos, el numero de columnas sera el mismo que el orden 
+  #obtenido en el procedimiento anterior
+  if(p>0)lags_df <- timeSeries::lag((base_retornos[,country]),c(1:p))
+  
+  #Lo colocamos desde el 8 de febrero para cuadrar con el indice de la base de datos principal
+  lags_reduced <- muestra_paper(lags_df,dia)
+  
+  #Nombres del dataframe de rezagos
+  colnames(lags_reduced) <- paste0(country,'.l',1:p) 
+  
+  return(lags_reduced)
+}
+
+##Realizar for loop para obtener las matrices de rezagos
+
+for(country in countries){
+  var_name <- paste0("lags_reduced_",country)
+  lags <- lag_function(country)
+  assign(var_name,lags)
 }
 
 
 #### Funcion para la estimacion del modelo ==========
 
+# Ya teniendo los rezagos, la variable dependiente y las variables exogenas, generaremos una funcion
+# que genere una formula para cada pais para cada uno de los 5 tipos de desastres.Lo anterior dado 
+# que vamos a estimar por el metodo SUR, el cual necesitara las 27 ecuaciones siguiendo el paper
+# de Pagnottoni.
 
-#generar el numero de columna relacionado al pais
-
-model_equation <- function(country){
+model_equation <- function(country,exo){
   
-  # Para poder seelccionar la columna que corresponde al país necesitamos el numero de columna
-  # number <- which(colnames(base_retornos) == country)
-  
-  #Utilizamos las funciones arma_seleccion_df y arma_min_AIc para obtener el rezago para incluir en la ecuacion
-  #segun el criterio de Akaike
-  #mod         <- arma_seleccion_df(base_retornos[,number],20,0,d=0,TRUE,"CSS-ML")
-  mod         <- arma_seleccion_df(ts_object=base_retornos[,country], AR.m=20, MA.m=0, d=0, bool=TRUE, metodo="CSS")
-  #min_aic_mod <- arma_min_AIC(mod)
-  #p           <- min_aic_mod$p
-  p = mod[which.min(mod$AIC),'p']
-  
-  #generamos una base de datos que genere columnas de rezagos, el numero de columnas sera el mismo que el orden 
-  #obtenido en el procedimiento anterior
-  #lags_df <- lag(as.vector(base_retornos[,country]),1)
-  lags_df <- timeSeries::lag((base_retornos[,country]),c(1:p))
-  
-  #Lo colocamos desde el 8 de febrero para cuadrar con el indice de la base de datos principal
-  lags_reduced <- muestra_paper(lags_df)
-  
-  #nombre de las columnas de rezagos
-  #names <- c()
-  #for(i in 1:ncol(lags_reduced)){
-  #  column_name <- paste("lag",i,sep="_")
-  #  names <- c(names, column_name)
-  #}
-  colnames(lags_reduced) <- paste0(country,'.l',1:p) 
+  #Busca el dataframe con los rezagos
+  lags_name <- paste0("lags_reduced_", country)
+  lags_df <- get(lags_name)
   
   #Busca las variables para el gdp y el fdi
   gdp_variable <- paste("gdp",country,sep="_")
   fdi_variable <- paste("gfdi",country,sep="_")
+  
   #Genera la ecuacion n.4 por el país country
-  eq  <- base_datos[,country]  ~ bio_exo + base_datos[,gdp_variable]  + base_datos[,fdi_variable] + lags_reduced
+  eq  <- base_datos[,country]  ~ exo + base_datos[,gdp_variable]  + base_datos[,fdi_variable] + lags_df
   return(eq)
 }
 
-### Realizar for loop a lo largo de todos los paises para obtener las ecuaciones a estimar
-#se demoro 42 min
-eqsystem <- list()
-for(country in countries)
-  eqsystem[[country]] <- model_equation(country)
+### Realizar for loop a lo largo de todos los paises para obtener las ecuaciones a estimar. 
+# Tambien a lo largo de los 5 tipos de desastres
 
+eqsystem = list()
 
-#Genera un sistema de ecuaciones con todas las ecuaciones que tenemos, para luego ser estimadas con el
-#modelo SUR usando el paquete systemfit
+disasters_exo = c("bio_exo","cli_exo","hyd_exo","geo_exo","met_exo")
 
-fitsur <- systemfit(eqsystem, method = "SUR")
-#Error in .solve.dgC.dense.lu(.sparse2g(a), b) : cs_lu(A) failed: near-singular A (or out of memory)
+# El siguiente for genera una estimacion para cada uno de los 5 tipos de desastres, los cuales tomaran
+# los nombres de fitsur_bio, fitsur_cli, fitsur_hyd, fitsur_geo, fitsur_met.
+# Por otro lado, en la lista fitted_models generamos el nombre de losmodelos estimados, que necesitaremos 
+# mas adelante.
 
-#Obtiene los coeficientes estimados
-coefs <- coef(fitsur)
+fitted_models <- c()
+for(disaster in disasters_exo){
+  for(country in countries){
+    eqsystem[[country]] <- model_equation(country,get(disaster))
+  }
+  three_l = substr(disaster,1,3)
+  name = paste0("fitsur_",three_l)
+  fitted_models <- c(fitted_models,name)
+  assign(name,systemfit(eqsystem,method="SUR"))
+} 
 
-#Creamos una lista de los coeficientes t_0 para cada pais
-coefficients <- list()
-for (country in countries) {
-  coefficient_key <- paste0(country, "_bio_exobiological_t_0")
-  coefficients[[coefficient_key]] <- coefs[coefficient_key]
+##Generamos una funcion que genere la densidad de los coeficientes dependiendo cuantos pasos 
+# adelante este
+
+dens <- function(fit, step){
+  coefs <- coef(get(fit))
+  interest_indices <- grep(step,names(coefs))
+  interest_coefficients <- coefs[interest_indices]
+  densidad <- density(as.numeric(interest_coefficients))
+  return(densidad)
 }
 
-#Por último es necesario crear las graficas de densidad kernel, por lo cual se usa la funcion density
-dens_bio_t_0 <- density(as.numeric(coefficients))
+#De acuerdo con la notacion de arriba, los coeficientes el dia del evento terminan en t_0, el dia sig
+# en t_1, dos dias despues t_2, y asi hasta llegar a t_4. Por otro lado, tambien generamos una 
+# lista con los modelos estimados que tenemos
+
+steps <- c("t_0","t_1","t_2","t_3","t_4")
+
+## El siguiente ciclo genera la densidad Kernel de los coeficientes para cada tipo de desastre 
+## y para todos los t_0, t_1 ...
+
+
+for(step in steps){
+  for(model in fitted_models){
+    dens_name <- paste("dens",model,step,sep="_")
+    assign(dens_name,dens(model,step))
+  }
+}
+
+
+##Ya con lo anterior podemos hacer las graficas para los 5 tipos de desastres para todos los t pasos
+# adelante
+
+limite <- max(max(dens_fitsur_bio_t_0$y),max(dens_fitsur_cli_t_0$y),max(dens_fitsur_geo_t_0$y),
+              max(dens_fitsur_hyd_t_0$y),max(dens_fitsur_met_t_0$y))
+X11()
+plot(dens_fitsur_bio_t_0, main = "Kernel density of AR t_0", col ="blue",lwd=2,ylim=c(0,limite))
+lines(dens_fitsur_cli_t_0,col="red",lwd = 2)
+lines(dens_fitsur_geo_t_0,col="orange",lwd = 2)
+lines(dens_fitsur_hyd_t_0,col="purple",lwd = 2)
+lines(dens_fitsur_met_t_0,col="green",lwd = 2)
+
+
+limite_2 <- max(max(dens_fitsur_bio_t_1$y),max(dens_fitsur_cli_t_1$y),max(dens_fitsur_geo_t_1$y),
+              max(dens_fitsur_hyd_t_1$y),max(dens_fitsur_met_t_1$y))
+X11()
+plot(dens_fitsur_bio_t_1, main = "Kernel density of AR t_1", col ="blue",lwd=2,ylim=c(0,limite_2))
+lines(dens_fitsur_cli_t_1,col="red",lwd = 2)
+lines(dens_fitsur_geo_t_1,col="orange",lwd = 2)
+lines(dens_fitsur_hyd_t_1,col="purple",lwd = 2)
+lines(dens_fitsur_met_t_1,col="green",lwd = 2)
+
+limite_3 <- max(max(dens_fitsur_bio_t_2$y),max(dens_fitsur_cli_t_2$y),max(dens_fitsur_geo_t_2$y),
+                max(dens_fitsur_hyd_t_2$y),max(dens_fitsur_met_t_2$y))
+X11()
+plot(dens_fitsur_bio_t_2, main = "Kernel density of AR t_2", col ="blue",lwd=2,ylim=c(0,limite_3))
+lines(dens_fitsur_cli_t_2,col="red",lwd = 2)
+lines(dens_fitsur_geo_t_2,col="orange",lwd = 2)
+lines(dens_fitsur_hyd_t_2,col="purple",lwd = 2)
+lines(dens_fitsur_met_t_2,col="green",lwd = 2)
+
+limite_4 <- max(max(dens_fitsur_bio_t_3$y),max(dens_fitsur_cli_t_3$y),max(dens_fitsur_geo_t_3$y),
+                max(dens_fitsur_hyd_t_3$y),max(dens_fitsur_met_t_3$y))
+X11()
+plot(dens_fitsur_bio_t_3, main = "Kernel density of AR t_3", col ="blue",lwd=2,ylim=c(0,limite_4))
+lines(dens_fitsur_cli_t_3,col="red",lwd = 2)
+lines(dens_fitsur_geo_t_3,col="orange",lwd = 2)
+lines(dens_fitsur_hyd_t_3,col="purple",lwd = 2)
+lines(dens_fitsur_met_t_3,col="green",lwd = 2)
+
+limite_5 <- max(max(dens_fitsur_bio_t_4$y),max(dens_fitsur_cli_t_4$y),max(dens_fitsur_geo_t_4$y),
+                max(dens_fitsur_hyd_t_4$y),max(dens_fitsur_met_t_4$y))
+X11()
+plot(dens_fitsur_bio_t_4, main = "Kernel density of AR t_4", col ="blue",lwd=2,ylim=c(0,limite_5))
+lines(dens_fitsur_cli_t_4,col="red",lwd = 2)
+lines(dens_fitsur_geo_t_4,col="orange",lwd = 2)
+lines(dens_fitsur_hyd_t_4,col="purple",lwd = 2)
+lines(dens_fitsur_met_t_4,col="green",lwd = 2)
+
+## Falta CAR y manera mas facil de graficar.
+
+
+cdf <- ecdf(as.numeric(coefficients))
 x11()
-plot(dens_bio_t_0,main="Kernel density of biological AR t_0",col="blue",lwd=2)
-
-
-### Con solo 5 paises =====
-
-eqsystem2 <- list()
-for(country in countries[1:5]){
-  eqsystem2[[country]] <- model_equation(country)
-}
-
-#Estimar las n ecuaciones
-fitsur2 <- systemfit(eqsystem2, method = "SUR")
-#Obtener los coeficientes de la estimacion
-coefs2 <- coef(fitsur2)
-
-#Creamos una lista de los coeficientes t_0 para cada pais
-coefficients <- list()
-for (country in countries[1:5]) {
-  coefficient_key <- paste0(country, "_bio_exobiological_t_0")
-  coefficients[[coefficient_key]] <- coefs2[coefficient_key]
-}
-
-dens_bio_t_0_2 <- density(as.numeric(coefficients))
-
-x11()
-plot(dens_bio_t_0_2,main="Kernel density of biological AR t_0",col="green",lwd=2)
-
-
-
-
-
-# t_1
-coefficients_t_1 <- list()
-for (country in countries[1:5]) {
-  coefficient_key <- paste0(country, "_bio_exobiological_t_1")
-  coefficients_t_1[[coefficient_key]] <- coefs2[coefficient_key]
-}
-
-dens_bio_t_1_2 <- density(as.numeric(coefficients_t_1))
-x11()
-plot(dens_bio_t_1_2,main="Kernel density of biological AR t_1",col="red",lwd=2)
+plot(dens_bio_t_0,col="red")
+lines(cdf, col="blue")
