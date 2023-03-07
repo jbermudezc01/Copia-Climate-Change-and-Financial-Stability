@@ -1,5 +1,5 @@
 #---------------------------------- 1. read_csv ------------------------------------#
-# Se crea una funcion que va a leer los csv para los indices bursatiles, genera una base de datos de los indices 
+# Lee los archivos csv para los indices bursatiles, genera una base de datos de los indices 
 # bursatiles en formato xts. 
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
