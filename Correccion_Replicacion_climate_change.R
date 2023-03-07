@@ -237,105 +237,10 @@ Crecimiento_FDI <- muestra_paper(fdi_growth_base,dia)
 
 ### Dummies =====
 
-dummies_database <- read_excel("EMDATA_dummies.xlsx",sheet="Biological")
-biological_disasters <- dummies_database$t0
-dummies_biological <- c(rep(0,nrow(Retornos)))
+# Corremos la función create_dummies en el archivo que contiene las fechas de las dummies
+dummies <- create_dummies(paste0(Dir,"EMDATA_dummies.xlsx"))
 
-##Para generar las dummies, se utiliza un for loop que va mirando si el dia del desastre esta dentro de indice de
-# retornos. Si el dia esta, establece 1 en la posicion de ese dia siguiendo el indice de retornos.
-# Si no se encuentra entonces mira si el dia calendario siguiente está en Retornos, si se encuentra establece 1
-# en el dia siguiente. Así sucesivamente hasta encontrar el dia de intercambio mas cercano al dia del desastre.
-
-dummies_biological0 <- c(rep(0,nrow(Retornos)))
-for(i in 1:length(biological_disasters)){
-  for(j in 0:10){
-    if((as.Date(biological_disasters[i])+j) %in% index(Retornos)){
-      index_f <- which(index(Retornos) == (as.Date(biological_disasters[i])+j)) 
-      dummies_biological0[index_f] <- 1
-      break
-    }
-  }
-}
-
-## Para crear las dummies t1, t2, t3, t4 se rezaga las dummies t0. Se completan los NA con 0 porque no hay desastres
-#  antes a tener en cuenta
-dummies_biological1 <- lag(dummies_biological0,1)
-dummies_biological2 <- lag(dummies_biological0,2)
-dummies_biological3 <- lag(dummies_biological0,3)
-dummies_biological4 <- lag(dummies_biological0,4)
-dummies_biological  <- cbind(dummies_biological0,dummies_biological1,dummies_biological2,dummies_biological3,
-                             dummies_biological4)
-dummies_biological_c <- ifelse(is.na(dummies_biological),0,dummies_biological)
-
-#se genera la dummy D
-D <- c()
-for(i in 1:nrow(dummies_biological_c)){
-  if(sum(dummies_biological_c[i,]) == 0){
-    D <- c(D,sum(dummies_biological_c[i,]))
-  }else if(sum(dummies_biological_c[i,]) != 0){
-    D <- c(D,sum(dummies_biological_c[i,])/sum(dummies_biological_c[i,])) 
-  }
-}
-
-dummies_biological_complete <- cbind(dummies_biological_c, D)  
-
-dummies_biological_xts <- xts(dummies_biological_complete,order.by=index(Retornos))
-
-
-## Creo una funcion que va a generar las dummies por los tipos de desastres
-
-create_dummies_xts <- function(excel_file){
-  sheet_names <- excel_sheets(excel_file)
-  xts_dummies_list <- list()
-  
-  #Loop para todas las hojas
-  for(sheet_name in sheet_names) {
-    current_sheet    <- read.xlsx(excel_file, sheet = sheet_name, detectDates = TRUE)
-    dummies_t0       <- current_sheet$t0
-    t_0 <- c(rep(0,nrow(Retornos)))
-    ##Para generar las dummies, se utiliza un for loop que va mirando si el dia del desastre esta dentro de indice de
-    # retornos. Si el dia esta, establece 1 en la posicion de ese dia siguiendo el indice de retornos.
-    # Si no se encuentra entonces mira si el dia calendario siguiente está en Retornos, si se encuentra establece 1
-    # en el dia siguiente. Así sucesivamente hasta encontrar el dia de intercambio mas cercano al dia del desastre.
-    
-    for(i in 1:length(dummies_t0)){
-      for(j in 0:10){
-        if((as.Date(dummies_t0[i])+j) %in% index(Retornos)){
-          index_f <- which(index(Retornos) == (as.Date(dummies_t0[i])+j)) 
-          t_0[index_f] <- 1
-          break
-        }
-      }
-    }
-    t_1 <- lag(t_0,1)
-    t_2 <- lag(t_0,2)
-    t_3 <- lag(t_0,3)
-    t_4 <- lag(t_0,4)
-    dummies_df       <- cbind(t_0,t_1,t_2,t_3,t_4)
-    dummies_df_c     <- ifelse(is.na(dummies_df),0,dummies_df)
-    
-    #se genera la dummy D
-    D <- c()
-    for(i in 1:nrow(dummies_df_c)){
-      if(sum(dummies_df_c[i,]) == 0){
-        D <- c(D,sum(dummies_df_c[i,]))
-      }else if(sum(dummies_df_c[i,]) != 0){
-        D <- c(D,sum(dummies_df_c[i,])/sum(dummies_df_c[i,])) 
-      }
-    }
-    
-    dummies_complete <- cbind(dummies_df_c, D)  
-    dummies_xts <- xts(dummies_complete,order.by=index(Retornos))
-    
-    #Crear objetos distintos para cada hoja
-    xts_name <- paste0(sheet_name, "_dummies_xts}")
-    xts_dummies_list[[xts_name]] <- dummies_xts
-  }
-  return(xts_dummies_list)
-}
-
-dummies <- create_dummies_xts("EMDATA_dummies.xlsx")
-
+#Para cada tipo de desastre lo guardamos en un xts distinto
 biological_dummies           <- dummies$`Biological_dummies_xts}`
 colnames(biological_dummies) <- paste("biological",colnames(biological_dummies),sep="_")
 
@@ -353,22 +258,13 @@ colnames(climatological_dummies) <- paste("climatological",colnames(climatologic
 
 # Tambien es necesario crear la interaccion entre D y Rmt
 
-interaction_function <- function(df){
-  interaction <- c()
-  for(i in 1:nrow(df)){
-    interaction <- c(interaction, as.numeric(Promedio_movil[i])*as.numeric((df[,ncol(df)])[i]))
-  }
-  interaction_xts <- xts(interaction, order.by = index(df))
-  return(interaction_xts)
-}
-
 interaction_climatological <- interaction_function(climatological_dummies)
 interaction_meteorological <- interaction_function(meteorological_dummies)
 interaction_hydrological <- interaction_function(hydrological_dummies)
 interaction_geophysical <- interaction_function(geophysical_dummies)
 interaction_biological <- interaction_function(biological_dummies) 
 
-### Generacion de base de datos exportada a excel ====
+### Generacion de base de datos con las variables que serán usadas para la estimación ====
 
 Date <- as.character(index(Retornos))
 
@@ -381,13 +277,16 @@ base_datos <- merge(Retornos,Promedio_movil,interaction_biological,interaction_c
                     hydrological_dummies[,1:(ncol(hydrological_dummies)-1)],
                     geophysical_dummies[,1:(ncol(geophysical_dummies)-1)],
                     Crecimiento_PIB, Crecimiento_FDI) 
+
+## Tambien es posible exportar a excel, en cuyo caso se sigue este codigo:
+if(0){
 # Cambiar a dataframe
 base_df <- as.data.frame(base_datos)
 #Agregar el indice, no se habia agregado antes porque la funcion merge ponia problema dada la clase de los objetos
 base_final <- cbind(Date,base_df)
 #Para crear un archivo excel con la base de datos
-#write.xlsx(base_final,"Base_datos_final.xlsx",row.names= FALSE)
-
+write.xlsx(base_final,"Base_datos_final.xlsx",row.names= FALSE)
+}
 
 #### Variables exogenas por tipo de desastre =========
 
@@ -419,24 +318,27 @@ met_exo <- with(base_datos, cbind(interaction_meteorological,meteorological_t_0,
 
 ##### Revisar autocorrelacion serial ============
 
+#El siguiente codigo es para revisar la autocorrelacion serial de la serie de retornos de cada indice, con 
+#50, 100 y n/4 rezagos. Al 5% para todos los indices se viola la hipótesis nula para al menos un rezago
+if(0){
+  lags.test = round(nrow(base_retornos)/4)
+  correlacionados <- c()
+  no_correlacionados <- c()
 
-lags.test = round(nrow(base_retornos)/4)
-correlacionados <- c()
-no_correlacionados <- c()
+  #Generamos un loop for, que crea dos vectores, en el primero incluye aquellos paises con un p-valor menor al 5%
+  #para un test Ljung-Box con lags.test rezagos; es decir, incluye a los paises que se puede rechazar la no autocorrelacion
+  #Mientras que en el segundo vector incluye a los paises que no tienen evidencia para rechazar la no autocorrelacion
 
-#Generamos un loop for, que crea dos vectores, en el primero incluye aquellos paises con un p-valor menor al 5%
-#para un test Ljung-Box con lags.test rezagos; es decir, incluye a los paises que se puede rechazar la no autocorrelacion
-#Mientras que en el segundo vector incluye a los paises que no tienen evidencia para rechazar la no autocorrelacion
-
-for (i in 1:ncol(base_retornos)) {
-  result <- Box.test(base_retornos[, i], lag = lags.test, type = "Ljung-Box")
-  if(result$p.value < 0.05){
-    correlacionados <- c(correlacionados,colnames(base_retornos[,i]))
-  }else{
-    no_correlacionados <- c(no_correlacionados,colnames(base_retornos[,i]))
+  for (i in 1:ncol(base_retornos)) {
+    result <- Box.test(base_retornos[, i], lag = lags.test, type = "Ljung-Box")
+    if(result$p.value < 0.05){
+      correlacionados <- c(correlacionados,colnames(base_retornos[,i]))
+    }else{
+      no_correlacionados <- c(no_correlacionados,colnames(base_retornos[,i]))
+    }
   }
 }
-## No hay ningun indice que tanto para 50, 100 o n/4 rezagos sea no correlacionado.
+
 
 ##### Agregar rezagos a las ecuaciones ===========
 
@@ -444,50 +346,6 @@ for (i in 1:ncol(base_retornos)) {
 # rezagos. Modelamos cada retorno siguiendo un modelo AR(p), siendo p = 0 a 20, y elegimos el modelo segun el 
 # criterio de Akaike
 
-#La siguiente funcion toma como argumento la serie de tiempo, los rezagos p y q maximos, el orden de diferencia
-#un booleano para incluir la media y el metodo de estimacion. El rezago q maximo será 0 ya que solo queremos ver
-#modelos AR(p).
-
-arma_seleccion_df = function(ts_object, AR.m, MA.m, d, bool, metodo){
-  index = 1
-  df = data.frame(p = double(), d = double(), q = double(), AIC = double(), BIC = double())
-  for (p in 0:AR.m) {
-    for (q in 0:MA.m)  {
-      fitp <- arima(ts_object, order = c(p, d, q), include.mean = bool, 
-                    method = metodo)
-      T.model = length(resid(fitp))
-      Aic = T.model*log(sum(resid(fitp)^2))+ 2*(p+q+1)   ## De acuerdo con Enders 2014.
-      Bic = T.model*log(sum(resid(fitp)^2)) + T.model*(p+q+1)  
-      df[index,] = c(p, d, q, Aic, Bic)
-      index = index + 1
-    }
-  }  
-  return(df)
-}
-
-## Posteriormente, generamos una funcion que encuentre los rezagos optimos para cada pais utilizando el
-# criterio de Akaike. Además, la función tambien va a generar los rezagos y agregandolos a un dataframe
-# Vamos a usar un for loop para generar un dataframe de rezagos para cada pais 
-
-lag_function <- function(country){
-  
-  #Utilizamos las funciones arma_seleccion_df y arma_min_AIc para obtener el rezago para incluir en la ecuacion
-  #segun el criterio de Akaike
-  mod <- arma_seleccion_df(ts_object=base_retornos[,country], AR.m=20, MA.m=0, d=0, bool=TRUE, metodo="CSS")
-  p   <- mod[which.min(mod$AIC),'p']
-  
-  #generamos una base de datos que genere columnas de rezagos, el numero de columnas sera el mismo que el orden 
-  #obtenido en el procedimiento anterior
-  if(p>0)lags_df <- timeSeries::lag((base_retornos[,country]),c(1:p))
-  
-  #Lo colocamos desde el 8 de febrero para cuadrar con el indice de la base de datos principal
-  lags_reduced <- muestra_paper(lags_df,dia)
-  
-  #Nombres del dataframe de rezagos
-  colnames(lags_reduced) <- paste0(country,'.l',1:p) 
-  
-  return(lags_reduced)
-}
 
 ##Realizar for loop para obtener las matrices de rezagos
 
@@ -499,27 +357,6 @@ for(country in countries){
 
 
 #### Funcion para la estimacion del modelo ==========
-
-# Ya teniendo los rezagos, la variable dependiente y las variables exogenas, generaremos una funcion
-# que genere una formula para cada pais para cada uno de los 5 tipos de desastres.Lo anterior dado 
-# que vamos a estimar por el metodo SUR, el cual necesitara las 27 ecuaciones siguiendo el paper
-# de Pagnottoni.
-
-model_equation <- function(country,exo){
-  
-  #Busca el dataframe con los rezagos
-  lags_name <- paste0("lags_reduced_", country)
-  lags_df <- get(lags_name)
-  
-  #Busca las variables para el gdp y el fdi
-  gdp_variable <- paste("gdp",country,sep="_")
-  fdi_variable <- paste("gfdi",country,sep="_")
-  
-  #Genera la ecuacion n.4 por el país country
-  eq  <- base_datos[,country]  ~ base_datos[,Promedio_movil]+exo + base_datos[,gdp_variable] +
-                                 base_datos[,fdi_variable] + lags_df
-  return(eq)
-}
 
 ### Realizar for loop a lo largo de todos los paises para obtener las ecuaciones a estimar. 
 # Tambien a lo largo de los 5 tipos de desastres
@@ -544,20 +381,9 @@ for(disaster in disasters_exo){
   assign(name,systemfit(eqsystem,method="SUR"))
 } 
 
-##Generamos una funcion que genere la densidad de los coeficientes dependiendo cuantos pasos en
-# adelante este
-
-dens <- function(fit, step){
-  coefs <- coef(get(fit))
-  interest_indices <- grep(step,names(coefs))
-  interest_coefficients <- coefs[interest_indices]
-  densidad <- density(as.numeric(interest_coefficients))
-  return(densidad)
-}
-
-#De acuerdo con la notacion de arriba, los coeficientes el dia del evento terminan en t_0, el dia sig
-# en t_1, dos dias despues t_2, y asi hasta llegar a t_4. Por otro lado, tambien generamos una 
-# lista con los modelos estimados que tenemos
+# De acuerdo con la notacion de los modelos estimados, los coeficientes el dia del evento terminan en t_0, 
+# el dia siguiente en t_1, dos dias despues t_2, y asi hasta llegar a t_4. Por otro lado, tambien 
+# generamos una lista con los modelos estimados que tenemos
 
 steps <- c("t_0","t_1","t_2","t_3","t_4")
 
@@ -573,39 +399,111 @@ for(step in steps){
 }
 
 ##Por otro lado, necesitamos hacer la gráfica de los CAR, que es la suma de los retornos anormales.
+##Con el ciclo for estamos haciendo el mismo proceso para cada uno de los 5 modelos estimados.
+##Al final tendremos un vector para cada modelo que incluye los coeficientes relacionados para las 5 
+##dummies temporales para todos los paises. Lo anterior para posteriormente ser sumadas por cada país para 
+##generar el retorno anormal acumulado t_0+t_1+t_2+t_3+t_4
 
 car_coefficients <- c()
 
 for(model in fitted_models){
-  var_name <- paste0("coef_list_",model)
-  coef_list <- c
+  #Vamos a generar una lista para cada modelo
+  var_name <- paste0("coef_vec_",model)
+  coef_vec <- c()
   for(step in steps){
+    #reunimos los coeficientes en coefs
     coefs <- coef(get(model))
+    
+    #seleccionamos solamente los coeficientes que acaben con step y lo añadimos a coef_vec
     interest_indices <- grep(step,names(coefs))
     interest_coefficients <- coefs[interest_indices]
-    coef_list <- c(coef_list, interest_coefficients)
+    coef_vec <- c(coef_vec, interest_coefficients)
   }
-  assign(var_name, coef_list)
+  # al final asignamos coef_vec al nombre especifico por modelo.
+  assign(var_name, coef_vec)
 }
 
-densidad_CAR <- function(x){
-  CAR <- c()
-  for(country in countries){
-    start_with <- paste0("^",country)
-    sum_of_coefficients <- sum(as.numeric(x[grep(start_with, names(x))]))
-    CAR <- c(CAR,sum_of_coefficients)
+# Generamos la densidad de los retornos anormales acumulados para cada tipo de desastre
+densidad_CAR_bio <- densidad_CAR(coef_vec_fitsur_bio,countries)
+densidad_CAR_cli <- densidad_CAR(coef_vec_fitsur_cli,countries)
+densidad_CAR_geo <- densidad_CAR(coef_vec_fitsur_geo,countries)
+densidad_CAR_hyd <- densidad_CAR(coef_vec_fitsur_hyd,countries)
+densidad_CAR_met <- densidad_CAR(coef_vec_fitsur_met,countries)
+
+### Graficas de retornos anormales =======
+
+##Funcion
+grafico <- function(vector,labels, colors){
+  maximos <- c()
+  for(i in vector[2:length(vector)]){
+    maximos <- c(maximos, max(get(i)$y))
   }
-  densidad_C <- density(CAR)
-  return(densidad_C)
+  limite_y          <-  max(maximos)
+  
+  x11()
+  plot(get(vector[2]), main = vector[1], col = colors[1],lwd=2,ylim=c(0,limite_y))
+  for(i in 3:length(vector)){
+    lines(get(vector[i]),col=colors[i-1],lwd=2)
+  }
+  legend("topright",legend = labels,col = colors, lwd = 2)
 }
 
-densidad_CAR_bio <- densidad_CAR(coef_list_fitsur_bio)
-densidad_CAR_cli <- densidad_CAR(coef_list_fitsur_cli)
-densidad_CAR_geo <- densidad_CAR(coef_list_fitsur_geo)
-densidad_CAR_hyd <- densidad_CAR(coef_list_fitsur_hyd)
-densidad_CAR_met <- densidad_CAR(coef_list_fitsur_met)
+
+#Ya con las densidades de los retornos acumulados y de las dummies t_0, t_1, ..., t_4 podemos graficarlas
+
+#Cree una función para poder graficar evitando repeticiones en el codigo. La función toma tres argumentos.
+#El primero de ellos es muy especifico: un vector que en la primera posición tiene el título del gráfico, 
+#y luego 5 argumentos que son las densidades a estimar en el mismo orden que este en el objeto labels.
+#Por ejemplo en labels el primero seria la densidad biological, ya sea densidad_CAR_bio o dens_fitsur_bio_t_0
+#El segundo argumento será labels, que indica las leyendas
+#El tercero es un vector con cinco colores.
 
 labels <- c("Biological","Climatological","Geophysical","Hydrological","Meteorological")
+colors <- c("blue", "tomato", "orange", "purple", "green")
+
+# Para los CAR el vector sería
+vector_a_graficar <- c("Kernel density of CAR","densidad_CAR_bio","densidad_CAR_cli","densidad_CAR_geo",
+                       "densidad_CAR_hyd", "densidad_CAR_met")
+
+grafico(vector_a_graficar,labels,colors)
+
+#Para los AR_t_0 sería
+
+vector_t_0 <- c("Kernel density of AR t_0", "dens_fitsur_bio_t_0","dens_fitsur_cli_t_0","dens_fitsur_geo_t_0",
+                 "dens_fitsur_hyd_t_0","dens_fitsur_met_t_0")
+
+grafico(vector_t_0,labels,colors)
+
+#Para los AR_t_1 sería
+
+vector_t_1 <- c("Kernel density of AR t_1", "dens_fitsur_bio_t_1","dens_fitsur_cli_t_1","dens_fitsur_geo_t_1",
+                "dens_fitsur_hyd_t_1","dens_fitsur_met_t_1")
+
+grafico(vector_t_1,labels,colors)
+
+#Para los AR_t_2 sería
+
+vector_t_2 <- c("Kernel density of AR t_2", "dens_fitsur_bio_t_2","dens_fitsur_cli_t_2","dens_fitsur_geo_t_2",
+                "dens_fitsur_hyd_t_2","dens_fitsur_met_t_2")
+
+grafico(vector_t_2,labels,colors)
+
+#Para los AR_t_3 sería
+
+vector_t_3 <- c("Kernel density of AR t_3", "dens_fitsur_bio_t_3","dens_fitsur_cli_t_3","dens_fitsur_geo_t_3",
+                "dens_fitsur_hyd_t_3","dens_fitsur_met_t_3")
+
+grafico(vector_t_3,labels,colors)
+
+#Para los AR_t_4 sería
+
+vector_t_4 <- c("Kernel density of AR t_4", "dens_fitsur_bio_t_4","dens_fitsur_cli_t_4","dens_fitsur_geo_t_4",
+                "dens_fitsur_hyd_t_4","dens_fitsur_met_t_4")
+
+grafico(vector_t_4,labels,colors)
+
+
+##revisar con las anteriores graficas
 
 limite0 <- max(max(densidad_CAR_bio$y),max(densidad_CAR_cli$y),max(densidad_CAR_geo$y),
                max(densidad_CAR_hyd$y),max(densidad_CAR_met$y))
@@ -684,7 +582,7 @@ legend("topright",legend = labels,col = c("blue", "tomato", "orange", "purple", 
 
 
 
-## Falta CAR y manera mas facil de graficar.
+## Manera mas facil de graficar.
 
 coef <- coef(get("fitsur_met"))[grep("t_0",names(coef(get("fitsur_met"))))]
 cdf <- ecdf(as.numeric(coef))
