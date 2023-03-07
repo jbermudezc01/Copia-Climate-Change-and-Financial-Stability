@@ -1,7 +1,7 @@
 
 rm(list = ls())
-#setwd('C:/Users/jpber/OneDrive/Documents/Codigo_compartido_Melo/Climate_Change_and_Financial_Stability/Climate-Change-and-Financial-Stability')
-setwd('/Users/lumelo/archivos/Climate-Change-and-Financial-Stability/Github/Climate-Change-and-Financial-Stability')
+setwd('C:/Users/jpber/OneDrive/Documents/Codigo_compartido_Melo/Climate_Change_and_Financial_Stability/Climate-Change-and-Financial-Stability')
+#setwd('/Users/lumelo/archivos/Climate-Change-and-Financial-Stability/Github/Climate-Change-and-Financial-Stability')
 
 
 cat("\014")
@@ -47,12 +47,11 @@ countries <- c("Australia","Belgium", "Brazil", "Canada", "Chile", "Denmark", "F
                "SouthAfrica","SouthKorea", "Spain", "Sweden","Switzerland","Thailand","Turkey", 
                "UnitedKingdom","USA1","USA2")
 
-# Corre la funcion dando una lista con los indices bursatiles
+# Establecemos el directorio de los datos
 Dir      = paste0(getwd(),'/Bases/') #Directorio de datos, se supone que el subdirectorio <Bases> existe
-xts_list = read_csv_files(Dir,countries)
 
-# Genera una base de datos de los indices en formato xts
-base_test <- do.call(merge, xts_list)
+# Genera una base de datos de los indices en formato xts, llamando a la función read_csv
+base_test <- read_csv(Dir,countries)
 
 # Generar un vector de fechas en los que solo se tiene valores para uno o dos mercados
 navalues = c()
@@ -63,7 +62,7 @@ for (i in 1:nrow(base_test)) {
 } 
 
 # Eliminar aquellos dias que hacen parte del vector navalues, dejando solo los dias en los que se tiene datos para al
-# menos 3 mercados.
+# menos 3 mercados. Se utilizó la función weekdays() para comprobar que ningún dia fuese sábado o domingo.
 for (day in navalues) 
   base_test <- subset(base_test, subset = index(base_test) != day, drop = TRUE)
 
@@ -81,26 +80,17 @@ base_precios <- base[complete.cases(base),]
 base_retornos <- 100*diff(log(base_precios))[2:nrow(base_precios),]
 
 ### Otra variable importante es la media de los promedios moviles, por lo cual se genera el promedio movil de cada
-### retorno de orden 22, ya que hay aproximadamente 22 dias para cada mes, utilizando la siguiente funcion
+### retorno de orden 22, ya que hay aproximadamente 22 dias para cada mes, usando la funcion moving_average.
 
-moving_average <- function(x){
-  mov_average_list <- list()
-  for(column in 1:ncol(x)){
-    rolling_average <- rollmean(x[, column], k = 22, align = "right")
-    mov_average_list[[length(mov_average_list)+1]] <- rolling_average
-  }
-  return(mov_average_list)
-}
-
-#La funcion nos genera una lista con el promedio movil de los retornos, por lo cual las uno en formato xts
-mov_average_list <- moving_average(base_retornos)
-mov_average_base <- do.call(merge,mov_average_list)
+orden <- 22
+mov_average_base <- moving_average(base_retornos,orden)
 
 #La variable que se usa en el paper es la media de los promedios. El procedimiento es generar un vector al cual
 #se le ira concatenando la media por cada dia, y luego generar un objeto xts con estos valores
 mean_mov_average <- c()
 for(row in 1:nrow(mov_average_base)){mean_mov_average <- c(mean_mov_average,mean(mov_average_base[row,]))}
 
+# El vector que incluye la media de los promedios moviles se convierte en xts
 mean_mov_average_xts <- xts(mean_mov_average,order.by = index(mov_average_base))
 colnames(mean_mov_average_xts) <- c("Mean_Returns_Moving_Averages")
 
@@ -110,13 +100,6 @@ colnames(mean_mov_average_xts) <- c("Mean_Returns_Moving_Averages")
 #siguiendo el paper.
 
 dia <- "2001-02-08"
-
-muestra_paper <- function(obj,x){
-  indice           <- index(obj)
-  base_start       <- which(indice == x)
-  obj              <- obj[base_start:nrow(obj),]
-  return(obj)
-}
 
 #Utilizamos la funcion para las bases
 Retornos <- muestra_paper(base_retornos,dia)
@@ -141,50 +124,11 @@ print(Stats, digits=3)
 # Las siguientes variables a agregar es el crecimiento del PIB y el crecimiento del FDI diarios, por lo que es 
 # necesario hacer desagregacion temporal.
 
-## Funciones. La primera es la funcion de Chow lin,la segunda es una funcion que genera una lista ====
-
-#La siguiente función toma cinco argumentos: el primero es una lista con las series de tiempo a las cuales se les
-# quiere realizar la desagregacion temporal, el segundo es la matriz de agregacion, el tercero es un vector
-# constante con valores 1, el cuarto es el valor de alpha, que corresponde al valor del coeficiente del AR(1) 
-# siguiendo a Chow-Lin. Por ultimo, el quinto argumento es la matriz de varianzas covarianzas. 
-# Tanto la matriz de varianzas covarianzas como el procedimiento para realizar la desagregacion temporal fueron
-# extraidas del articulo de Hurtado y Melo (2015).
-
-chow_lin <- function(time_Series_list,c,w,alpha,var_covar){
-  return_list <- list()
-  for(series in time_Series_list){
-    CW <- c%*%w
-    model_gls <- gls(series ~ CW - 1, correlation = corAR1(value = alpha, fixed = TRUE)) 
-    sigma_sq <- (model_gls$sigma)^2
-    V = (sigma_sq/1-alpha^2)*var_covar
-    CVC <- solve(c%*%(V%*%t(c)))
-    beta <- (solve(t(CW)%*%(CVC%*%CW))%*%t(CW))%*%(CVC%*%series)
-    y <- w%*%beta + ((V%*%t(c))%*%CVC)%*%(series-CW%*%beta)
-    y <- xts(y,order.by= index(base_precios)) 
-    gdp_growth <- diff(log(y))[2:nrow(y),]
-    return_list[[length(return_list)+1]] <- gdp_growth
-  }
-  return(return_list)
-} ## Argumentos: 1, lista con las series de tiempo, 2: matriz de agregacion, 3. vector constante, 4. alpha, 
-## 5. matriz var covar 
-
-## La siguiente funcion genera una lista de las series de tiempo que queremos desagregar. Necesitamos la lista ya que
-# la funcion chowlin pide de primer argumento la lsita con las series de tiempo a desagregar.
-
-series_list_function <- function(ts1){
-  series_list <- list()
-  for(country in colnames(ts1)){
-    func_series <- as.vector(ts1[,country])
-    series_list[[tolower(country)]] <- func_series
-  }
-  return(series_list)
-}
-
 
 ### DATOS para GDP trimestral ====
 
 #Leer la base de datos, establecer el formato fecha y generar la base de datos en xts y la lista a ser desagregada
-gdp_countries     <- read.csv("GDP_COUNTRIES.csv", header = TRUE, sep = ";") 
+gdp_countries     <- read.csv(paste0(Dir,"GDP_COUNTRIES.csv"), header = TRUE, sep = ";") 
 dates             <- as.Date(as.yearqtr(gdp_countries$Time)) #date format 
 gdp_countries_xts <- xts(gdp_countries[-1], order.by = dates)
 quarterly_series  <- series_list_function(gdp_countries_xts)
@@ -205,27 +149,12 @@ qtr_agr <- matrix(0, nrow = nrows, ncol = ncols) #matriz de agregacion
 dates <- as.character(index(base_precios))
 
 ## Extrae los meses en formato yyyy-mm sin repeticiones.
-months <- unique(substr(dates,1,7))
+meses <- unique(substr(dates,1,7))
 
-## La siguiente funcion sera usada para generar la matriz de agregacion, añadiendo uno a los dias que correspondan 
-## a cada trimestre.
-days <- function(x, m){
-  first_month <- months[3*x+1]
-  second_month <- months[3*x+2]
-  third_month <- months[3*x+3]
-  for(date in dates){
-    if(substr(date,1,7)==first_month |substr(date,1,7)==second_month|substr(date,1,7)==third_month){
-      pos <- which(dates == date)
-      #print(c(date,pos))
-      m[x+1,pos] <- 1
-    }
-  }
-  return(m)
-} ## argumentos x va a ser enteros, m la matriz de agregacion
-
-#Realizamos la matriz de agregacion usando la funcion
+#Realizamos la matriz de agregacion usando la funcion days. En este caso los enteros i iran de 0 a 75, 
+# y de acuerdo con la función esto generara el primer a tercer mes de cada trimestre. (Explicar mejor)
 for(i in 0:(nrows-1)){
-  qtr_agr <- days(i, qtr_agr)
+  qtr_agr <- days(i, qtr_agr,meses)
 }
 
 
@@ -249,8 +178,7 @@ for(i in 1:ncols){
 
 ## Usamos la funcion, lo que da una lista de las series desagregadas, y posteriormente las juntamos en una base
 
-gdp_growth_list <- chow_lin(quarterly_series,qtr_agr,vec_cte,alpha_fast,matriz_var_cov_0)
-gdp_growth_base <- do.call(merge,gdp_growth_list)
+gdp_growth_base <- chow_lin(quarterly_series,qtr_agr,vec_cte,alpha_fast,matriz_var_cov_0)
 
 #Colocamos de nombres de las columnas los paises
 names <- colnames(base_retornos)
@@ -265,7 +193,7 @@ colnames(gdp_growth_base) <- paste("gdp",colnames(gdp_growth_base),sep="_")
 # series a desagregar, un vector constante, una matriz de agregación y una matriz de varianzas covarianzas-
 # el alpha puede seguir siendo el mismo, ya que para el metodo fast debe ser 0.99999.
 
-fdi_countries <- read_xlsx("FDI_anual.xlsx", sheet="FDI")
+fdi_countries <- read_xlsx(paste0(Dir,"FDI_anual.xlsx"), sheet="FDI")
 fdi_countries_ts <- as.ts(fdi_countries[,-1],start=2001,frequency=1)
 fdi_series <- series_list_function(fdi_countries_ts)
 
@@ -295,8 +223,8 @@ for(i in as.numeric(unique(substr(dates,1,4)))){
 # puede utilizar la variable w. para alfa sirve alpha_fast. la matriz de varianzas y covarianzas tambien 
 # permaece igual
 
-fdi_growth_list <- chow_lin(fdi_series,fdi_agregacion_matriz,vec_cte,alpha_fast,matriz_var_cov_0)
-fdi_growth_base <- do.call(merge,fdi_growth_list)
+fdi_growth_base <- chow_lin(fdi_series,fdi_agregacion_matriz,vec_cte,alpha_fast,matriz_var_cov_0)
+
 #Colocamos los mismos nombres que la base de retornos pero le agregamos un prefijo gfdi
 colnames(fdi_growth_base) <- names[1:ncol(fdi_growth_base)]
 colnames(fdi_growth_base) <- paste("gfdi",colnames(fdi_growth_base),sep="_")
@@ -698,11 +626,11 @@ limite1 <- max(max(dens_fitsur_bio_t_0$y),max(dens_fitsur_cli_t_0$y),max(dens_fi
               max(dens_fitsur_hyd_t_0$y),max(dens_fitsur_met_t_0$y))
 X11()
 plot(dens_fitsur_bio_t_0, main = "Kernel density of AR t_0", col ="blue",lwd=2,ylim=c(0,limite1))
-lines(dens_fitsur_cli_t_0,col="red",lwd = 2)
+lines(dens_fitsur_cli_t_0,col="tomato",lwd = 2)
 lines(dens_fitsur_geo_t_0,col="orange",lwd = 2)
 lines(dens_fitsur_hyd_t_0,col="purple",lwd = 2)
 lines(dens_fitsur_met_t_0,col="green",lwd = 2)
-legend("topright",legend = labels,col = c("blue", "red", "orange", "purple", "green"), lwd = 2)
+legend("topright",legend = labels,col = c("blue", "tomato", "orange", "purple", "green"), lwd = 2)
 
 ##t_1
 
@@ -710,11 +638,11 @@ limite_2 <- max(max(dens_fitsur_bio_t_1$y),max(dens_fitsur_cli_t_1$y),max(dens_f
               max(dens_fitsur_hyd_t_1$y),max(dens_fitsur_met_t_1$y))
 X11()
 plot(dens_fitsur_bio_t_1, main = "Kernel density of AR t_1", col ="blue",lwd=2,ylim=c(0,limite_2))
-lines(dens_fitsur_cli_t_1,col="red",lwd = 2)
+lines(dens_fitsur_cli_t_1,col="tomato",lwd = 2)
 lines(dens_fitsur_geo_t_1,col="orange",lwd = 2)
 lines(dens_fitsur_hyd_t_1,col="purple",lwd = 2)
 lines(dens_fitsur_met_t_1,col="green",lwd = 2)
-legend("topright",legend = labels,col = c("blue", "red", "orange", "purple", "green"), lwd = 2)
+legend("topright",legend = labels,col = c("blue", "tomato", "orange", "purple", "green"), lwd = 2)
 
 ##t_2
 
@@ -722,11 +650,11 @@ limite_3 <- max(max(dens_fitsur_bio_t_2$y),max(dens_fitsur_cli_t_2$y),max(dens_f
                 max(dens_fitsur_hyd_t_2$y),max(dens_fitsur_met_t_2$y))
 X11()
 plot(dens_fitsur_bio_t_2, main = "Kernel density of AR t_2", col ="blue",lwd=2,ylim=c(0,limite_3))
-lines(dens_fitsur_cli_t_2,col="red",lwd = 2)
+lines(dens_fitsur_cli_t_2,col="tomato",lwd = 2)
 lines(dens_fitsur_geo_t_2,col="orange",lwd = 2)
 lines(dens_fitsur_hyd_t_2,col="purple",lwd = 2)
 lines(dens_fitsur_met_t_2,col="green",lwd = 2)
-legend("topright",legend = labels,col = c("blue", "red", "orange", "purple", "green"), lwd = 2)
+legend("topright",legend = labels,col = c("blue", "tomato", "orange", "purple", "green"), lwd = 2)
 
 ##t_3
 
@@ -734,11 +662,11 @@ limite_4 <- max(max(dens_fitsur_bio_t_3$y),max(dens_fitsur_cli_t_3$y),max(dens_f
                 max(dens_fitsur_hyd_t_3$y),max(dens_fitsur_met_t_3$y))
 X11()
 plot(dens_fitsur_bio_t_3, main = "Kernel density of AR t_3", col ="blue",lwd=2,ylim=c(0,limite_4))
-lines(dens_fitsur_cli_t_3,col="red",lwd = 2)
+lines(dens_fitsur_cli_t_3,col="tomato",lwd = 2)
 lines(dens_fitsur_geo_t_3,col="orange",lwd = 2)
 lines(dens_fitsur_hyd_t_3,col="purple",lwd = 2)
 lines(dens_fitsur_met_t_3,col="green",lwd = 2)
-legend("topright",legend = labels,col = c("blue", "red", "orange", "purple", "green"), lwd = 2)
+legend("topright",legend = labels,col = c("blue", "tomato", "orange", "purple", "green"), lwd = 2)
 
 
 ##t_4
@@ -747,11 +675,11 @@ limite_5 <- max(max(dens_fitsur_bio_t_4$y),max(dens_fitsur_cli_t_4$y),max(dens_f
                 max(dens_fitsur_hyd_t_4$y),max(dens_fitsur_met_t_4$y))
 X11()
 plot(dens_fitsur_bio_t_4, main = "Kernel density of AR t_4", col ="blue",lwd=2,ylim=c(0,limite_5))
-lines(dens_fitsur_cli_t_4,col="red",lwd = 2)
+lines(dens_fitsur_cli_t_4,col="tomato",lwd = 2)
 lines(dens_fitsur_geo_t_4,col="orange",lwd = 2)
 lines(dens_fitsur_hyd_t_4,col="purple",lwd = 2)
 lines(dens_fitsur_met_t_4,col="green",lwd = 2)
-legend("topright",legend = labels,col = c("blue", "red", "orange", "purple", "green"), lwd = 2)
+legend("topright",legend = labels,col = c("blue", "tomato", "orange", "purple", "green"), lwd = 2)
 
 
 
