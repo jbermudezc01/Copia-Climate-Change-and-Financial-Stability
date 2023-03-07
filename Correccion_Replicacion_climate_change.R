@@ -432,23 +432,6 @@ densidad_CAR_met <- densidad_CAR(coef_vec_fitsur_met,countries)
 
 ### Graficas de retornos anormales =======
 
-##Funcion
-grafico <- function(vector,labels, colors){
-  maximos <- c()
-  for(i in vector[2:length(vector)]){
-    maximos <- c(maximos, max(get(i)$y))
-  }
-  limite_y          <-  max(maximos)
-  
-  x11()
-  plot(get(vector[2]), main = vector[1], col = colors[1],lwd=2,ylim=c(0,limite_y))
-  for(i in 3:length(vector)){
-    lines(get(vector[i]),col=colors[i-1],lwd=2)
-  }
-  legend("topright",legend = labels,col = colors, lwd = 2)
-}
-
-
 #Ya con las densidades de los retornos acumulados y de las dummies t_0, t_1, ..., t_4 podemos graficarlas
 
 #Cree una función para poder graficar evitando repeticiones en el codigo. La función toma tres argumentos.
@@ -503,86 +486,7 @@ vector_t_4 <- c("Kernel density of AR t_4", "dens_fitsur_bio_t_4","dens_fitsur_c
 grafico(vector_t_4,labels,colors)
 
 
-##revisar con las anteriores graficas
-
-limite0 <- max(max(densidad_CAR_bio$y),max(densidad_CAR_cli$y),max(densidad_CAR_geo$y),
-               max(densidad_CAR_hyd$y),max(densidad_CAR_met$y))
-x11()
-plot(densidad_CAR_bio,main = "Kernel density of CAR", col="blue",lwd=2,ylim=c(0,limite0))
-lines(densidad_CAR_cli,col="tomato",lwd = 2)
-lines(densidad_CAR_geo,col="orange",lwd = 2)
-lines(densidad_CAR_hyd,col="purple",lwd = 2)
-lines(densidad_CAR_met,col="green",lwd = 2)
-legend("topright",legend = labels,col = c("blue", "tomato", "orange", "purple", "green"), lwd = 2)
-
-##Ya con lo anterior podemos hacer las graficas para los 5 tipos de desastres para todos los t pasos
-# adelante
-
-##t_0
-
-limite1 <- max(max(dens_fitsur_bio_t_0$y),max(dens_fitsur_cli_t_0$y),max(dens_fitsur_geo_t_0$y),
-              max(dens_fitsur_hyd_t_0$y),max(dens_fitsur_met_t_0$y))
-X11()
-plot(dens_fitsur_bio_t_0, main = "Kernel density of AR t_0", col ="blue",lwd=2,ylim=c(0,limite1))
-lines(dens_fitsur_cli_t_0,col="tomato",lwd = 2)
-lines(dens_fitsur_geo_t_0,col="orange",lwd = 2)
-lines(dens_fitsur_hyd_t_0,col="purple",lwd = 2)
-lines(dens_fitsur_met_t_0,col="green",lwd = 2)
-legend("topright",legend = labels,col = c("blue", "tomato", "orange", "purple", "green"), lwd = 2)
-
-##t_1
-
-limite_2 <- max(max(dens_fitsur_bio_t_1$y),max(dens_fitsur_cli_t_1$y),max(dens_fitsur_geo_t_1$y),
-              max(dens_fitsur_hyd_t_1$y),max(dens_fitsur_met_t_1$y))
-X11()
-plot(dens_fitsur_bio_t_1, main = "Kernel density of AR t_1", col ="blue",lwd=2,ylim=c(0,limite_2))
-lines(dens_fitsur_cli_t_1,col="tomato",lwd = 2)
-lines(dens_fitsur_geo_t_1,col="orange",lwd = 2)
-lines(dens_fitsur_hyd_t_1,col="purple",lwd = 2)
-lines(dens_fitsur_met_t_1,col="green",lwd = 2)
-legend("topright",legend = labels,col = c("blue", "tomato", "orange", "purple", "green"), lwd = 2)
-
-##t_2
-
-limite_3 <- max(max(dens_fitsur_bio_t_2$y),max(dens_fitsur_cli_t_2$y),max(dens_fitsur_geo_t_2$y),
-                max(dens_fitsur_hyd_t_2$y),max(dens_fitsur_met_t_2$y))
-X11()
-plot(dens_fitsur_bio_t_2, main = "Kernel density of AR t_2", col ="blue",lwd=2,ylim=c(0,limite_3))
-lines(dens_fitsur_cli_t_2,col="tomato",lwd = 2)
-lines(dens_fitsur_geo_t_2,col="orange",lwd = 2)
-lines(dens_fitsur_hyd_t_2,col="purple",lwd = 2)
-lines(dens_fitsur_met_t_2,col="green",lwd = 2)
-legend("topright",legend = labels,col = c("blue", "tomato", "orange", "purple", "green"), lwd = 2)
-
-##t_3
-
-limite_4 <- max(max(dens_fitsur_bio_t_3$y),max(dens_fitsur_cli_t_3$y),max(dens_fitsur_geo_t_3$y),
-                max(dens_fitsur_hyd_t_3$y),max(dens_fitsur_met_t_3$y))
-X11()
-plot(dens_fitsur_bio_t_3, main = "Kernel density of AR t_3", col ="blue",lwd=2,ylim=c(0,limite_4))
-lines(dens_fitsur_cli_t_3,col="tomato",lwd = 2)
-lines(dens_fitsur_geo_t_3,col="orange",lwd = 2)
-lines(dens_fitsur_hyd_t_3,col="purple",lwd = 2)
-lines(dens_fitsur_met_t_3,col="green",lwd = 2)
-legend("topright",legend = labels,col = c("blue", "tomato", "orange", "purple", "green"), lwd = 2)
-
-
-##t_4
-
-limite_5 <- max(max(dens_fitsur_bio_t_4$y),max(dens_fitsur_cli_t_4$y),max(dens_fitsur_geo_t_4$y),
-                max(dens_fitsur_hyd_t_4$y),max(dens_fitsur_met_t_4$y))
-X11()
-plot(dens_fitsur_bio_t_4, main = "Kernel density of AR t_4", col ="blue",lwd=2,ylim=c(0,limite_5))
-lines(dens_fitsur_cli_t_4,col="tomato",lwd = 2)
-lines(dens_fitsur_geo_t_4,col="orange",lwd = 2)
-lines(dens_fitsur_hyd_t_4,col="purple",lwd = 2)
-lines(dens_fitsur_met_t_4,col="green",lwd = 2)
-legend("topright",legend = labels,col = c("blue", "tomato", "orange", "purple", "green"), lwd = 2)
-
-
-
-
-## Manera mas facil de graficar.
+## La función de distribución acumulada de la densidad meterologica t_0 si es de la forma que deberia ser
 
 coef <- coef(get("fitsur_met"))[grep("t_0",names(coef(get("fitsur_met"))))]
 cdf <- ecdf(as.numeric(coef))
