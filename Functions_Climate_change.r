@@ -416,3 +416,35 @@ densidad_CAR <- function(x,countries){
 }
 
 #---------------------------------------------------------------------------------------#
+
+
+
+#---------------------------------- 12. grafico  ------------------------------------#
+# La siguiente función va a generar la densidad de los retornos acumulados. 
+#---------------------------------------------------------------------------------------#
+# ----Argumentos de entrada ----#
+#-- vector: un vector especifico que incluye el nombre del gráfico más los objetos a graficar
+#-- labels: leyenda del grafico
+#-- colors: colores de las lineas del gráfico
+# ----Argumentos de salida  ----#
+#-- NA. No retorna argumentos, más bien un gráfico que incluye las 5 densidades (biologico, climatológico
+#-- hidrologico, geologico, meteorologico).
+#---------------------------------------------------------------------------------------#
+
+grafico <- function(vector,labels, colors){
+  maximos <- c()
+  for(i in vector[2:length(vector)]){
+    maximos <- c(maximos, max(get(i)$y))
+  }
+  limite_y          <-  max(maximos)
+  
+  x11()
+  plot(get(vector[2]), main = vector[1], col = colors[1],lwd=2,ylim=c(0,limite_y))
+  for(i in 3:length(vector)){
+    lines(get(vector[i]),col=colors[i-1],lwd=2)
+  }
+  legend("topright",legend = labels,col = colors, lwd = 2)
+}
+#---------------------------------------------------------------------------------------#
+
+
