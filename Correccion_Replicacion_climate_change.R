@@ -238,7 +238,7 @@ Crecimiento_FDI <- muestra_paper(fdi_growth_base,dia)
 ### Dummies corregidas =====
 
 # Corremos la función create_dummies en el archivo que contiene las fechas de las dummies
-dummies <- create_dummies(paste0(Dir,"EMDATA_dummies.xlsx"))
+dummies <- create_dummies(paste0(Dir,"EMDATA_dummies_copia.xlsx")) # Dos archivos: EMDATA_dummies y EMDATA_dummies_copia
 
 #Para cada tipo de desastre lo guardamos en un xts distinto
 biological_dummies           <- dummies$`Biological_dummies_xts}`
@@ -472,7 +472,7 @@ vector_a_graficar <- c("Kernel density of CAR","densidad_CAR_bio","densidad_CAR_
                        "densidad_CAR_hyd", "densidad_CAR_met")
 
 grafico(vector_a_graficar,labels,colors)
-guardar(vector_a_graficar,labels,colors)
+#guardar(vector_a_graficar,labels,colors)
 
 #Para los AR_t_0 sería
 
@@ -480,7 +480,7 @@ vector_t_0 <- c("Kernel density of AR t_0", "dens_fitsur_bio_t_0","dens_fitsur_c
                  "dens_fitsur_hyd_t_0","dens_fitsur_met_t_0")
 
 grafico(vector_t_0,labels,colors)
-guardar(vector_t_0,labels,colors)
+#guardar(vector_t_0,labels,colors)
 
 #Para los AR_t_1 sería
 
@@ -488,7 +488,7 @@ vector_t_1 <- c("Kernel density of AR t_1", "dens_fitsur_bio_t_1","dens_fitsur_c
                 "dens_fitsur_hyd_t_1","dens_fitsur_met_t_1")
 
 grafico(vector_t_1,labels,colors)
-guardar(vector_t_1,labels,colors)
+#guardar(vector_t_1,labels,colors)
 
 #Para los AR_t_2 sería
 
@@ -496,7 +496,7 @@ vector_t_2 <- c("Kernel density of AR t_2", "dens_fitsur_bio_t_2","dens_fitsur_c
                 "dens_fitsur_hyd_t_2","dens_fitsur_met_t_2")
 
 grafico(vector_t_2,labels,colors)
-guardar(vector_t_2,labels,colors)
+#guardar(vector_t_2,labels,colors)
 
 #Para los AR_t_3 sería
 
@@ -504,7 +504,7 @@ vector_t_3 <- c("Kernel density of AR t_3", "dens_fitsur_bio_t_3","dens_fitsur_c
                 "dens_fitsur_hyd_t_3","dens_fitsur_met_t_3")
 
 grafico(vector_t_3,labels,colors)
-guardar(vector_t_3,labels,colors)
+#guardar(vector_t_3,labels,colors)
 
 #Para los AR_t_4 sería
 
@@ -512,7 +512,7 @@ vector_t_4 <- c("Kernel density of AR t_4", "dens_fitsur_bio_t_4","dens_fitsur_c
                 "dens_fitsur_hyd_t_4","dens_fitsur_met_t_4")
 
 grafico(vector_t_4,labels,colors)
-guardar(vector_t_4,labels,colors)
+#guardar(vector_t_4,labels,colors)
 
 
 ## La función de distribución acumulada de la densidad meterologica t_0 si es de la forma que deberia ser
