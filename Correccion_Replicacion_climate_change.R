@@ -267,7 +267,7 @@ interaction_biological <- interaction_function(biological_dummies)
 ### Dummies anteriores =====
 
 
-dummies <- create_dummies_xts(paste0(Dir,"EMDATA_dummies.xlsx"))
+dummies <- create_dummies_xts(paste0(Dir,"EMDATA_dummies_copia.xlsx"))
 
 climatological_dummies <- xts(dummies$`Climatological_dummies_xts}`,order.by = index(Retornos))
 meteorological_dummies <- xts(dummies$`Meteorological_dummies_xts}`,order.by = index(Retornos))
@@ -514,10 +514,30 @@ vector_t_4 <- c("Kernel density of AR t_4", "dens_fitsur_bio_t_4","dens_fitsur_c
 grafico(vector_t_4,labels,colors)
 #guardar(vector_t_4,labels,colors)
 
+if(0){
+  ## La función de distribución acumulada de la densidad meterologica t_0 si es de la forma que deberia ser
 
-## La función de distribución acumulada de la densidad meterologica t_0 si es de la forma que deberia ser
+  coef <- coef(get("fitsur_met"))[grep("t_0",names(coef(get("fitsur_met"))))]
+  cdf <- ecdf(as.numeric(coef))
+  plot(cdf,col="blue")
+}
 
-coef <- coef(get("fitsur_met"))[grep("t_0",names(coef(get("fitsur_met"))))]
-cdf <- ecdf(as.numeric(coef))
-plot(cdf,col="blue")
+if(0){
+  ## Grafico densidad retornos
 
+  countries_America        <- c("Brazil","Canada","Chile","Mexico","USA1","USA2")
+  countries_Europa_Este    <- c("Russia","Denmark","Turkey","Norway","Poland","Finland","Sweden")
+  countries_Europa_Oeste   <- c("UnitedKingdom","Switzerland","Germany","Spain","Netherlands","Belgium","France")
+  countries_Asia           <- c("Thailand","SouthKorea","India","Indonesia","HongKong")
+  countries_Africa_Oceania <- c("Australia","SouthAfrica")
+
+  vector_America        <- c("Densidad retornos America",paste0("Retornos$",countries_America))
+  vector_Europa_Este    <- c("Densidad retornos Europa del Este",paste0("Retornos$",countries_Europa_Este))
+  vector_Europa_Oeste   <- c("Densidad retornos Europa del Oeste",paste0("Retornos$",countries_Europa_Oeste))
+  vector_Asia           <- c("Densidad retornos Asia",paste0("Retornos$",countries_Asia))
+  vector_Africa_Oceania <- c("Densidad retornos Africa y Oceania",paste0("Retornos$",countries_Africa_Oceania))
+
+  colores <- c("blue","tomato","orange","purple","green","cyan","firebrick")
+
+  grafico(vector_America,countries_America,colores)
+} #Falta terminar el grafico, por eso el if(0)z
