@@ -235,7 +235,7 @@ colnames(fdi_growth_base) <- paste("gfdi",colnames(fdi_growth_base),sep="_")
 Crecimiento_PIB <- muestra_paper(gdp_growth_base,dia)
 Crecimiento_FDI <- muestra_paper(fdi_growth_base,dia)
 
-### Dummies =====
+### Dummies corregidas =====
 
 # Corremos la función create_dummies en el archivo que contiene las fechas de las dummies
 dummies <- create_dummies(paste0(Dir,"EMDATA_dummies.xlsx"))
@@ -263,6 +263,29 @@ interaction_meteorological <- interaction_function(meteorological_dummies)
 interaction_hydrological <- interaction_function(hydrological_dummies)
 interaction_geophysical <- interaction_function(geophysical_dummies)
 interaction_biological <- interaction_function(biological_dummies) 
+
+### Dummies anteriores =====
+
+
+dummies <- create_dummies_xts(paste0(Dir,"EMDATA_dummies.xlsx"))
+
+climatological_dummies <- xts(dummies$`Climatological_dummies_xts}`,order.by = index(Retornos))
+meteorological_dummies <- xts(dummies$`Meteorological_dummies_xts}`,order.by = index(Retornos))
+hydrological_dummies <- xts(dummies$`Hydrological_dummies_xts}`,order.by = index(Retornos))
+geophysical_dummies <- xts(dummies$`Geophysical_dummies_xts}`,order.by = index(Retornos))
+biological_dummies <- xts(dummies$`Biological_dummies_xts}`, order.by = index(Retornos))
+
+colnames(biological_dummies) <- paste("biological",colnames(biological_dummies),sep="_")
+colnames(meteorological_dummies) <- paste("meteorological",colnames(meteorological_dummies),sep="_")
+colnames(hydrological_dummies) <- paste("hydrological",colnames(hydrological_dummies),sep="_")
+colnames(geophysical_dummies) <- paste("geophysical",colnames(geophysical_dummies),sep="_")
+colnames(climatological_dummies) <- paste("climatological",colnames(climatological_dummies),sep="_")
+
+interaction_climatological <- interaction_function(climatological_dummies)
+interaction_meteorological <- interaction_function(meteorological_dummies)
+interaction_hydrological <- interaction_function(hydrological_dummies)
+interaction_geophysical <- interaction_function(geophysical_dummies)
+interaction_biological <- interaction_function(biological_dummies) ### hacer for
 
 ### Generacion de base de datos con las variables que serán usadas para la estimación ====
 
@@ -449,6 +472,7 @@ vector_a_graficar <- c("Kernel density of CAR","densidad_CAR_bio","densidad_CAR_
                        "densidad_CAR_hyd", "densidad_CAR_met")
 
 grafico(vector_a_graficar,labels,colors)
+guardar(vector_a_graficar,labels,colors)
 
 #Para los AR_t_0 sería
 
@@ -456,6 +480,7 @@ vector_t_0 <- c("Kernel density of AR t_0", "dens_fitsur_bio_t_0","dens_fitsur_c
                  "dens_fitsur_hyd_t_0","dens_fitsur_met_t_0")
 
 grafico(vector_t_0,labels,colors)
+guardar(vector_t_0,labels,colors)
 
 #Para los AR_t_1 sería
 
@@ -463,6 +488,7 @@ vector_t_1 <- c("Kernel density of AR t_1", "dens_fitsur_bio_t_1","dens_fitsur_c
                 "dens_fitsur_hyd_t_1","dens_fitsur_met_t_1")
 
 grafico(vector_t_1,labels,colors)
+guardar(vector_t_1,labels,colors)
 
 #Para los AR_t_2 sería
 
@@ -470,6 +496,7 @@ vector_t_2 <- c("Kernel density of AR t_2", "dens_fitsur_bio_t_2","dens_fitsur_c
                 "dens_fitsur_hyd_t_2","dens_fitsur_met_t_2")
 
 grafico(vector_t_2,labels,colors)
+guardar(vector_t_2,labels,colors)
 
 #Para los AR_t_3 sería
 
@@ -477,6 +504,7 @@ vector_t_3 <- c("Kernel density of AR t_3", "dens_fitsur_bio_t_3","dens_fitsur_c
                 "dens_fitsur_hyd_t_3","dens_fitsur_met_t_3")
 
 grafico(vector_t_3,labels,colors)
+guardar(vector_t_3,labels,colors)
 
 #Para los AR_t_4 sería
 
@@ -484,6 +512,7 @@ vector_t_4 <- c("Kernel density of AR t_4", "dens_fitsur_bio_t_4","dens_fitsur_c
                 "dens_fitsur_hyd_t_4","dens_fitsur_met_t_4")
 
 grafico(vector_t_4,labels,colors)
+guardar(vector_t_4,labels,colors)
 
 
 ## La función de distribución acumulada de la densidad meterologica t_0 si es de la forma que deberia ser
