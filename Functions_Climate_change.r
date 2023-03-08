@@ -432,19 +432,118 @@ densidad_CAR <- function(x,countries){
 #---------------------------------------------------------------------------------------#
 
 grafico <- function(vector,labels, colors){
-  maximos <- c()
+  maximo_y <- c()
+  minimo_x <- c()
+  maximo_x <- c()
   for(i in vector[2:length(vector)]){
-    maximos <- c(maximos, max(get(i)$y))
+    maximo_y <- c(maximo_y, max(get(i)$y))
+    minimo_x <- c(minimo_x, min(get(i)$x))
+    maximo_x <- c(maximo_x, max(get(i)$x))
   }
-  limite_y          <-  max(maximos)
+  limite_y          <-  max(maximo_y)
+  limite_min_x      <-  min(minimo_x)
+  limite_max_x      <-  max(maximo_x)
   
   x11()
-  plot(get(vector[2]), main = vector[1], col = colors[1],lwd=2,ylim=c(0,limite_y))
+  plot(get(vector[2]), main = vector[1], col = colors[1],lwd=2,ylim=c(0,limite_y),xlim=c(limite_min_x,limite_max_x))
   for(i in 3:length(vector)){
     lines(get(vector[i]),col=colors[i-1],lwd=2)
   }
   legend("topright",legend = labels,col = colors, lwd = 2)
+
 }
+#---------------------------------------------------------------------------------------#
+
+
+#---------------------------------- 12. guardar  ------------------------------------#
+# La siguiente función va a generar la densidad de los retornos acumulados y lo guarda en png
+#---------------------------------------------------------------------------------------#
+# ----Argumentos de entrada ----#
+#-- vector: un vector especifico que incluye el nombre del gráfico más los objetos a graficar
+#-- labels: leyenda del grafico
+#-- colors: colores de las lineas del gráfico
+# ----Argumentos de salida  ----#
+#-- NA. No retorna argumentos, más bien un gráfico que incluye las 5 densidades (biologico, climatológico
+#-- hidrologico, geologico, meteorologico).
+#---------------------------------------------------------------------------------------#
+
+guardar <- function(vector,labels, colors){
+  maximo_y <- c()
+  minimo_x <- c()
+  maximo_x <- c()
+  for(i in vector[2:length(vector)]){
+    maximo_y <- c(maximo_y, max(get(i)$y))
+    minimo_x <- c(minimo_x, min(get(i)$x))
+    maximo_x <- c(maximo_x, max(get(i)$x))
+  }
+  limite_y          <-  max(maximo_y)
+  limite_min_x      <-  min(minimo_x)
+  limite_max_x      <-  max(maximo_x)
+  
+  Folder <- paste0(getwd(),"/Imagenes")
+  png(paste(Folder, paste0(vector[1],".png"),sep="/"))
+  plot(get(vector[2]), main = vector[1], col = colors[1],lwd=2,ylim=c(0,limite_y),xlim=c(limite_min_x,limite_max_x))
+  for(i in 3:length(vector)){
+    lines(get(vector[i]),col=colors[i-1],lwd=2)
+  }
+  legend("topright",legend = labels,col = colors, lwd = 2)
+  dev.off()
+}
+#---------------------------------------------------------------------------------------#
+
+
+
+#---------------------------------- 13. create_dummies_xts  ------------------------------------#
+# La siguiente función genera las dummies sin tener  en cuenta los días hábiles 
+#---------------------------------------------------------------------------------------#
+# ----Argumentos de entrada ----#
+#-- excel_file: archivo de excel
+# ----Argumentos de salida  ----#
+#-- xts_dummies_list: lasta de objetos xts de las dummies
+#---------------------------------------------------------------------------------------#
+
+create_dummies_xts <- function(excel_file) {
+  # Get the names of all the sheets in the Excel file
+  sheet_names <- excel_sheets(excel_file)
+  
+  # Create an empty list to store the xts objects
+  xts_dummies_list <- list()
+  
+  # Loop through all the sheet names
+  for (sheet_name in sheet_names[1:length(sheet_names)]) {
+    # Read the current sheet into a data frame
+    current_sheet <- read.xlsx(excel_file, sheet = sheet_name, detectDates = TRUE)
+    
+    # Perform the necessary operations on the current sheet to create the xts object
+    dates <- index(Retornos)
+    dummies <- data.frame(t_0 = double(),t_1 = double(), t_2 = double(),t_3 = double(),t_4 = double())
+    for(i in 1:ncol(current_sheet)){
+      for(j in 1:nrow(Retornos)){
+        if(dates[j] %in% current_sheet[[i]]){
+          dummies[j,i] <- 1
+        }else if(!(dates[j] %in% current_sheet[[i]])){
+          dummies[j,i] <- 0
+        }
+      }
+    }
+    D <- c()
+    for(i in 1:nrow(dummies)){
+      if(sum(dummies[i,]) == 0){
+        D <- c(D,sum(dummies[i,]))
+      }else if(sum(dummies[i,]) != 0){
+        D <- c(D,sum(dummies[i,])/sum(dummies[i,])) 
+      }
+    }
+    xts_object <- as.xts(cbind(dummies,D), order.by = index(Retornos))
+    
+    # Use the sheet name to create a variable name for the xts object and store it in the list
+    xts_name <- paste0(sheet_name, "_dummies_xts}")
+    xts_dummies_list[[xts_name]] <- xts_object
+  }
+  # Return the list of xts objects
+  return(xts_dummies_list)
+}
+
 #---------------------------------------------------------------------------------------#
 
 
