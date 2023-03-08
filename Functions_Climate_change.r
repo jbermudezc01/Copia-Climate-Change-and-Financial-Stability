@@ -37,29 +37,30 @@ read_csv <- function(dir,countries) {
 }
 #------------------------------------------------------------------------------------#
 
+if(0){
 #---------------------------------- 2. moving_average  ------------------------------------#
-# Se crea una función que toma como argumento una base de datos, para la cual genera para cada columna
+# Esta funcióntoma como argumento una base de datos, para la cual genera para cada columna
 # el promedio movil de orden k.
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
-#-- x: el argumento denota una base de datos
-#-- k: el argumento denota el orden del promedio móvil
+#-- x: Nombre de la base de datos
+#-- k: Orden del promedio móvil
 # ----Argumentos de salida  ----#
-#-- mov_average_base: base de datos con el promedio movil de orden k de cada una de las columnas de la base x
+#-- mov_average_base: base de datos con el promedio movil de orden <k> de cada una de las columnas de la base <x>
 #---------------------------------------------------------------------------------------#
-
 moving_average <- function(x,k){
   mov_average_list <- list()
   for(column in 1:ncol(x)){
-    rolling_average <- rollmean(x[, column], k, align = "right")
+    rolling_average <- rollmean(x=x[, column], k=k, align="right")
     mov_average_list[[length(mov_average_list)+1]] <- rolling_average
   }
   mov_average_base <- do.call(merge, mov_average_list)
   return(mov_average_base)
 }
 #---------------------------------------------------------------------------------------#
+}
 
-
+if(0){
 #---------------------------------- 3. muestra_paper  ------------------------------------#
 # Se crea una función que reduzca la base de datos dependiendo del indice. Esta funcion toma un día en 
 # específico y tomará desde ese día en adelante para generar la base recortada.
@@ -79,7 +80,7 @@ muestra_paper <- function(obj,t){
 }
 
 #---------------------------------------------------------------------------------------#
-
+}
 
 #---------------------------------- 4. chow_lin ------------------------------------#
 # Se crea una función que genere la desagregacion temporal de una base de datos siguiendo el método de Chow-lin.
