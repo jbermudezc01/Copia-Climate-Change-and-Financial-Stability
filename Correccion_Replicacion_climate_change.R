@@ -1,8 +1,8 @@
+if(Sys.info()["sysname"]=='windows') Sys.setlocale("LC_TIME","English")
 
 rm(list = ls())
-setwd('C:/Users/jpber/OneDrive/Documents/Codigo_compartido_Melo/Climate_Change_and_Financial_Stability/Climate-Change-and-Financial-Stability')
-#setwd('/Users/lumelo/archivos/Climate-Change-and-Financial-Stability/Github/Climate-Change-and-Financial-Stability')
-
+#setwd('C:/Users/jpber/OneDrive/Documents/Codigo_compartido_Melo/Climate_Change_and_Financial_Stability/Climate-Change-and-Financial-Stability')
+setwd('/Users/lumelo/archivos/Climate-Change-and-Financial-Stability/Github/Climate-Change-and-Financial-Stability')
 
 cat("\014")
 
@@ -45,7 +45,7 @@ source('Functions_Climate_change.r')
 countries <- c("Australia","Belgium", "Brazil", "Canada", "Chile", "Denmark", "Finland",
                "France", "Germany", "HongKong", "India", "Indonesia","Mexico","Netherlands","Norway","Poland","Russia",
                "SouthAfrica","SouthKorea", "Spain", "Sweden","Switzerland","Thailand","Turkey", 
-               "UnitedKingdom","USA1","USA2")
+               "UnitedKingdom","USA1","USA2") #<<<--- Lista de los paises analizados
 
 # Establecemos el directorio de los datos
 Dir      = paste0(getwd(),'/Bases/') #Directorio de datos, se supone que el subdirectorio <Bases> existe
@@ -65,6 +65,8 @@ for (i in 1:nrow(base_test)) {
 # menos 3 mercados. Se utilizó la función weekdays() para comprobar que ningún dia fuese sábado o domingo.
 for (day in navalues) 
   base_test <- subset(base_test, subset = index(base_test) != day, drop = TRUE)
+if ((any(weekdays(index(base_test))=='Sunday' | weekdays(index(base_test))=='Saturday')) == TRUE) 
+  warning("En la base de datos hay sabados o domingos")
 
 # Interpolacion lineal de los datos faltantes
 base <- na.approx(base_test[,1])
@@ -82,33 +84,28 @@ base_retornos <- 100*diff(log(base_precios))[2:nrow(base_precios),]
 ### Otra variable importante es la media de los promedios moviles, por lo cual se genera el promedio movil de cada
 ### retorno de orden 22, ya que hay aproximadamente 22 dias para cada mes, usando la funcion moving_average.
 
-orden <- 22
-mov_average_base <- moving_average(base_retornos,orden)
+orden <- 22 #<<<---  Orden del promedio movil del indice global de largo plazo de los indices accionarios 
+#mov_average_base <- moving_average(base_retornos,orden)
+mov_average_base <- apply(base_retornos, MARGIN=2, FUN=rollmean, k=orden, align="right")
 
-#La variable que se usa en el paper es la media de los promedios. El procedimiento es generar un vector al cual
-#se le ira concatenando la media por cada dia, y luego generar un objeto xts con estos valores
-mean_mov_average <- c()
-for(row in 1:nrow(mov_average_base)){mean_mov_average <- c(mean_mov_average,mean(mov_average_base[row,]))}
-
-# El vector que incluye la media de los promedios moviles se convierte en xts
-mean_mov_average_xts <- xts(mean_mov_average,order.by = index(mov_average_base))
-colnames(mean_mov_average_xts) <- c("Mean_Returns_Moving_Averages")
+# Media de los anteriores promedios. 
+mean_mov_average = apply(mov_average_base, MARGIN=1, FUN=mean)
+mean_mov_average = xts(mean_mov_average, order.by=index(base_retornos)[-c(1:(orden-1))]) #-> XTS
+colnames(mean_mov_average) = c("Mean_Returns_Moving_Averages") # Nombre de la variable
 
 #Hay que tener en cuenta que la muestra que se utiliza en el paper no es la misma que la que se tiene en las bases,
 #por lo que se reduce la base para los datos del febrero 08 2001 a diciembre 30 2019.
 #La funcion muestra_paper va a seleccionar desde un cierto dia, el cual elegimos 08 febrero 2001
 #siguiendo el paper.
 
-dia <- "2001-02-08"
+dia.inicial <- "2001-02-08"   #<<<--- Dia inicial de la muestra
 
-#Utilizamos la funcion para las bases
-Retornos <- muestra_paper(base_retornos,dia)
-Promedio_movil <- muestra_paper(mean_mov_average_xts,dia)
+# Se obliga que la muestra comience en <dia.inicial>
+Retornos       = base_retornos[paste0(dia.inicial,"/"),]
+Promedio_movil = mean_mov_average[paste0(dia.inicial,"/")]
 
 ### Table 1 de Pagnottoni: Estadistica descriptivas ===============
-
-## Generar skewness, kurtosis, mean, max, min, sd
-
+## Generar (skewness, kurtosis, mean, max, min, sd) de los retornos de los indices acc. 
 skewness <- moments::skewness(Retornos)
 kurtosis <- kurtosis(Retornos)
 mean     <- apply(Retornos, MARGIN=2, FUN=mean)
@@ -117,68 +114,58 @@ min      <- apply(Retornos, MARGIN=2, FUN=min)
 sd       <- apply(Retornos, MARGIN=2, FUN=sd)
 
 Stats = cbind(min,max,mean,sd,skewness,kurtosis )
-
 print(Stats, digits=3)
 
 ### Desagregacion temporal ====
-# Las siguientes variables a agregar es el crecimiento del PIB y el crecimiento del FDI diarios, por lo que es 
-# necesario hacer desagregacion temporal.
+# Las variables a desagregar diariamente son el crecimiento del GDP trimestral y el crecimiento del FDI anual.
 
-
-### DATOS para GDP trimestral ====
-
+### Datos para GDP trimestral ====
 #Leer la base de datos, establecer el formato fecha y generar la base de datos en xts y la lista a ser desagregada
 gdp_countries     <- read.csv(paste0(Dir,"GDP_COUNTRIES.csv"), header = TRUE, sep = ";") 
-dates             <- as.Date(as.yearqtr(gdp_countries$Time)) #date format 
-gdp_countries_xts <- xts(gdp_countries[-1], order.by = dates)
-quarterly_series  <- series_list_function(gdp_countries_xts)
+dates             <- as.Date(as.yearqtr(gdp_countries$Time)) #date format, se supone que existe una col llamada <Time> 
+#gdp_countries_xts <- xts(gdp_countries[,-1], order.by = dates) #Se quita la columna <Time>, se supone que esta de primeras
+#quarterly_series  <- series_list_function(gdp_countries_xts)
+quarterly_series  <- as.list(gdp_countries[,-1]) #Se quita la columna de fechas y se genera una lista de sus columnas
 
 ### Matriz de agregacion GDP trimestral =============================================================================
 
-# El metodo de chow-lin requiere una matriz de agregacion. Sin embargo, en el metodo fast se tiene en cuenta las 
+# El metodo de chow-lin requiere una matriz de agregacion. Sin embargo, en la version fast se tiene en cuenta las 
 # diferencias de dias que puede haber en cada mes. Por tanto, es necesario crear una matriz de agregacion que 
 # tenga lo anterior en cuenta. 
 
-
-nrows <- length(quarterly_series$australia)   ## Hay 76 trimestres en la base de datos, numero de datos trimestrales
-ncols <- nrow(base_precios)   ## Dias de los cuales tenemos precios, el retorno sera un dato menos, pero a este
-## al tomarle diferencia para el crecimiento tambien perdera un dato
+nrows <- length(quarterly_series[[1]])   ## Hay 76 trimestres en la base de datos, numero de datos trimestrales
+ncols <- nrow(base_precios)   ## No. de dias, con los retornos se pierde un dato, y
+                              ## al tomarle diferencias se perdera otro dato
 
 qtr_agr <- matrix(0, nrow = nrows, ncol = ncols) #matriz de agregacion 
-
-dates <- as.character(index(base_precios))
+dates   <- as.character(index(base_precios))
 
 ## Extrae los meses en formato yyyy-mm sin repeticiones.
 meses <- unique(substr(dates,1,7))
 
 #Realizamos la matriz de agregacion usando la funcion days. En este caso los enteros i iran de 0 a 75, 
 # y de acuerdo con la función esto generara el primer a tercer mes de cada trimestre. (Explicar mejor)
-for(i in 0:(nrows-1)){
+for(i in 0:(nrows-1))
   qtr_agr <- days(i, qtr_agr,meses)
-}
 
 
 ### Ahora sigamos con la solucion de Chow Lin. 
 #Para poder usar la funcion, necesitamos el vector, alpha y la matriz de var covar
 
 vec_cte <- c(rep(1, ncols)) ## vector constante
-alpha_fast = 0.99999
+alpha_fast = 0.99999 #<<---- Parametro de la version fast de chow-Lin
 
-#generar la matriz de var- cov de acuerdo al paper analizado
-matriz_var_cov_0 <- matrix(0,nrow = ncols,ncol=ncols)
+#generar la matriz de var-cov de acuerdo al paper analizado
+matriz_var_cov_0 <- matrix(0, nrow=ncols, ncol=ncols)
 for(i in 1:ncols){
   matriz_var_cov_0[i, i] <- 1
   for(j in 1:ncols){
-    if(j != i){
-      exp <- abs(j-i)
-      matriz_var_cov_0[i, j] = alpha_fast^exp
-    }
+    if(j != i) matriz_var_cov_0[i, j] = alpha_fast^(abs(j-i))
   }
 } ##Crear la matriz de var-cov
 
 ## Usamos la funcion, lo que da una lista de las series desagregadas, y posteriormente las juntamos en una base
-
-gdp_growth_base <- chow_lin(quarterly_series,qtr_agr,vec_cte,alpha_fast,matriz_var_cov_0)
+gdp_growth_base <- chow_lin(quarterly_series, qtr_agr, vec_cte, alpha_fast, matriz_var_cov_0)
 
 #Colocamos de nombres de las columnas los paises
 names <- colnames(base_retornos)
