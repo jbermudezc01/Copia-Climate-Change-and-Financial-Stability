@@ -1,14 +1,15 @@
-if(Sys.info()["sysname"]=='windows') Sys.setlocale("LC_TIME","English")
+if(Sys.info()["sysname"]=='Windows') Sys.setlocale("LC_TIME","English")
 
 rm(list = ls())
-#setwd('C:/Users/jpber/OneDrive/Documents/Codigo_compartido_Melo/Climate_Change_and_Financial_Stability/Climate-Change-and-Financial-Stability')
-setwd('/Users/lumelo/archivos/Climate-Change-and-Financial-Stability/Github/Climate-Change-and-Financial-Stability')
+setwd('C:/Users/jpber/OneDrive/Documents/Codigo_compartido_Melo/Climate_Change_and_Financial_Stability/Climate-Change-and-Financial-Stability')
+#setwd('/Users/lumelo/archivos/Climate-Change-and-Financial-Stability/Github/Climate-Change-and-Financial-Stability')
 
 cat("\014")
 
 ### Libraries ====
 
 library(lubridate)
+library(ggplot2)
 library(xts)
 library(tidyr)
 library(timeDate)
@@ -35,6 +36,7 @@ library(smoots)
 library(dynlm)
 library(systemfit)
 library(ks)
+library(gridExtra)
 
 #--- Carga de funciones ---#
 source('Functions_Climate_change.r')
@@ -121,11 +123,11 @@ print(Stats, digits=3)
 
 ### Datos para GDP trimestral ====
 #Leer la base de datos, establecer el formato fecha y generar la base de datos en xts y la lista a ser desagregada
-gdp_countries     <- read.csv(paste0(Dir,"GDP_COUNTRIES.csv"), header = TRUE, sep = ";") 
-dates             <- as.Date(as.yearqtr(gdp_countries$Time)) #date format, se supone que existe una col llamada <Time> 
+gdp_countries      <- read.csv(paste0(Dir,"GDP_COUNTRIES.csv"), header = TRUE, sep = ";") 
+dates              <- as.Date(as.yearqtr(gdp_countries$Time)) #date format, se supone que existe una col llamada <Time> 
 #gdp_countries_xts <- xts(gdp_countries[,-1], order.by = dates) #Se quita la columna <Time>, se supone que esta de primeras
 #quarterly_series  <- series_list_function(gdp_countries_xts)
-quarterly_series  <- as.list(gdp_countries[,-1]) #Se quita la columna de fechas y se genera una lista de sus columnas
+quarterly_series   <- as.list(gdp_countries[,-1]) #Se quita la columna de fechas y se genera una lista de sus columnas
 
 ### Matriz de agregacion GDP trimestral =============================================================================
 
@@ -146,13 +148,13 @@ meses <- unique(substr(dates,1,7))
 #Realizamos la matriz de agregacion usando la funcion days. En este caso los enteros i iran de 0 a 75, 
 # y de acuerdo con la función esto generara el primer a tercer mes de cada trimestre. (Explicar mejor)
 for(i in 0:(nrows-1))
-  qtr_agr <- days(i, qtr_agr,meses)
+  qtr_agr <- days(i, qtr_agr,meses,dates)
 
 
 ### Ahora sigamos con la solucion de Chow Lin. 
 #Para poder usar la funcion, necesitamos el vector, alpha y la matriz de var covar
 
-vec_cte <- c(rep(1, ncols)) ## vector constante
+vec_cte <- c(rep(1, ncols)) ## vector constante, dado que no tenemos variable indicadora
 alpha_fast = 0.99999 #<<---- Parametro de la version fast de chow-Lin
 
 #generar la matriz de var-cov de acuerdo al paper analizado
@@ -219,8 +221,8 @@ colnames(fdi_growth_base) <- paste("gfdi",colnames(fdi_growth_base),sep="_")
 #Por otro lado, tambien es necesario reducir la muestra a las bases para que concuerden con la muestra de paper
 #Podemos usar la funcion que estaba anteriormente especificada
 
-Crecimiento_PIB <- muestra_paper(gdp_growth_base,dia)
-Crecimiento_FDI <- muestra_paper(fdi_growth_base,dia)
+Crecimiento_PIB <- gdp_growth_base[paste0(dia.inicial,"/"),]
+Crecimiento_FDI <- fdi_growth_base[paste0(dia.inicial,"/"),]
 
 ### Dummies corregidas =====
 
@@ -251,29 +253,30 @@ interaction_hydrological <- interaction_function(hydrological_dummies)
 interaction_geophysical <- interaction_function(geophysical_dummies)
 interaction_biological <- interaction_function(biological_dummies) 
 
+if(0){
 ### Dummies anteriores =====
 
 
-dummies <- create_dummies_xts(paste0(Dir,"EMDATA_dummies_copia.xlsx"))
+  dummies <- create_dummies_xts(paste0(Dir,"EMDATA_dummies_copia.xlsx"))
 
-climatological_dummies <- xts(dummies$`Climatological_dummies_xts}`,order.by = index(Retornos))
-meteorological_dummies <- xts(dummies$`Meteorological_dummies_xts}`,order.by = index(Retornos))
-hydrological_dummies <- xts(dummies$`Hydrological_dummies_xts}`,order.by = index(Retornos))
-geophysical_dummies <- xts(dummies$`Geophysical_dummies_xts}`,order.by = index(Retornos))
-biological_dummies <- xts(dummies$`Biological_dummies_xts}`, order.by = index(Retornos))
+  climatological_dummies <- xts(dummies$`Climatological_dummies_xts}`,order.by = index(Retornos))
+  meteorological_dummies <- xts(dummies$`Meteorological_dummies_xts}`,order.by = index(Retornos))
+  hydrological_dummies <- xts(dummies$`Hydrological_dummies_xts}`,order.by = index(Retornos))
+  geophysical_dummies <- xts(dummies$`Geophysical_dummies_xts}`,order.by = index(Retornos))
+  biological_dummies <- xts(dummies$`Biological_dummies_xts}`, order.by = index(Retornos))
 
-colnames(biological_dummies) <- paste("biological",colnames(biological_dummies),sep="_")
-colnames(meteorological_dummies) <- paste("meteorological",colnames(meteorological_dummies),sep="_")
-colnames(hydrological_dummies) <- paste("hydrological",colnames(hydrological_dummies),sep="_")
-colnames(geophysical_dummies) <- paste("geophysical",colnames(geophysical_dummies),sep="_")
-colnames(climatological_dummies) <- paste("climatological",colnames(climatological_dummies),sep="_")
+  colnames(biological_dummies) <- paste("biological",colnames(biological_dummies),sep="_")
+  colnames(meteorological_dummies) <- paste("meteorological",colnames(meteorological_dummies),sep="_")
+  colnames(hydrological_dummies) <- paste("hydrological",colnames(hydrological_dummies),sep="_")
+  colnames(geophysical_dummies) <- paste("geophysical",colnames(geophysical_dummies),sep="_")
+  colnames(climatological_dummies) <- paste("climatological",colnames(climatological_dummies),sep="_")
 
-interaction_climatological <- interaction_function(climatological_dummies)
-interaction_meteorological <- interaction_function(meteorological_dummies)
-interaction_hydrological <- interaction_function(hydrological_dummies)
-interaction_geophysical <- interaction_function(geophysical_dummies)
-interaction_biological <- interaction_function(biological_dummies) ### hacer for
-
+  interaction_climatological <- interaction_function(climatological_dummies)
+  interaction_meteorological <- interaction_function(meteorological_dummies)
+  interaction_hydrological <- interaction_function(hydrological_dummies)
+  interaction_geophysical <- interaction_function(geophysical_dummies)
+  interaction_biological <- interaction_function(biological_dummies) ### hacer for
+}
 ### Generacion de base de datos con las variables que serán usadas para la estimación ====
 
 Date <- as.character(index(Retornos))
@@ -361,7 +364,7 @@ if(0){
 
 for(country in countries){
   var_name <- paste0("lags_reduced_",country)
-  lags <- lag_function(country)
+  lags <- lag_function(country,AR.m=20, MA.m=0, d=0, bool=TRUE, metodo="CSS")
   assign(var_name,lags)
 }
 
@@ -373,7 +376,7 @@ for(country in countries){
 
 eqsystem = list()
 
-disasters_exo = c("bio_exo","cli_exo","hyd_exo","geo_exo","met_exo") 
+disasters_exo = c("bio_exo","cli_exo","hyd_exo","geo_exo","met_exo")  #<<<--- vector con tipos de desastres, son matrices definidas arriba
 
 # El siguiente for genera una estimacion para cada uno de los 5 tipos de desastres, los cuales tomaran
 # los nombres de fitsur_bio, fitsur_cli, fitsur_hyd, fitsur_geo, fitsur_met.
@@ -395,7 +398,7 @@ for(disaster in disasters_exo){
 # el dia siguiente en t_1, dos dias despues t_2, y asi hasta llegar a t_4. Por otro lado, tambien 
 # generamos una lista con los modelos estimados que tenemos
 
-steps <- c("t_0","t_1","t_2","t_3","t_4")
+steps <- c("t_0","t_1","t_2","t_3","t_4")  #<<<--- vector con los días adelante del evento, hace referencia a como termina el nombre de las dummies
 
 ## El siguiente ciclo genera la densidad Kernel de los coeficientes para cada tipo de desastre 
 ## y para todos los t_0, t_1 ...
@@ -451,55 +454,48 @@ densidad_CAR_met <- densidad_CAR(coef_vec_fitsur_met,countries)
 #El segundo argumento será labels, que indica las leyendas
 #El tercero es un vector con cinco colores.
 
-labels <- c("Biological","Climatological","Geophysical","Hydrological","Meteorological")
-colors <- c("blue", "tomato", "orange", "purple", "green")
+labels <- c("Biological","Climatological","Geophysical","Hydrological","Meteorological")  #<<<--- leyendas del grafico
+colors <- c("blue", "tomato", "orange", "purple", "green")   #<<<--- colores que usara la grafica
 
 # Para los CAR el vector sería
-vector_a_graficar <- c("Kernel density of CAR","densidad_CAR_bio","densidad_CAR_cli","densidad_CAR_geo",
-                       "densidad_CAR_hyd", "densidad_CAR_met")
+main_car   <- "Kernel denisty of CAR"  #<<<--- título para la gráfica
+vector_car <- c("densidad_CAR_bio","densidad_CAR_cli","densidad_CAR_geo","densidad_CAR_hyd", 
+                "densidad_CAR_met") #<<<---vector de elementos a graficar
+grafico_densidad(vector_car,main_car,labels,colors)
 
-grafico(vector_a_graficar,labels,colors)
-#guardar(vector_a_graficar,labels,colors)
 
 #Para los AR_t_0 sería
+main_t_0   <- "Kernel density of AR t_0"  #<<<--- título para la gráfica
+vector_t_0 <- c("dens_fitsur_bio_t_0","dens_fitsur_cli_t_0","dens_fitsur_geo_t_0",
+                 "dens_fitsur_hyd_t_0","dens_fitsur_met_t_0") #<<<---vector de elementos a graficar
+grafico_densidad(vector_t_0,main_t_0,labels,colors)
 
-vector_t_0 <- c("Kernel density of AR t_0", "dens_fitsur_bio_t_0","dens_fitsur_cli_t_0","dens_fitsur_geo_t_0",
-                 "dens_fitsur_hyd_t_0","dens_fitsur_met_t_0")
-
-grafico(vector_t_0,labels,colors)
-#guardar(vector_t_0,labels,colors)
 
 #Para los AR_t_1 sería
+main_t_1   <- "Kernel density of AR t_1"  #<<<--- título para la gráfica
+vector_t_1 <- c("dens_fitsur_bio_t_1","dens_fitsur_cli_t_1","dens_fitsur_geo_t_1",
+                "dens_fitsur_hyd_t_1","dens_fitsur_met_t_1") #<<<---vector de elementos a graficar
+grafico_densidad(vector_t_1,main_t_1,labels,colors)
 
-vector_t_1 <- c("Kernel density of AR t_1", "dens_fitsur_bio_t_1","dens_fitsur_cli_t_1","dens_fitsur_geo_t_1",
-                "dens_fitsur_hyd_t_1","dens_fitsur_met_t_1")
-
-grafico(vector_t_1,labels,colors)
-#guardar(vector_t_1,labels,colors)
 
 #Para los AR_t_2 sería
-
-vector_t_2 <- c("Kernel density of AR t_2", "dens_fitsur_bio_t_2","dens_fitsur_cli_t_2","dens_fitsur_geo_t_2",
-                "dens_fitsur_hyd_t_2","dens_fitsur_met_t_2")
-
-grafico(vector_t_2,labels,colors)
-#guardar(vector_t_2,labels,colors)
+main_t_2   <- "Kernel density of AR t_2"  #<<<--- título para la gráfica
+vector_t_2 <- c("dens_fitsur_bio_t_2","dens_fitsur_cli_t_2","dens_fitsur_geo_t_2",
+                "dens_fitsur_hyd_t_2","dens_fitsur_met_t_2") #<<<---vector de elementos a graficar
+grafico_densidad(vector_t_2,main_t_2,labels,colors)
 
 #Para los AR_t_3 sería
-
-vector_t_3 <- c("Kernel density of AR t_3", "dens_fitsur_bio_t_3","dens_fitsur_cli_t_3","dens_fitsur_geo_t_3",
-                "dens_fitsur_hyd_t_3","dens_fitsur_met_t_3")
-
-grafico(vector_t_3,labels,colors)
-#guardar(vector_t_3,labels,colors)
+main_t_3   <- "Kernel density of AR t_3"  #<<<--- título para la gráfica
+vector_t_3 <- c("dens_fitsur_bio_t_3","dens_fitsur_cli_t_3","dens_fitsur_geo_t_3",
+                "dens_fitsur_hyd_t_3","dens_fitsur_met_t_3") #<<<---vector de elementos a graficar
+grafico_densidad(vector_t_3,main_t_3,labels,colors)
 
 #Para los AR_t_4 sería
+main_t_4   <- "Kernel density of AR t_4"  #<<<--- título para la gráfica
+vector_t_4 <- c("dens_fitsur_bio_t_4","dens_fitsur_cli_t_4","dens_fitsur_geo_t_4",
+                "dens_fitsur_hyd_t_4","dens_fitsur_met_t_4") #<<<---vector de elementos a graficar
+grafico_densidad(vector_t_4,main_t_4,labels,colors)
 
-vector_t_4 <- c("Kernel density of AR t_4", "dens_fitsur_bio_t_4","dens_fitsur_cli_t_4","dens_fitsur_geo_t_4",
-                "dens_fitsur_hyd_t_4","dens_fitsur_met_t_4")
-
-grafico(vector_t_4,labels,colors)
-#guardar(vector_t_4,labels,colors)
 
 if(0){
   ## La función de distribución acumulada de la densidad meterologica t_0 si es de la forma que deberia ser
@@ -509,22 +505,142 @@ if(0){
   plot(cdf,col="blue")
 }
 
-if(0){
-  ## Grafico densidad retornos
+## Graficos A.3 de densidad de los retornos =======
+  
+colores <- c("blue","tomato","orange","purple","green","cyan","firebrick") #<<<--- colores para grafica de retornos
 
-  countries_America        <- c("Brazil","Canada","Chile","Mexico","USA1","USA2")
-  countries_Europa_Este    <- c("Russia","Denmark","Turkey","Norway","Poland","Finland","Sweden")
-  countries_Europa_Oeste   <- c("UnitedKingdom","Switzerland","Germany","Spain","Netherlands","Belgium","France")
-  countries_Asia           <- c("Thailand","SouthKorea","India","Indonesia","HongKong")
-  countries_Africa_Oceania <- c("Australia","SouthAfrica")
+densidad_retornos <- apply(Retornos, MARGIN = 2, FUN = density)
 
-  vector_America        <- c("Densidad retornos America",paste0("Retornos$",countries_America))
-  vector_Europa_Este    <- c("Densidad retornos Europa del Este",paste0("Retornos$",countries_Europa_Este))
-  vector_Europa_Oeste   <- c("Densidad retornos Europa del Oeste",paste0("Retornos$",countries_Europa_Oeste))
-  vector_Asia           <- c("Densidad retornos Asia",paste0("Retornos$",countries_Asia))
-  vector_Africa_Oceania <- c("Densidad retornos Africa y Oceania",paste0("Retornos$",countries_Africa_Oceania))
+# Para utilizar la función grafico_retornos necesitamos un vector con los paises de cada continente, mas un
+# titulo para el grafico y un vector de leyendas, el cual será el nombre del índice de cada país
 
-  colores <- c("blue","tomato","orange","purple","green","cyan","firebrick")
+# Para America seria:
+main_America      <- "Densidad retornos America" #<<<--- título para la gráfica
+countries_America <- c("Brazil","Chile","USA1","USA2","Canada","Mexico")  #<<<--- vector de paises que pertencen al continente
+labels_America    <- c("Bovespa","S&P CLX IPSA","NASDAQ Composite","Nasdaq 100","S&P TSX Composite",
+                       "S&P BMV IPC") #<<<--- leyendas, indices de cada pais del continente
+grafico_retornos(densidad_retornos,countries_America,main_America,labels_America,colores)
 
-  grafico(vector_America,countries_America,colores)
-} #Falta terminar el grafico, por eso el if(0)z
+# Para Europa del Este:
+main_Europa_Este      <- "Densidad retornos Europa del Este" #<<<--- título para la gráfica
+countries_Europa_Este <- c("Russia","Denmark","Turkey","Norway","Poland","Finland","Sweden") #<<<--- vector de paises que pertencen al continente
+labels_Europa_Este    <- c("Moex Russia","OMX Copenhagen 20","BIST 100","OSE Benchmark","WIG20",
+                           "OMX Helsinki 25","OMX Stockholm 30") #<<<--- leyendas, indices de cada pais del continente
+grafico_retornos(densidad_retornos,countries_Europa_Este,main_Europa_Este,labels_Europa_Este,colores)
+
+# Para Europa del Oeste
+main_Europa_Oeste      <- "Densidad retornos Europa del Oeste"  #<<<--- título para la gráfica
+countries_Europa_Oeste <- c("UnitedKingdom","Switzerland","Germany","Spain","Netherlands","Belgium","France") #<<<--- vector de paises que pertencen al continente
+labels_Europa_Oeste    <- c("FTSE 100","SMI","DAX","IBEX 35","AEX","BEL 20","CAC 40") #<<<--- leyendas, indices de cada pais del continente
+grafico_retornos(densidad_retornos,countries_Europa_Oeste,main_Europa_Oeste,labels_Europa_Oeste,colores)
+
+#Para Asia
+main_Asia      <- "Densidad retornos Asia" #<<<--- título para la gráfica
+countries_Asia <- c("Thailand","SouthKorea","India","Indonesia","HongKong") #<<<--- vector de paises que pertencen al continente
+labels_Asia    <- c("SET Index","KOSPI","Nifty 50","Jakarta Stock Exchange","Hang Seng") #<<<--- leyendas, indices de cada pais del continente
+grafico_retornos(densidad_retornos,countries_Asia,main_Asia,labels_Asia,colores)
+
+#Para Africa y Oceania
+main_Africa_Oceania      <- "Densidad retornos Africa y Oceania" #<<<--- título para la gráfica
+countries_Africa_Oceania <- c("SouthAfrica","Australia")  #<<<--- vector de paises que pertencen al continente
+labels_Africa_Oceania    <- c("South Africa Top 40","S&P ASX 200") #<<<--- leyendas, indices de cada pais del continente
+grafico_retornos(densidad_retornos,countries_Africa_Oceania,main_Africa_Oceania,labels_Africa_Oceania,colores)
+
+## Grafico 3 Pagnottoni. AR estimates
+
+# Para el grafico, Pagnottoni tiene un orden específico, por lo cual toca especificarlo
+
+pagn_orden <- c("Thailand",	"Russia", "SouthKorea", "India", "Indonesia", "Brazil", "Chile", "HongKong", 
+                "USA1", "USA2", "Canada", "Mexico", "SouthAfrica", "Denmark", "Turkey", "Norway", 
+                "Poland", "Finland", "UnitedKingdom", "Australia", "Sweden", "Switzerland", "Germany", 
+                "Spain", "Netherlands", "Belgium", "France") #<<<--- países en el orden que aparece en la gráfica #3
+
+labels_grafico <- c("SET Index", "MOEX Russia", "KOSPI", "Nifty 50", "Jakarta Stock Exchange", "Bovespa", 
+                    "S&P CLX IPSA", "Hang Seng", "NASDAQ Composite", "Nasdaq 100", "S&P TSX Composite", "S&P BMV IPC", 
+                    "South Africa Top 40", "OMX Copenhagen 20", "BIST 100", "OSE Benchmark", "WIG20", "OMX Helsinki 25", 
+                    "FTSE 100", "S&P ASX 200", "OMX Stockholm 30", "SMI", "DAX", 
+                    "IBEX 35", "AEX", "BEL 20", "CAC 40") #<<<--- indices en el orden que aparece en la gráfica #3
+
+## Para biological
+ar_data       <- coef_vec_fitsur_bio[paste0(rep(pagn_orden,each=5),paste0("_exobiological_",steps))] ##ordenar
+group         <- rep(labels_grafico,each=5) ## Variable que va a agrupar en grupos de a 5 los datos (porque cada 5 es un indice distinto)
+ar_data_frame <- data.frame(values = ar_data, 
+                            group=group,
+                            subgroup =steps)
+ar_data_frame$group <- factor(ar_data_frame$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica grupo
+
+x11()
+ggplot(ar_data_frame, aes(x=group,y=values,fill=subgroup))+
+  geom_bar(stat="identity", position="dodge", width=0.7) +
+  scale_fill_manual(values=c("blue", "red", "yellow","purple","green")) +
+  labs(x="index",y="Abnormal return",title="Biological") +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10))
+
+## Para climatological
+ar_data      <- coef_vec_fitsur_cli[paste0(rep(pagn_orden,each=5),paste0("_exoclimatological_",steps))] ##ordenar
+group         <- rep(labels_grafico,each=5) ## Variable que va a agrupar en grupos de a 5 los datos (porque cada 5 es un indice distinto)
+ar_data_frame <- data.frame(values = ar_data, 
+                            group=group,
+                            subgroup =steps)
+ar_data_frame$group <- factor(ar_data_frame$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica grupo
+
+x11()
+ggplot(ar_data_frame, aes(x=group,y=values,fill=subgroup))+
+  geom_bar(stat="identity", position="dodge", width=0.7) +
+  scale_fill_manual(values=c("blue", "red", "yellow","purple","green")) +
+  labs(x="index",y="Abnormal return",title="Climatological") +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10))
+
+
+## Para geological
+
+ar_data      <- coef_vec_fitsur_geo[paste0(rep(pagn_orden,each=5),paste0("_exogeophysical_",steps))] ##ordenar
+group         <- rep(labels_grafico,each=5) ## Variable que va a agrupar en grupos de a 5 los datos (porque cada 5 es un indice distinto)
+ar_data_frame <- data.frame(values = ar_data, 
+                            group=group,
+                            subgroup =steps)
+ar_data_frame$group <- factor(ar_data_frame$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica grupo
+
+x11()
+ggplot(ar_data_frame, aes(x=group,y=values,fill=subgroup))+
+  geom_bar(stat="identity", position="dodge", width=0.7) +
+  scale_fill_manual(values=c("blue", "red", "yellow","purple","green")) +
+  labs(x="index",y="Abnormal return",title="Geophysical") +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10))
+
+## Para hydrological
+
+ar_data      <- coef_vec_fitsur_hyd[paste0(rep(pagn_orden,each=5),paste0("_exohydrological_",steps))] ##ordenar
+group         <- rep(labels_grafico,each=5) ## Variable que va a agrupar en grupos de a 5 los datos (porque cada 5 es un indice distinto)
+ar_data_frame <- data.frame(values = ar_data, 
+                            group=group,
+                            subgroup =steps)
+ar_data_frame$group <- factor(ar_data_frame$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica grupo
+
+x11()
+ggplot(ar_data_frame, aes(x=group,y=values,fill=subgroup))+
+  geom_bar(stat="identity", position="dodge", width=0.7) +
+  scale_fill_manual(values=c("blue", "red", "yellow","purple","green")) +
+  labs(x="index",y="Abnormal return",title="Hydrological") +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10))
+
+## Para meteorological
+
+ar_data      <- coef_vec_fitsur_met[paste0(rep(pagn_orden,each=5),paste0("_exometeorological_",steps))] ##ordenar
+group         <- rep(labels_grafico,each=5) ## Variable que va a agrupar en grupos de a 5 los datos (porque cada 5 es un indice distinto)
+ar_data_frame <- data.frame(values = ar_data, 
+                            group=group,
+                            subgroup =steps)
+ar_data_frame$group <- factor(ar_data_frame$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica grupo
+
+x11()
+ggplot(ar_data_frame, aes(x=group,y=values,fill=subgroup))+
+  geom_bar(stat="identity", position="dodge", width=0.7) +
+  scale_fill_manual(values=c("blue", "red", "yellow","purple","green")) +
+  labs(x="index",y="Abnormal return",title="Meteorological") +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10))
