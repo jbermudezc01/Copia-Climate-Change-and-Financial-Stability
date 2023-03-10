@@ -594,7 +594,7 @@ ggplot(ar_data_frame, aes(x=group,y=values,fill=subgroup))+
         axis.text.x = element_text(angle = 45, hjust = 1, size = 10))
 
 
-## Para geological
+## Para geophysical
 
 ar_data      <- coef_vec_fitsur_geo[paste0(rep(pagn_orden,each=5),paste0("_exogeophysical_",steps))] ##ordenar
 group         <- rep(labels_grafico,each=5) ## Variable que va a agrupar en grupos de a 5 los datos (porque cada 5 es un indice distinto)
@@ -642,5 +642,112 @@ ggplot(ar_data_frame, aes(x=group,y=values,fill=subgroup))+
   geom_bar(stat="identity", position="dodge", width=0.7) +
   scale_fill_manual(values=c("blue", "red", "yellow","purple","green")) +
   labs(x="index",y="Abnormal return",title="Meteorological") +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10))
+
+
+## Grafico A.4 Pagnottoni, t-tests ======
+
+#Primero necesitamos el valor de los estadísticos t
+
+for(model in fitted_models){
+  #Vamos a generar una lista para cada modelo
+  tests <- summary(get(model))$coefficients[, "t value"]
+  var_name <- paste0("t_test_",model)
+  t_test <- c()
+  for(step in steps){
+    #reunimos los coeficientes en coefs
+    
+    #seleccionamos solamente los coeficientes que acaben con step y lo añadimos a t_test
+    interest_indices <- grep(step,names(tests))
+    interest_tests <- tests[interest_indices]
+    t_test <- c(t_test, interest_tests)
+  }
+  # al final asignamos t_test al nombre especifico por modelo.
+  assign(var_name, t_test)
+}
+
+#Para biological
+
+ar_data       <- t_test_fitsur_bio[paste0(rep(pagn_orden,each=5),paste0("_exobiological_",steps))] ##ordenar
+group         <- rep(labels_grafico,each=5) ## Variable que va a agrupar en grupos de a 5 los datos (porque cada 5 es un indice distinto)
+ar_data_frame <- data.frame(values = ar_data, 
+                            group=group,
+                            subgroup =steps)
+ar_data_frame$group <- factor(ar_data_frame$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica grupo
+
+x11()
+ggplot(ar_data_frame, aes(x=group,y=values,fill=subgroup))+
+  geom_bar(stat="identity", position="dodge", width=0.7) +
+  scale_fill_manual(values=c("blue", "red", "yellow","purple","green")) +
+  labs(x="index",y="t-test",title="Biological") +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10))
+
+#Para climatological
+
+ar_data       <- t_test_fitsur_cli[paste0(rep(pagn_orden,each=5),paste0("_exoclimatological_",steps))] ##ordenar
+group         <- rep(labels_grafico,each=5) ## Variable que va a agrupar en grupos de a 5 los datos (porque cada 5 es un indice distinto)
+ar_data_frame <- data.frame(values = ar_data, 
+                            group=group,
+                            subgroup =steps)
+ar_data_frame$group <- factor(ar_data_frame$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica grupo
+
+x11()
+ggplot(ar_data_frame, aes(x=group,y=values,fill=subgroup))+
+  geom_bar(stat="identity", position="dodge", width=0.7) +
+  scale_fill_manual(values=c("blue", "red", "yellow","purple","green")) +
+  labs(x="index",y="t-test",title="Climatological") +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10))
+
+## Para geophysical
+
+ar_data      <- t_test_fitsur_geo[paste0(rep(pagn_orden,each=5),paste0("_exogeophysical_",steps))] ##ordenar
+group         <- rep(labels_grafico,each=5) ## Variable que va a agrupar en grupos de a 5 los datos (porque cada 5 es un indice distinto)
+ar_data_frame <- data.frame(values = ar_data, 
+                            group=group,
+                            subgroup =steps)
+ar_data_frame$group <- factor(ar_data_frame$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica grupo
+
+x11()
+ggplot(ar_data_frame, aes(x=group,y=values,fill=subgroup))+
+  geom_bar(stat="identity", position="dodge", width=0.7) +
+  scale_fill_manual(values=c("blue", "red", "yellow","purple","green")) +
+  labs(x="index",y="t_test",title="Geophysical") +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10))
+
+## Para hydrological
+
+ar_data      <- t_test_fitsur_hyd[paste0(rep(pagn_orden,each=5),paste0("_exohydrological_",steps))] ##ordenar
+group         <- rep(labels_grafico,each=5) ## Variable que va a agrupar en grupos de a 5 los datos (porque cada 5 es un indice distinto)
+ar_data_frame <- data.frame(values = ar_data, 
+                            group=group,
+                            subgroup =steps)
+ar_data_frame$group <- factor(ar_data_frame$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica grupo
+
+x11()
+ggplot(ar_data_frame, aes(x=group,y=values,fill=subgroup))+
+  geom_bar(stat="identity", position="dodge", width=0.7) +
+  scale_fill_manual(values=c("blue", "red", "yellow","purple","green")) +
+  labs(x="index",y="t-test",title="Hydrological") +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10))
+
+## Para meteorological
+
+ar_data      <- t_test_fitsur_met[paste0(rep(pagn_orden,each=5),paste0("_exometeorological_",steps))] ##ordenar
+group         <- rep(labels_grafico,each=5) ## Variable que va a agrupar en grupos de a 5 los datos (porque cada 5 es un indice distinto)
+ar_data_frame <- data.frame(values = ar_data, 
+                            group=group,
+                            subgroup =steps)
+ar_data_frame$group <- factor(ar_data_frame$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica grupo
+
+x11()
+ggplot(ar_data_frame, aes(x=group,y=values,fill=subgroup))+
+  geom_bar(stat="identity", position="dodge", width=0.7) +
+  scale_fill_manual(values=c("blue", "red", "yellow","purple","green")) +
+  labs(x="index",y="t-test",title="Meteorological") +
   theme(plot.title = element_text(hjust = 0.5),
         axis.text.x = element_text(angle = 45, hjust = 1, size = 10))
