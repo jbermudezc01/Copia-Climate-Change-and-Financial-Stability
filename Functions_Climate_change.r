@@ -149,11 +149,12 @@ series_list_function <- function(ts1){
 #-- x: un entero
 #-- m: una matriz de agregación que antes de la función solamente contiene ceros
 #-- months: vector caracter tipo "yyyy-mm" de los meses que hacen parte de los trimestres a desagregar
+#-- dates: vector caracter que contiene todos los dias que están en cierta base de datos
 # ----Argumentos de salida  ----#
 #-- m: la matriz de agregación ya con el valor de 1 en los días que pertenezcan a cierto trimestre
 #---------------------------------------------------------------------------------------#
 
-days <- function(x, m, months){
+days <- function(x, m, months, dates){
   first_month <- months[3*x+1]
   second_month <- months[3*x+2]
   third_month <- months[3*x+3]
@@ -265,59 +266,50 @@ interaction_function <- function(obj){
 #---------------------------------------------------------------------------------------#
 
 
-#---------------------------------- 9. arma_seleccion_df  ------------------------------------#
-# La siguiente función se encarga de tomar una serie de tiempo, un rezago p y q maximos del modelo ARMA(p,q)
+
+#---------------------------------- 9. lag_function  ------------------------------------#
+# La siguiente función se encarga de encontrar los rezagos optimos para cada pais utilizando el
+# criterio de Akaike, utilizando la función arma_seleccion_df, la cual está dentro de lag_function. 
+# Además, la función tambien va a generar los rezagos y agregarlos a un dataframe. 
+# Como tiene una función adentro, lag_function hereda los parámetros de arma_seleccion_df.
+# arma_seleccion_df se encarga de tomar una serie de tiempo, un rezago p y q maximos del modelo ARMA(p,q)
 # y crear un dataframe de todos los posibles modelos con el criterio de Akaike y bayesiano.
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
-#-- object: la serie de tiempo a al cual se le quiere encontrar el modelo
+#-- country: caracteres indicando un pais
 #-- AR.m  : rezago máximo de la parte autorregresiva
 #-- Ma.m  : rezago máximo de la parte de promedio movil
 #-- d     : orden de diferenciación
-#-- bool  : booleano que indica si realizar la estimación arima con constante
-#-- metodo: método por el cual se hará la estimación ARIMA (existe CS, ML y CSS-ML)
-# ----Argumentos de salida  ----#
-#-- dataframe de todos los modelos ARMA(p,q) de las posibles combinaciones (0,AR.m)x(0,MA.m) con su respectivo
-#-- criterio de Akaike y bayesiano
-#---------------------------------------------------------------------------------------#
-
-arma_seleccion_df = function(object, AR.m, MA.m, d, bool, metodo){
-  index = 1
-  df = data.frame(p = double(), d = double(), q = double(), AIC = double(), BIC = double())
-  for (p in 0:AR.m) {
-    for (q in 0:MA.m)  {
-      fitp <- arima(object, order = c(p, d, q), include.mean = bool, 
-                    method = metodo)
-      T.model = length(resid(fitp))
-      Aic = T.model*log(sum(resid(fitp)^2))+ 2*(p+q+1)   ## De acuerdo con Enders 2014.
-      Bic = T.model*log(sum(resid(fitp)^2)) + T.model*(p+q+1)  
-      df[index,] = c(p, d, q, Aic, Bic)
-      index = index + 1
-    }
-  }  
-  return(df)
-}
-
-
-#---------------------------------------------------------------------------------------#
-
-#---------------------------------- 10. lag_function  ------------------------------------#
-# La siguiente función se encarga de encontrar los rezagos optimos para cada pais utilizando el
-# criterio de Akaike, utilizando la función 9. Además, la función tambien va a generar los rezagos y 
-# agregarlos a un dataframe
-#---------------------------------------------------------------------------------------#
-# ----Argumentos de entrada ----#
-#-- country: caracteres indicando un pais
+#-- bool  : booleano que indica si realizar la estimación arima con constante (el default es TRUE)
+#-- metodo: método por el cual se hará la estimación ARIMA (existe CS, ML y CSS-ML) (el default es CSS)
 # ----Argumentos de salida  ----#
 #-- lags_reduced: objeto xts con los p-rezagos para cada país.
 #---------------------------------------------------------------------------------------#
 
-lag_function <- function(country){
+lag_function <- function(country,AR.m,MA.m,d,bool=TRUE,metodo="CSS"){
+  
+  
+  arma_seleccion_df = function(object, AR.m, MA.m, d, bool, metodo){
+    index = 1
+    df = data.frame(p = double(), d = double(), q = double(), AIC = double(), BIC = double())
+    for (p in 0:AR.m) {
+      for (q in 0:MA.m)  {
+        fitp <- arima(object, order = c(p, d, q), include.mean = bool, 
+                      method = metodo)
+        T.model = length(resid(fitp))
+        Aic = T.model*log(sum(resid(fitp)^2))+ 2*(p+q+1)   ## De acuerdo con Enders 2014.
+        Bic = T.model*log(sum(resid(fitp)^2)) + T.model*(p+q+1)  
+        df[index,] = c(p, d, q, Aic, Bic)
+        index = index + 1
+      }
+    }  
+    return(df)
+  }
   
   #Utilizamos la funcion arma_seleccion_df para obtener el rezago para incluir en la ecuacion segun el 
   #criterio de Akaike. Como queremos ver AR(p), MA.m = 0, y como todos los retornos son estacionarios, 
   #entonces d =0.
-  mod <- arma_seleccion_df(object=base_retornos[,country], AR.m=20, MA.m=0, d=0, bool=TRUE, metodo="CSS")
+  mod <- arma_seleccion_df(object=base_retornos[,country], AR.m, MA.m, d, bool, metodo)
   p   <- mod[which.min(mod$AIC),'p']
   
   #generamos una base de datos que genere columnas de rezagos, el numero de columnas sera el mismo que el orden 
@@ -325,7 +317,7 @@ lag_function <- function(country){
   if(p>0)lags_df <- timeSeries::lag((base_retornos[,country]),c(1:p))
   
   #Lo colocamos desde el 8 de febrero para cuadrar con el indice de la base de datos principal
-  lags_reduced <- muestra_paper(lags_df,dia)
+  lags_reduced <- lags_df[paste0(dia.inicial,"/"),]
   
   #Nombres del dataframe de rezagos
   colnames(lags_reduced) <- paste0(country,'.l',1:p) 
@@ -337,7 +329,7 @@ lag_function <- function(country){
 #---------------------------------------------------------------------------------------#
 
 
-#---------------------------------- 11. model_equation  ------------------------------------#
+#---------------------------------- 10. model_equation  ------------------------------------#
 # La siguiente función va a generar una ecuación para el país country y teniendo en cuenta las variables 
 # exógenas exo. Lo anterior dado que vamos a estimar por el metodo SUR, el cual necesitara las 27 
 # ecuaciones siguiendo el paper de Pagnottoni.
@@ -420,23 +412,24 @@ densidad_CAR <- function(x,countries){
 
 
 
-#---------------------------------- 12. grafico  ------------------------------------#
+#---------------------------------- 13. grafico_densidad  ------------------------------------#
 # La siguiente función va a generar la densidad de los retornos acumulados. 
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
 #-- vector: un vector especifico que incluye el nombre del gráfico más los objetos a graficar
 #-- labels: leyenda del grafico
 #-- colors: colores de las lineas del gráfico
+#-- main: título del grafico
 # ----Argumentos de salida  ----#
 #-- NA. No retorna argumentos, más bien un gráfico que incluye las 5 densidades (biologico, climatológico
 #-- hidrologico, geologico, meteorologico).
 #---------------------------------------------------------------------------------------#
 
-grafico <- function(vector,labels, colors){
+grafico_densidad <- function(vector,main,labels,colors){
   maximo_y <- c()
   minimo_x <- c()
   maximo_x <- c()
-  for(i in vector[2:length(vector)]){
+  for(i in vector[1:length(vector)]){
     maximo_y <- c(maximo_y, max(get(i)$y))
     minimo_x <- c(minimo_x, min(get(i)$x))
     maximo_x <- c(maximo_x, max(get(i)$x))
@@ -446,17 +439,17 @@ grafico <- function(vector,labels, colors){
   limite_max_x      <-  max(maximo_x)
   
   x11()
-  plot(get(vector[2]), main = vector[1], col = colors[1],lwd=2,ylim=c(0,limite_y),xlim=c(limite_min_x,limite_max_x))
-  for(i in 3:length(vector)){
-    lines(get(vector[i]),col=colors[i-1],lwd=2)
+  plot(get(vector[1]), main = main, col = colors[1],lwd=2,ylim=c(0,limite_y),xlim=c(limite_min_x,limite_max_x))
+  for(i in 2:length(vector)){
+    lines(get(vector[i]),col=colors[i],lwd=2)
   }
   legend("topright",legend = labels,col = colors, lwd = 2)
-
 }
+
 #---------------------------------------------------------------------------------------#
 
 
-#---------------------------------- 12. guardar  ------------------------------------#
+#---------------------------------- 14. guardar  ------------------------------------#
 # La siguiente función va a generar la densidad de los retornos acumulados y lo guarda en png
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
@@ -493,8 +486,45 @@ guardar <- function(vector,labels, colors){
 #---------------------------------------------------------------------------------------#
 
 
+#---------------------------------- 15. grafico_retornos  ------------------------------------#
+# La siguiente función va a generar la densidad de los retornos acumulados. 
+#---------------------------------------------------------------------------------------#
+# ----Argumentos de entrada ----#
+#-- vector: un vector especifico que incluye el nombre del gráfico más los objetos a graficar
+#-- labels: leyenda del grafico
+#-- colors: colores de las lineas del gráfico
+# ----Argumentos de salida  ----#
+#-- NA. No retorna argumentos, más bien un gráfico que incluye las 5 densidades (biologico, climatológico
+#-- hidrologico, geologico, meteorologico).
+#---------------------------------------------------------------------------------------#
 
-#---------------------------------- 13. create_dummies_xts  ------------------------------------#
+grafico_retornos <- function(list,vector,main,legends,colors){
+  maximo_y <- c()
+  minimo_x <- c()
+  maximo_x <- c()
+  
+  for(country in vector[2:length(vector)]){
+    
+    maximo_y <- c(maximo_y, max(list[[country]]$y))
+    minimo_x <- c(minimo_x, min(list[[country]]$x))
+    maximo_x <- c(maximo_x, max(list[[country]]$x))
+  }
+  
+  limite_y          <-  max(maximo_y)
+  limite_min_x      <-  min(minimo_x)
+  limite_max_x      <-  max(maximo_x)
+  
+  x11()
+  plot(list[[vector[1]]], main = main, col = colors[1],lwd=2,ylim=c(0,limite_y),xlim=c(limite_min_x,limite_max_x))
+  for(i in 2:length(vector)){
+    lines(list[[vector[i]]],col=colors[i],lwd=2)
+  }
+  legend("topleft",legend = legends,col = colors, lwd = 2)
+}
+#---------------------------------------------------------------------------------------#
+
+
+#---------------------------------- 16. create_dummies_xts  ------------------------------------#
 # La siguiente función genera las dummies sin tener  en cuenta los días hábiles 
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
