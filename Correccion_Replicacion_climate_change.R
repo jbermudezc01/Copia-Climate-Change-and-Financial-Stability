@@ -569,82 +569,57 @@ ar_data_frame <- data.frame(values = ar_data,
                             subgroup =steps)
 ar_data_frame$group <- factor(ar_data_frame$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica grupo
 
-x11()
-ggplot(ar_data_frame, aes(x=group,y=values,fill=subgroup))+
-  geom_bar(stat="identity", position="dodge", width=0.7) +
-  scale_fill_manual(values=c("blue", "red", "yellow","purple","green")) +
-  labs(x="index",y="Abnormal return",title="Biological") +
-  theme(plot.title = element_text(hjust = 0.5),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 10))
+plot_bio <- grafico_estimates(ar_data_frame,"Abnormal return","Biological")
 
 ## Para climatological
 ar_data      <- coef_vec_fitsur_cli[paste0(rep(pagn_orden,each=5),paste0("_exoclimatological_",steps))] ##ordenar
-group         <- rep(labels_grafico,each=5) ## Variable que va a agrupar en grupos de a 5 los datos (porque cada 5 es un indice distinto)
 ar_data_frame <- data.frame(values = ar_data, 
                             group=group,
                             subgroup =steps)
 ar_data_frame$group <- factor(ar_data_frame$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica grupo
 
-x11()
-ggplot(ar_data_frame, aes(x=group,y=values,fill=subgroup))+
-  geom_bar(stat="identity", position="dodge", width=0.7) +
-  scale_fill_manual(values=c("blue", "red", "yellow","purple","green")) +
-  labs(x="index",y="Abnormal return",title="Climatological") +
-  theme(plot.title = element_text(hjust = 0.5),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 10))
-
+plot_cli <- grafico_estimates(ar_data_frame, "Abnormal return", "Climatological")
 
 ## Para geophysical
 
 ar_data      <- coef_vec_fitsur_geo[paste0(rep(pagn_orden,each=5),paste0("_exogeophysical_",steps))] ##ordenar
-group         <- rep(labels_grafico,each=5) ## Variable que va a agrupar en grupos de a 5 los datos (porque cada 5 es un indice distinto)
 ar_data_frame <- data.frame(values = ar_data, 
                             group=group,
                             subgroup =steps)
 ar_data_frame$group <- factor(ar_data_frame$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica grupo
 
-x11()
-ggplot(ar_data_frame, aes(x=group,y=values,fill=subgroup))+
-  geom_bar(stat="identity", position="dodge", width=0.7) +
-  scale_fill_manual(values=c("blue", "red", "yellow","purple","green")) +
-  labs(x="index",y="Abnormal return",title="Geophysical") +
-  theme(plot.title = element_text(hjust = 0.5),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 10))
+plot_geo <- grafico_estimates(ar_data_frame, "Abnormal return", "Geophysical")
 
 ## Para hydrological
 
 ar_data      <- coef_vec_fitsur_hyd[paste0(rep(pagn_orden,each=5),paste0("_exohydrological_",steps))] ##ordenar
-group         <- rep(labels_grafico,each=5) ## Variable que va a agrupar en grupos de a 5 los datos (porque cada 5 es un indice distinto)
 ar_data_frame <- data.frame(values = ar_data, 
                             group=group,
                             subgroup =steps)
 ar_data_frame$group <- factor(ar_data_frame$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica grupo
 
-x11()
-ggplot(ar_data_frame, aes(x=group,y=values,fill=subgroup))+
-  geom_bar(stat="identity", position="dodge", width=0.7) +
-  scale_fill_manual(values=c("blue", "red", "yellow","purple","green")) +
-  labs(x="index",y="Abnormal return",title="Hydrological") +
-  theme(plot.title = element_text(hjust = 0.5),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 10))
+plot_hyd <- grafico_estimates(ar_data_frame, "Abnormal return", "Hydrological")
 
 ## Para meteorological
 
 ar_data      <- coef_vec_fitsur_met[paste0(rep(pagn_orden,each=5),paste0("_exometeorological_",steps))] ##ordenar
-group         <- rep(labels_grafico,each=5) ## Variable que va a agrupar en grupos de a 5 los datos (porque cada 5 es un indice distinto)
 ar_data_frame <- data.frame(values = ar_data, 
                             group=group,
                             subgroup =steps)
 ar_data_frame$group <- factor(ar_data_frame$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica grupo
 
-x11()
-ggplot(ar_data_frame, aes(x=group,y=values,fill=subgroup))+
+plot_met <- ggplot(ar_data_frame, aes(x=group,y=values,fill=subgroup))+
   geom_bar(stat="identity", position="dodge", width=0.7) +
-  scale_fill_manual(values=c("blue", "red", "yellow","purple","green")) +
+  scale_fill_manual(values=c("#1964C4", "#C9675A","#D5B259","#7C63CF","#709E3D")) +
   labs(x="index",y="Abnormal return",title="Meteorological") +
   theme(plot.title = element_text(hjust = 0.5),
         axis.text.x = element_text(angle = 45, hjust = 1, size = 10))
+  
 
+#graficas juntas
+
+complete_plot <- grid.arrange(plot_bio,plot_cli,plot_hyd,plot_geo,plot_met,nrow=5,ncol=1,heights = c(1,1,1,1,1.7))
+ggsave("abnormal_returns.pdf",plot=complete_plot,device="pdf", width = 8.27, height = 11.69)
 
 ## Grafico A.4 Pagnottoni, t-tests ======
 
@@ -670,84 +645,62 @@ for(model in fitted_models){
 #Para biological
 
 ar_data       <- t_test_fitsur_bio[paste0(rep(pagn_orden,each=5),paste0("_exobiological_",steps))] ##ordenar
-group         <- rep(labels_grafico,each=5) ## Variable que va a agrupar en grupos de a 5 los datos (porque cada 5 es un indice distinto)
 ar_data_frame <- data.frame(values = ar_data, 
                             group=group,
                             subgroup =steps)
 ar_data_frame$group <- factor(ar_data_frame$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica grupo
 
-x11()
-ggplot(ar_data_frame, aes(x=group,y=values,fill=subgroup))+
-  geom_bar(stat="identity", position="dodge", width=0.7) +
-  scale_fill_manual(values=c("blue", "red", "yellow","purple","green")) +
-  labs(x="index",y="t-test",title="Biological") +
-  theme(plot.title = element_text(hjust = 0.5),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 10))
+plot_t_bio <- grafico_estimates(ar_data_frame, "t_test", "Biological")
+
 
 #Para climatological
 
 ar_data       <- t_test_fitsur_cli[paste0(rep(pagn_orden,each=5),paste0("_exoclimatological_",steps))] ##ordenar
-group         <- rep(labels_grafico,each=5) ## Variable que va a agrupar en grupos de a 5 los datos (porque cada 5 es un indice distinto)
 ar_data_frame <- data.frame(values = ar_data, 
                             group=group,
                             subgroup =steps)
 ar_data_frame$group <- factor(ar_data_frame$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica grupo
 
-x11()
-ggplot(ar_data_frame, aes(x=group,y=values,fill=subgroup))+
-  geom_bar(stat="identity", position="dodge", width=0.7) +
-  scale_fill_manual(values=c("blue", "red", "yellow","purple","green")) +
-  labs(x="index",y="t-test",title="Climatological") +
-  theme(plot.title = element_text(hjust = 0.5),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 10))
+plot_t_cli <-  grafico_estimates(ar_data_frame, "t_test", "Climatological")
 
 ## Para geophysical
 
 ar_data      <- t_test_fitsur_geo[paste0(rep(pagn_orden,each=5),paste0("_exogeophysical_",steps))] ##ordenar
-group         <- rep(labels_grafico,each=5) ## Variable que va a agrupar en grupos de a 5 los datos (porque cada 5 es un indice distinto)
 ar_data_frame <- data.frame(values = ar_data, 
                             group=group,
                             subgroup =steps)
 ar_data_frame$group <- factor(ar_data_frame$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica grupo
 
-x11()
-ggplot(ar_data_frame, aes(x=group,y=values,fill=subgroup))+
-  geom_bar(stat="identity", position="dodge", width=0.7) +
-  scale_fill_manual(values=c("blue", "red", "yellow","purple","green")) +
-  labs(x="index",y="t_test",title="Geophysical") +
-  theme(plot.title = element_text(hjust = 0.5),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 10))
+plot_t_geo <- grafico_estimates(ar_data_frame, "t_test", "Geophysical")
+  
 
 ## Para hydrological
 
 ar_data      <- t_test_fitsur_hyd[paste0(rep(pagn_orden,each=5),paste0("_exohydrological_",steps))] ##ordenar
-group         <- rep(labels_grafico,each=5) ## Variable que va a agrupar en grupos de a 5 los datos (porque cada 5 es un indice distinto)
 ar_data_frame <- data.frame(values = ar_data, 
                             group=group,
                             subgroup =steps)
 ar_data_frame$group <- factor(ar_data_frame$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica grupo
 
-x11()
-ggplot(ar_data_frame, aes(x=group,y=values,fill=subgroup))+
-  geom_bar(stat="identity", position="dodge", width=0.7) +
-  scale_fill_manual(values=c("blue", "red", "yellow","purple","green")) +
-  labs(x="index",y="t-test",title="Hydrological") +
-  theme(plot.title = element_text(hjust = 0.5),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 10))
+plot_t_hyd <- grafico_estimates(ar_data_frame, "t_test", "Hydrological")
+
 
 ## Para meteorological
 
 ar_data      <- t_test_fitsur_met[paste0(rep(pagn_orden,each=5),paste0("_exometeorological_",steps))] ##ordenar
-group         <- rep(labels_grafico,each=5) ## Variable que va a agrupar en grupos de a 5 los datos (porque cada 5 es un indice distinto)
 ar_data_frame <- data.frame(values = ar_data, 
                             group=group,
                             subgroup =steps)
 ar_data_frame$group <- factor(ar_data_frame$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica grupo
 
-x11()
-ggplot(ar_data_frame, aes(x=group,y=values,fill=subgroup))+
+plot_t_met <- ggplot(ar_data_frame, aes(x=group,y=values,fill=subgroup))+
   geom_bar(stat="identity", position="dodge", width=0.7) +
-  scale_fill_manual(values=c("blue", "red", "yellow","purple","green")) +
+  scale_fill_manual(values=c("#1964C4", "#C9675A", "#D5B259","#7C63CF","#709E3D")) +
   labs(x="index",y="t-test",title="Meteorological") +
   theme(plot.title = element_text(hjust = 0.5),
         axis.text.x = element_text(angle = 45, hjust = 1, size = 10))
+
+#graficas juntas
+
+complete_t_plot <- grid.arrange(plot_t_bio,plot_t_cli,plot_t_hyd,plot_t_geo,plot_t_met,nrow=5,ncol=1,heights = c(1,1,1,1,1.7))
+ggsave("t_tests.pdf",plot=complete_t_plot,device="pdf", width = 8.27, height = 11.69)
