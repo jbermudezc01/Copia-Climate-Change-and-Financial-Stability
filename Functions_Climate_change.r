@@ -216,27 +216,24 @@ create_dummies <- function(excel_file, first.calendar.days.tobe.evaluated = 10 )
     t_4 <- lag(t_0,4)
     
     #Se genera un dataframe de las dummies
-    dummies_df       <- cbind(t_0,t_1,t_2,t_3,t_4)
+    dummies_df       <- cbind(t_0, t_1, t_2, t_3, t_4)
     #Se reemplaza los valores NA al inicio del dataframe por cero, ya que no se tienen en cuenta eventos anteriores
     dummies_df_c     <- ifelse(is.na(dummies_df),0,dummies_df)
     
     #se genera la dummy D, la cual es 0 si en el dia i tanto t_0, t_1, t_2, t_3 y t_4 son 0, y 1 en otro caso
-    
-    D <- c()
-    for(i in 1:nrow(dummies_df_c)){
-      if(sum(dummies_df_c[i,]) == 0){
-        D <- c(D,0)
-      }else if(sum(dummies_df_c[i,]) != 0){
-        D <- c(D,1) 
-      }
-    }
+    #D <- c()
+    #for(i in 1:nrow(dummies_df_c)){
+    #  if(sum(dummies_df_c[i,]) == 0)        D <- c(D, 0)
+    #  else if(sum(dummies_df_c[i,]) != 0)   D <- c(D, 1) 
+    #}
+    D = (rowSums(dummies_df_c)!=0) + 0
     
     #Generamos el objeto xts
     dummies_complete <- cbind(dummies_df_c, D)  
-    dummies_xts <- xts(dummies_complete,order.by=index(Retornos))
+    dummies_xts      <- xts(dummies_complete,order.by=index(Retornos))
     
     #Crear objetos distintos para cada hoja
-    xts_name <- paste0(sheet_name, "_dummies_xts}","test")
+    xts_name                     <- paste0(sheet_name, "_dummies_xts}","test")
     xts_dummies_list[[xts_name]] <- dummies_xts
   }
   return(xts_dummies_list)
