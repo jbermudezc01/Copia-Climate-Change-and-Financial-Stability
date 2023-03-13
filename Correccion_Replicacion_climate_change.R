@@ -227,7 +227,7 @@ Crecimiento_FDI <- fdi_growth_base[paste0(dia.inicial,"/"),]
 ### Dummies corregidas =====
 
 # Corremos la función create_dummies en el archivo que contiene las fechas de las dummies
-dummies <- create_dummies(paste0(Dir,"EMDATA_dummies_copia.xlsx")) # Dos archivos: EMDATA_dummies y EMDATA_dummies_copia
+dummies <- create_dummies(paste0(Dir,"EMDATA_dummies.xlsx")) 
 
 #Para cada tipo de desastre lo guardamos en un xts distinto
 biological_dummies           <- dummies$`Biological_dummies_xts}`
@@ -257,7 +257,7 @@ if(0){
 ### Dummies anteriores =====
 
 
-  dummies <- create_dummies_xts(paste0(Dir,"EMDATA_dummies_copia.xlsx"))
+  dummies <- create_dummies_xts(paste0(Dir,"EMDATA_dummies.xlsx"))
 
   climatological_dummies <- xts(dummies$`Climatological_dummies_xts}`,order.by = index(Retornos))
   meteorological_dummies <- xts(dummies$`Meteorological_dummies_xts}`,order.by = index(Retornos))
