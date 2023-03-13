@@ -515,7 +515,7 @@ grafico_retornos <- function(list,vector,main,legends,colors){
   limite_max_x      <-  max(maximo_x)
   
   x11()
-  plot(list[[vector[1]]], main = main, col = colors[1],lwd=2,ylim=c(0,limite_y),xlim=c(limite_min_x,limite_max_x))
+  plot(list[[vector[1]]], main = main, col = colors[1],lwd=4,ylim=c(0,limite_y),xlim=c(limite_min_x,limite_max_x))
   for(i in 2:length(vector)){
     lines(list[[vector[i]]],col=colors[i],lwd=2)
   }
@@ -578,3 +578,22 @@ create_dummies_xts <- function(excel_file) {
 #---------------------------------------------------------------------------------------#
 
 
+#---------------------------------- 17. Graficos AR estimates  ------------------------------------#
+# La siguiente función es para evitar la repeticion en los graficos AR_estimate y sus t-tests 
+#---------------------------------------------------------------------------------------#
+# ----Argumentos de entrada ----#
+#-- excel_file: archivo de excel
+# ----Argumentos de salida  ----#
+#-- xts_dummies_list: lasta de objetos xts de las dummies
+#---------------------------------------------------------------------------------------#
+
+grafico_estimates <- function(object,yaxis,title){
+  ggplot(object, aes(x=group,y=values,fill=subgroup))+
+    geom_bar(stat="identity", position="dodge", width=0.7) +
+    scale_fill_manual(values=c("#1964C4", "#C9675A", "#D5B259","#7C63CF","#709E3D")) +
+    labs(y=yaxis,title=title) +
+    theme(plot.title = element_text(hjust = 0.5),axis.text.x = element_blank(),
+          axis.title.x = element_blank())
+}
+
+#---------------------------------------------------------------------------------------#
