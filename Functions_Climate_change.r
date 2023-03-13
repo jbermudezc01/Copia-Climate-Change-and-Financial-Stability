@@ -91,25 +91,25 @@ muestra_paper <- function(obj,t){
 #-- time_Series_list: lista con las series de tiempo a las cuales se les quiere realizar la desagregacion temporal
 #-- c               : matriz de agregacion
 #-- w               : vector constante de valores 1
-#-- alpha           : valor de alpha, que corresponde al valor del coeficiente del AR(1)
 #-- var_covar       : matriz de varianzas y covarianzas
 # ----Argumentos de salida  ----#
 #-- return_base: base de datos con la desagregacion temporal de cada una de los elementos en la lista time_Series_list
 #---------------------------------------------------------------------------------------#
 
-chow_lin <- function(time_Series_list,c,w,alpha,var_covar){
+chow_lin <- function(time_Series_list, c, w, var_covar){
   return_list <- list()
   for(series in time_Series_list){
-    CW <- c%*%w
-    model_gls <- gls(series ~ CW - 1, correlation = corAR1(value = alpha, fixed = TRUE)) 
-    sigma_sq <- (model_gls$sigma)^2
-    V = (sigma_sq/1-alpha^2)*var_covar
-    CVC <- solve(c%*%(V%*%t(c)))
-    beta <- (solve(t(CW)%*%(CVC%*%CW))%*%t(CW))%*%(CVC%*%series)
-    y <- w%*%beta + ((V%*%t(c))%*%CVC)%*%(series-CW%*%beta)
-    y <- xts(y,order.by= index(base_precios)) 
-    gdp_growth <- diff(log(y))[2:nrow(y),]
-    return_list[[length(return_list)+1]] <- gdp_growth
+    CW        <- c%*%w
+    #model_gls <- gls(series ~ CW - 1, correlation = corAR1(value = alpha, fixed = TRUE)) 
+    #sigma_sq  <- (model_gls$sigma)^2
+    #V         <- (sigma_sq/(1-alpha^2))*var_covar # no se requiere <sigma_sq>, ya que no se necesita, se cancela  
+    CVC       <- solve(c%*%(var_covar%*%t(c)))
+    beta      <- (solve(t(CW)%*%(CVC%*%CW))%*%t(CW))%*%(CVC%*%series)
+    y         <- w%*%beta + ((var_covar%*%t(c))%*%CVC)%*%(series-CW%*%beta)
+    y          <- xts(y,order.by= index(base_precios)) 
+    #gdp_growth <- diff(log(y))[2:nrow(y),]
+    #return_list[[length(return_list)+1]] <- gdp_growth
+    return_list[[length(return_list)+1]] <- y
   }
   return_base <- do.call(merge,return_list)
   return(return_base)
@@ -142,22 +142,22 @@ series_list_function <- function(ts1){
 #---------------------------------------------------------------------------------------#
 
 #---------------------------------- 6. days  ------------------------------------#
-# La siguiente función se encarga de generar la matriz de agregación trimestral, añadiendo uno a los dias que 
+# Esta funcion se encarga de generar la matriz de agregación trimestral, anhadiendo uno a los dias que 
 # corresponden a cada trimestre
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
-#-- x: un entero
-#-- m: una matriz de agregación que antes de la función solamente contiene ceros
-#-- months: vector caracter tipo "yyyy-mm" de los meses que hacen parte de los trimestres a desagregar
-#-- dates: vector caracter que contiene todos los dias que están en cierta base de datos
+#-- x: un entero que corresponde al trimestre (menos uno) tenido en cuenta
+#-- m: matriz de agregación (inicializada con ceros)
+#-- months: vector caracter tipo "yyyy-mm" de los meses que hacen parte de los trimestres a desagregar 
+#-- dates: vector caracter que contiene todos los dias que están en cierta base de datos (high-freq)
 # ----Argumentos de salida  ----#
 #-- m: la matriz de agregación ya con el valor de 1 en los días que pertenezcan a cierto trimestre
 #---------------------------------------------------------------------------------------#
 
 days <- function(x, m, months, dates){
-  first_month <- months[3*x+1]
+  first_month  <- months[3*x+1] #Primer mes del trimeste
   second_month <- months[3*x+2]
-  third_month <- months[3*x+3]
+  third_month  <- months[3*x+3]
   for(date in dates){
     if(substr(date,1,7)==first_month |substr(date,1,7)==second_month|substr(date,1,7)==third_month){
       pos <- which(dates == date)
@@ -174,31 +174,32 @@ days <- function(x, m, months, dates){
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
 #-- excel_file: un archivo excel que contiene los dias correspondientes a las dummies
+#-- first.calendar.days.tobe.evaluated: 
 # ----Argumentos de salida  ----#
 #-- xts_dummies_list: una lista con las dummies de todos los tipos de desastres
 #---------------------------------------------------------------------------------------#
 
-create_dummies <- function(excel_file){
-  #Lee el nombre de las hojas del archivo
-  sheet_names <- excel_sheets(excel_file)
+create_dummies <- function(excel_file, first.calendar.days.tobe.evaluated = 10 ){
+  #Lee el nombre de las hojas del archivo, cada hoja corresponde a un tipo de desastre
+  sheet_names      <- excel_sheets(excel_file)
   xts_dummies_list <- list()
   
   #Loop para todas las hojas
   for(sheet_name in sheet_names) {
     #lee la hoja especifica
-    current_sheet    <- read.xlsx(excel_file, sheet = sheet_name, detectDates = TRUE)
-    #la columna t0 sale del nombre del archivo excel
-    dummies_t0       <- current_sheet$t0
-    #Primero generamos un vector de 0 de longitud nrow(Retornos), al que se le añadira 1 dependiendo del dia
+    current_sheet <- read.xlsx(excel_file, sheet = sheet_name, detectDates = TRUE)
+    #Selecciona la columna t0 del archivo excel
+    dummies_t0    <- current_sheet$t0
+    #Se inicializa en ceros 
     t_0 <- c(rep(0,nrow(Retornos)))
     
-    ##Para generar las dummies, se utiliza un for loop que va mirando si el dia del desastre esta dentro de indice de
-    # retornos. Si el dia esta, establece 1 en la posicion de ese dia siguiendo el indice de retornos.
-    # Si no se encuentra entonces mira si el dia calendario siguiente está en Retornos, si se encuentra establece 1
-    # en el dia siguiente. Así sucesivamente hasta encontrar el dia de intercambio mas cercano al dia del desastre.
-    
+    ##Para generar las dummies, se utiliza un loop que evalua si el dia del desastre esta dentro de indice de
+    # retornos. Si el dia esta, establece 1 en la posicion de ese dia.
+    # Si no se encuentra, evalua si el dia calendario siguiente está en la base de Retornos, si se encuentra establece 1
+    # en ese dia. Así sucesivamente hasta encontrar el dia transable mas cercano al dia del desastre. 
+    # El maximo no. de dias evaluados es <first.calendar.days.tobe.evaluated>
     for(i in 1:length(dummies_t0)){
-      for(j in 0:10){
+      for(j in 0:first.calendar.days.tobe.evaluated){
         if((as.Date(dummies_t0[i])+j) %in% index(Retornos)){
           index_f <- which(index(Retornos) == (as.Date(dummies_t0[i])+j)) 
           t_0[index_f] <- 1
