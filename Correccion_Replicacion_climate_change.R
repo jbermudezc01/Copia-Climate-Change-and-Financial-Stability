@@ -141,6 +141,13 @@ dates.high.freq   <- as.character(index(base_precios)) #Fechas de freq alta
 cat('\nHigh frequency range:',range(dates.high.freq))
 cat('\nLow frequency range:'); range(dates.low.freq)
 
+## WARNING si los rangos son distintos, primero pasar dates.high.freq al ultimo dia de su trimestre
+quarter.high.freq <- ceiling_date(as.Date(dates.high.freq), unit = "quarter") - 1
+cat('\nHigh frequency range in trimesters:');range(quarter.high.freq)
+
+if ((range(quarter.high.freq)[1] == range(dates.low.freq)[1] & range(quarter.high.freq)[2] == range(dates.low.freq)[2]) == FALSE)
+  warning("Los rangos de baja y alta frecuencia son distintos")
+
 ## Extrae los meses de alta freq. en formato yyyy-mm sin repeticiones.
 meses <- unique(substr(dates.high.freq,1,7))
 
@@ -192,11 +199,11 @@ fdi_agregacion_matriz  <- matrix(0, nrow = fdi_rows, ncol = ncols)
 #Se genera la matriz de agregacion, colocando uno a los dias que pertenezcan al año correspondiente.
 #Por ejemplo en la primera fila tendran uno aquellos dias que pertenezcan al 2001 (primer anho)
 i1 = 0
-for(i in as.numeric(unique(substr(dates,1,4)))){
+for(i in as.numeric(unique(substr(dates.high.freq,1,4)))){
   i1 = i1 + 1
-  for(date in dates){
+  for(date in dates.high.freq){
     if(substr(date,1,4)==i){
-      pos <- which(dates == date)
+      pos <- which(dates.high.freq == date)
       fdi_agregacion_matriz[i1, pos] <- 1
     }
   }
@@ -219,7 +226,7 @@ Crecimiento_FDI <- fdi_growth_base[paste0(dia.inicial,"/"),]
 ### Dummies corregidas =====
 
 # Corremos la función create_dummies sobre el archivo que contiene las fechas de las dummies
-dummies <- create_dummies(excel_file=paste0(Dir,"EMDATA_dummies.xlsx")) 
+dummies <- create_dummies(excel_file=paste0(Dir,"emdata_dummies_arregladas.xlsx")) 
 
 #Para cada tipo de desastre lo guardamos en un xts distinto
 biological_dummies           <- dummies$`Biological_dummies_xts}`
@@ -409,8 +416,6 @@ for(step in steps){
 ##dummies temporales para todos los paises. Lo anterior para posteriormente ser sumadas por cada país para 
 ##generar el retorno anormal acumulado t_0+t_1+t_2+t_3+t_4
 
-car_coefficients <- c()
-
 for(model in fitted_models){
   #Vamos a generar una lista para cada modelo
   var_name <- paste0("coef_vec_",model)
@@ -487,15 +492,6 @@ main_t_4   <- "Kernel density of AR t_4"  #<<<--- título para la gráfica
 vector_t_4 <- c("dens_fitsur_bio_t_4","dens_fitsur_cli_t_4","dens_fitsur_geo_t_4",
                 "dens_fitsur_hyd_t_4","dens_fitsur_met_t_4") #<<<---vector de elementos a graficar
 grafico_densidad(vector_t_4,main_t_4,labels,colors)
-
-
-if(0){
-  ## La función de distribución acumulada de la densidad meterologica t_0 si es de la forma que deberia ser
-
-  coef <- coef(get("fitsur_met"))[grep("t_0",names(coef(get("fitsur_met"))))]
-  cdf <- ecdf(as.numeric(coef))
-  plot(cdf,col="blue")
-}
 
 ## Graficos A.3 de densidad de los retornos =======
   
@@ -696,3 +692,11 @@ plot_t_met <- ggplot(ar_data_frame, aes(x=group,y=values,fill=subgroup))+
 
 complete_t_plot <- grid.arrange(plot_t_bio,plot_t_cli,plot_t_hyd,plot_t_geo,plot_t_met,nrow=5,ncol=1,heights = c(1,1,1,1,1.7))
 ggsave("t_tests.pdf",plot=complete_t_plot,device="pdf", width = 8.27, height = 11.69)
+
+
+
+## Regresion con dummies de paises ====
+
+dummies_countries <- create_dummies(excel_file=paste0(Dir,"emdata_dummies_countries.xlsx")) 
+
+
