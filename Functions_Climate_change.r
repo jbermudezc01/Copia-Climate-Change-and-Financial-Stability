@@ -39,7 +39,7 @@ read_csv <- function(dir,countries) {
 
 if(0){
 #---------------------------------- 2. moving_average  ------------------------------------#
-# Esta funcióntoma como argumento una base de datos, para la cual genera para cada columna
+# Toma como argumento una base de datos, para la cual genera para cada columna
 # el promedio movil de orden k.
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
@@ -62,7 +62,7 @@ moving_average <- function(x,k){
 
 if(0){
 #---------------------------------- 3. muestra_paper  ------------------------------------#
-# Se crea una función que reduzca la base de datos dependiendo del indice. Esta funcion toma un día en 
+# Reduce la base de datos dependiendo del indice. Esta funcion toma un día en 
 # específico y tomará desde ese día en adelante para generar la base recortada.
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
@@ -83,7 +83,7 @@ muestra_paper <- function(obj,t){
 }
 
 #---------------------------------- 4. chow_lin ------------------------------------#
-# Se crea una función que genere la desagregacion temporal de una base de datos siguiendo el método de Chow-lin.
+# Genera la desagregacion temporal de una base de datos siguiendo el método de Chow-lin.
 # Tanto la matriz de varianzas covarianzas como el procedimiento para realizar la desagregacion temporal fueron
 # extraidas del articulo de Hurtado y Melo (2015).
 #---------------------------------------------------------------------------------------#
@@ -142,8 +142,7 @@ series_list_function <- function(ts1){
 #---------------------------------------------------------------------------------------#
 
 #---------------------------------- 6. days  ------------------------------------#
-# Esta funcion se encarga de generar la matriz de agregación trimestral, anhadiendo uno a los dias que 
-# corresponden a cada trimestre
+# Genera la matriz de agregación trimestral, anhadiendo uno a los dias que corresponden a cada trimestre
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
 #-- x: un entero que corresponde al trimestre (menos uno) tenido en cuenta
@@ -170,11 +169,11 @@ days <- function(x, m, months, dates){
 
 
 #---------------------------------- 7. create_dummies  ------------------------------------#
-# La siguiente función genera las dummies t_0, t_1, t_2, t_3, t_4 y D para cada tipo de desastre
+# Genera las dummies t_0, t_1, t_2, t_3, t_4 y D para cada tipo de desastre (o país)
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
 #-- excel_file: un archivo excel que contiene los dias correspondientes a las dummies
-#-- first.calendar.days.tobe.evaluated: 
+#-- first.calendar.days.tobe.evaluated: numero de dias despues del evento a ser evaluados
 # ----Argumentos de salida  ----#
 #-- xts_dummies_list: una lista con las dummies de todos los tipos de desastres
 #---------------------------------------------------------------------------------------#
@@ -187,7 +186,7 @@ create_dummies <- function(excel_file, first.calendar.days.tobe.evaluated = 10 )
   #Loop para todas las hojas
   for(sheet_name in sheet_names) {
     #lee la hoja especifica
-    current_sheet <- read.xlsx(excel_file, sheet = sheet_name, detectDates = TRUE)
+    current_sheet <- openxlsx::read.xlsx(excel_file, sheet = sheet_name, detectDates = TRUE)
     #Selecciona la columna t0 del archivo excel
     dummies_t0    <- current_sheet$t0
     #Se inicializa en ceros 
@@ -210,10 +209,10 @@ create_dummies <- function(excel_file, first.calendar.days.tobe.evaluated = 10 )
     
     #Por otro lado, para formar las dummies t_1, t_2, t_3 y t_4 se usan rezagos de t_0, ya que en esta funcion
     #se asume que el n-paso adelante del evento es igual al n-ésimo día hábil después de t_0.
-    t_1 <- lag(t_0,1)
-    t_2 <- lag(t_0,2)
-    t_3 <- lag(t_0,3)
-    t_4 <- lag(t_0,4)
+    t_1 <- dplyr::lag(t_0,1)
+    t_2 <- dplyr::lag(t_0,2)
+    t_3 <- dplyr::lag(t_0,3)
+    t_4 <- dplyr::lag(t_0,4)
     
     #Se genera un dataframe de las dummies
     dummies_df       <- cbind(t_0, t_1, t_2, t_3, t_4)
@@ -243,7 +242,7 @@ create_dummies <- function(excel_file, first.calendar.days.tobe.evaluated = 10 )
 
 
 #---------------------------------- 8. interaction_function  ------------------------------------#
-# La siguiente función se encarga de generar el vector de interacción entre la dummy D y el promedio movil
+# Genera el vector de interacción entre la dummy D y el promedio movil
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
 #-- obj: un objeto xts
@@ -266,8 +265,8 @@ interaction_function <- function(obj){
 
 
 #---------------------------------- 9. lag_function  ------------------------------------#
-# La siguiente función se encarga de encontrar los rezagos optimos para cada pais utilizando el
-# criterio de Akaike, utilizando la función arma_seleccion_df, la cual está dentro de lag_function. 
+# Encuentra los rezagos optimos para cada pais utilizando el criterio de Akaike, utilizando la función arma_seleccion_df, 
+# la cual está dentro de lag_function. 
 # Además, la función tambien va a generar los rezagos y agregarlos a un dataframe. 
 # Como tiene una función adentro, lag_function hereda los parámetros de arma_seleccion_df.
 # arma_seleccion_df se encarga de tomar una serie de tiempo, un rezago p y q maximos del modelo ARMA(p,q)
@@ -328,7 +327,7 @@ lag_function <- function(country,AR.m,MA.m,d,bool=TRUE,metodo="CSS"){
 
 
 #---------------------------------- 10. model_equation  ------------------------------------#
-# La siguiente función va a generar una ecuación para el país country y teniendo en cuenta las variables 
+# Genera una ecuación para el país country y teniendo en cuenta las variables 
 # exógenas exo. Lo anterior dado que vamos a estimar por el metodo SUR, el cual necesitara las 27 
 # ecuaciones siguiendo el paper de Pagnottoni.
 #---------------------------------------------------------------------------------------#
@@ -361,7 +360,7 @@ model_equation <- function(country,exo){
 
 
 #---------------------------------- 11. dens  ------------------------------------#
-# La siguiente función va a generar una ecuación para el país country y teniendo en cuenta las variables 
+# Genera una ecuación para el país country y teniendo en cuenta las variables 
 # exógenas exo. Lo anterior dado que vamos a estimar por el metodo SUR, el cual necesitara las 27 
 # ecuaciones siguiendo el paper de Pagnottoni.
 #---------------------------------------------------------------------------------------#
@@ -384,7 +383,7 @@ dens <- function(fit, step){
 
 
 #---------------------------------- 12. densidad_CAR ------------------------------------#
-# La siguiente función va a generar la densidad de los retornos acumulados. 
+# Genera la densidad de los retornos acumulados. 
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
 #-- x: toma un vector de coeficentes
@@ -411,7 +410,7 @@ densidad_CAR <- function(x,countries){
 
 
 #---------------------------------- 13. grafico_densidad  ------------------------------------#
-# La siguiente función va a generar la densidad de los retornos acumulados. 
+# Genera la densidad de los retornos acumulados. 
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
 #-- vector: un vector especifico que incluye el nombre del gráfico más los objetos a graficar
@@ -447,45 +446,8 @@ grafico_densidad <- function(vector,main,labels,colors){
 #---------------------------------------------------------------------------------------#
 
 
-#---------------------------------- 14. guardar  ------------------------------------#
-# La siguiente función va a generar la densidad de los retornos acumulados y lo guarda en png
-#---------------------------------------------------------------------------------------#
-# ----Argumentos de entrada ----#
-#-- vector: un vector especifico que incluye el nombre del gráfico más los objetos a graficar
-#-- labels: leyenda del grafico
-#-- colors: colores de las lineas del gráfico
-# ----Argumentos de salida  ----#
-#-- NA. No retorna argumentos, más bien un gráfico que incluye las 5 densidades (biologico, climatológico
-#-- hidrologico, geologico, meteorologico).
-#---------------------------------------------------------------------------------------#
-
-guardar <- function(vector,labels, colors){
-  maximo_y <- c()
-  minimo_x <- c()
-  maximo_x <- c()
-  for(i in vector[2:length(vector)]){
-    maximo_y <- c(maximo_y, max(get(i)$y))
-    minimo_x <- c(minimo_x, min(get(i)$x))
-    maximo_x <- c(maximo_x, max(get(i)$x))
-  }
-  limite_y          <-  max(maximo_y)
-  limite_min_x      <-  min(minimo_x)
-  limite_max_x      <-  max(maximo_x)
-  
-  Folder <- paste0(getwd(),"/Imagenes")
-  png(paste(Folder, paste0(vector[1],".png"),sep="/"))
-  plot(get(vector[2]), main = vector[1], col = colors[1],lwd=2,ylim=c(0,limite_y),xlim=c(limite_min_x,limite_max_x))
-  for(i in 3:length(vector)){
-    lines(get(vector[i]),col=colors[i-1],lwd=2)
-  }
-  legend("topright",legend = labels,col = colors, lwd = 2)
-  dev.off()
-}
-#---------------------------------------------------------------------------------------#
-
-
 #---------------------------------- 15. grafico_retornos  ------------------------------------#
-# La siguiente función va a generar la densidad de los retornos acumulados. 
+# Genera la densidad de los retornos acumulados. 
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
 #-- vector: un vector especifico que incluye el nombre del gráfico más los objetos a graficar
@@ -523,7 +485,7 @@ grafico_retornos <- function(list,vector,main,legends,colors){
 
 
 #---------------------------------- 16. create_dummies_xts  ------------------------------------#
-# La siguiente función genera las dummies sin tener  en cuenta los días hábiles 
+# Genera las dummies sin tener  en cuenta los días hábiles . Es decir las dummies originales
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
 #-- excel_file: archivo de excel
@@ -577,7 +539,7 @@ create_dummies_xts <- function(excel_file) {
 
 
 #---------------------------------- 17. Graficos AR estimates  ------------------------------------#
-# La siguiente función es para evitar la repeticion en los graficos AR_estimate y sus t-tests 
+# La siguiente función es para evitar la repeticion en los graficos AR_estimate y sus t-tests. 
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
 #-- excel_file: archivo de excel
