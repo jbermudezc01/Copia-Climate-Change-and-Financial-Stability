@@ -173,16 +173,19 @@ days <- function(x, m, months, dates){
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
 #-- excel_file: un archivo excel que contiene los dias correspondientes a las dummies
+#-- Retornos   : xxxx
+#-- no.rezagos : Numero de rezagos de xxxx
 #-- first.calendar.days.tobe.evaluated: numero de dias despues del evento a ser evaluados
 # ----Argumentos de salida  ----#
-#-- xts_dummies_list: una lista con las dummies de todos los tipos de desastres
+#-- xts_dummies: Array con las dummies de todos los tipos de desastres de tres dominsiones, 
+#                donde la primera es ....   
 #---------------------------------------------------------------------------------------#
 
-create_dummies <- function(excel_file, first.calendar.days.tobe.evaluated = 10 ){
+create_dummies <- function(excel_file, Retornos, no.rezagos=4, first.calendar.days.tobe.evaluated = 10 ){
   #Lee el nombre de las hojas del archivo, cada hoja corresponde a un tipo de desastre
   sheet_names      <- excel_sheets(excel_file)
-  xts_dummies_list <- list()
-  
+  xts_dummies      <- array(NA,dim=c(length(sheet_names), nrow(Retornos), no.rezagos+2), 
+                            dimnames = list(sheet_names,as.character(index(Retornos)),c(paste0('t',0:no.rezagos),'D')))# +2: Por rezago 0 y por D
   #Loop para todas las hojas
   for(sheet_name in sheet_names) {
     #lee la hoja especifica
@@ -209,15 +212,20 @@ create_dummies <- function(excel_file, first.calendar.days.tobe.evaluated = 10 )
     
     #Por otro lado, para formar las dummies t_1, t_2, t_3 y t_4 se usan rezagos de t_0, ya que en esta funcion
     #se asume que el n-paso adelante del evento es igual al n-ésimo día hábil después de t_0.
-    t_1 <- dplyr::lag(t_0,1)
-    t_2 <- dplyr::lag(t_0,2)
-    t_3 <- dplyr::lag(t_0,3)
-    t_4 <- dplyr::lag(t_0,4)
+    #t_1 <- dplyr::lag(t_0,1)
+    #t_2 <- dplyr::lag(t_0,2)
+    #t_3 <- dplyr::lag(t_0,3)
+    #t_4 <- dplyr::lag(t_0,4)
+    
+    #Se genera una matriz de la forma cbind(t_0, t_1, t_2, t_3, ...), los valores de <NA> se reemplazan por <0>  
+    dummies_lags = matrix(0, length(t_0) , no.rezagos+1, dimnames=list(as.character(index(Retornos)),paste0('t_',0:no.rezagos)) )
+    for(Lags in 0:no.rezagos)
+      dummies_lags[(1+Lags):length(t_0),Lags+1] = dplyr::lag(t_0, Lags)[(1+Lags):length(t_0)]
     
     #Se genera un dataframe de las dummies
-    dummies_df       <- cbind(t_0, t_1, t_2, t_3, t_4)
+    #dummies_df       <- cbind(t_0, t_1, t_2, t_3, t_4)
     #Se reemplaza los valores NA al inicio del dataframe por cero, ya que no se tienen en cuenta eventos anteriores
-    dummies_df_c     <- ifelse(is.na(dummies_df),0,dummies_df)
+    #dummies_df_c     <- ifelse(is.na(dummies_df),0,dummies_df)
     
     #se genera la dummy D, la cual es 0 si en el dia i tanto t_0, t_1, t_2, t_3 y t_4 son 0, y 1 en otro caso
     #D <- c()
@@ -225,17 +233,18 @@ create_dummies <- function(excel_file, first.calendar.days.tobe.evaluated = 10 )
     #  if(sum(dummies_df_c[i,]) == 0)        D <- c(D, 0)
     #  else if(sum(dummies_df_c[i,]) != 0)   D <- c(D, 1) 
     #}
-    D = (rowSums(dummies_df_c)!=0) + 0
+    D = (rowSums(dummies_lags)!=0) + 0
     
     #Generamos el objeto xts
-    dummies_complete <- cbind(dummies_df_c, D)  
+    dummies_complete <- cbind(dummies_lags, D)  
     dummies_xts      <- xts(dummies_complete,order.by=index(Retornos))
     
     #Crear objetos distintos para cada hoja
-    xts_name                     <- paste0(sheet_name, "_dummies_xts}","test")
-    xts_dummies_list[[xts_name]] <- dummies_xts
+    #xts_name        <- paste0(sheet_name, "_dummies_xts")
+    #xts_dummies_list[[xts_name]] <- dummies_xts
+    xts_dummies[sheet_name,,] <- dummies_xts
   }
-  return(xts_dummies_list)
+  return(xts_dummies)
 }
 
 #---------------------------------------------------------------------------------------#
