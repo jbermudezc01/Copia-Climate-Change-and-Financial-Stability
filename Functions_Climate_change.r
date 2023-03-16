@@ -550,7 +550,7 @@ create_dummies_xts <- function(excel_file) {
 grafico_estimates <- function(object,yaxis,title){
   ggplot(object, aes(x=group,y=values,fill=subgroup))+
     geom_bar(stat="identity", position="dodge", width=0.7) +
-    scale_fill_manual(values=c("#1964C4", "#C9675A", "#D5B259","#7C63CF","#709E3D")) +
+    scale_fill_manual(values=c("#1964C4", "#C9675A", "#D5B259","darkorchid4","#709E3D")) +
     labs(y=yaxis,title=title) +
     theme(plot.title = element_text(hjust = 0.5),axis.text.x = element_blank(),
           axis.title.x = element_blank())
