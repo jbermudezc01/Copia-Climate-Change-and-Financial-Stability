@@ -56,10 +56,13 @@ Dir      = paste0(getwd(),'/Bases/') #Directorio de datos, se supone que el subd
 base_test <- read_csv(Dir,countries)
 
 # Generar un vector de fechas en los que solo se tiene valores para uno o dos mercados
+
+min.dias.stock <- ceiling((length(countries)/2)) #<<<--- minimo numero de paises en donde debe haber datos para stocks
+
 navalues = c()
 for (i in 1:nrow(base_test)) {
   row <- base_test[i, ]
-  if (sum(is.na(row))>=length(countries)-2){
+  if (sum(is.na(row))>=length(countries)- min.dias.stock){
     navalues <- c(navalues, index(row))}
 } 
 
@@ -123,7 +126,7 @@ print(Stats, digits=3)
 
 ### Datos para GDP trimestral ====
 #Leer la base de datos, establecer el formato fecha y generar la base de datos en xts y la lista a ser desagregada
-gdp_countries      <- read.csv(paste0(Dir,"GDP_COUNTRIES.csv"), header = TRUE, sep = ";") #<<<--- Base de datos con GDPs
+gdp_countries      <- read_xlsx(paste0(Dir,"GDP_countries_corregida.xlsx"), sheet="GDP") #<<<--- Base de datos con GDPs
 dates.low.freq     <- as.Date(as.yearqtr(gdp_countries$Time),frac=1) #date format, se supone que existe una col llamada <Time>
 quarterly_series   <- as.list(gdp_countries[,-1]) #Se quita la columna de fechas y se genera una lista de sus columnas
 
@@ -452,7 +455,7 @@ densidad_CAR_met <- densidad_CAR(coef_vec_fitsur_met,countries)
 #El tercero es un vector con cinco colores.
 
 labels <- c("Biological","Climatological","Geophysical","Hydrological","Meteorological")  #<<<--- leyendas del grafico
-colors <- c("blue", "tomato", "orange", "purple", "green")   #<<<--- colores que usara la grafica
+colors <- c("blue", "tomato", "orange", "darkorchid4", "green")   #<<<--- colores que usara la grafica
 
 # Para los CAR el vector sería
 main_car   <- "Kernel denisty of CAR"  #<<<--- título para la gráfica
@@ -495,7 +498,7 @@ grafico_densidad(vector_t_4,main_t_4,labels,colors)
 
 ## Graficos A.3 de densidad de los retornos =======
   
-colores <- c("blue","tomato","orange","purple","green","cyan","firebrick") #<<<--- colores para grafica de retornos
+colores <- c("blue","tomato","orange","darkorchid4","green","cyan","firebrick") #<<<--- colores para grafica de retornos
 
 densidad_retornos <- apply(Retornos, MARGIN = 2, FUN = density)
 
@@ -693,10 +696,33 @@ plot_t_met <- ggplot(ar_data_frame, aes(x=group,y=values,fill=subgroup))+
 complete_t_plot <- grid.arrange(plot_t_bio,plot_t_cli,plot_t_hyd,plot_t_geo,plot_t_met,nrow=5,ncol=1,heights = c(1,1,1,1,1.7))
 ggsave("t_tests.pdf",plot=complete_t_plot,device="pdf", width = 8.27, height = 11.69)
 
+##falta terminar
+if(0){
+  ## Regresion con dummies de paises ====
 
+  dummies_countries <- create_dummies(excel_file=paste0(Dir,"emdata_dummies_countries.xlsx")) 
 
-## Regresion con dummies de paises ====
+  exo_afghanistan <- dummies_countries$`Afghanistan_dummies_xts}test`
 
-dummies_countries <- create_dummies(excel_file=paste0(Dir,"emdata_dummies_countries.xlsx")) 
+  ##Prueba de regresion con un Afganistan
 
+  eqsystem2 <- list()
+  for(country in countries){
+    lags_name <- paste0("lags_reduced_", country)
+    lags_df <- get(lags_name)
+  
+    #Busca las variables para el gdp y el fdi
+    gdp_variable <- paste("gdp",country,sep="_")
+    fdi_variable <- paste("gfdi",country,sep="_")
+  
+    ## Interaccion dummy D y promedio movil
+    interaction <- interaction_function(exo_afghanistan)
+  
+    #Genera la ecuacion n.4 por el país country
+  
+    eqsystem2[[country]]  <- base_datos[,country]  ~ base_datos[,"Mean_Returns_Moving_Averages"] + exo_afghanistan[,-ncol(exo_afghanistan)] + 
+        interaction+ base_datos[,gdp_variable] + base_datos[,fdi_variable] + lags_df
+  }
 
+  model <- systemfit(eqsystem2, method = "SUR")
+}
