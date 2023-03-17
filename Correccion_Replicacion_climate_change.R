@@ -356,7 +356,7 @@ if(0){
 ##Realizar for loop para obtener las matrices de rezagos
 for(country in countries){
   var_name <- paste0("lags_reduced_",country)
-  lags     <- lag_function(country,AR.m=20, MA.m=0, d=0, bool=TRUE, metodo="CSS")
+  lags     <- lag_function(base_retornos,country,AR.m=20, MA.m=0, d=0, bool=TRUE, metodo="CSS",dia.inicial)
   assign(var_name,lags)
 }
 
@@ -378,7 +378,8 @@ disasters_exo = c("bio_exo","cli_exo","hyd_exo","geo_exo","met_exo")  #<<<--- ve
 fitted_models <- c()
 for(disaster in disasters_exo){
   for(country in countries){
-    eqsystem[[country]] <- model_equation(country,get(disaster))
+    eqsystem[[country]] <- model_equation(base_datos,country,get(disaster))
+    
   }
   three_l = substr(disaster,1,3)
   name = paste0("fitsur_",three_l)
