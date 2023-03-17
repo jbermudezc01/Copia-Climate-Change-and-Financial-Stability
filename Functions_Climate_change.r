@@ -311,7 +311,6 @@ arma_seleccion_df = function(object, AR.m, MA.m, d, bool, metodo){
 lag_function <- function(base_niveles,country,AR.m,MA.m,d,bool=TRUE,metodo="CSS",dia.inicial = dia.inicial)
   {
   
-  #En correccion_climate_change la funcion seria lag_function(base_retornos,country,AR.m=20, MA.m=0, d=0, bool=TRUE, metodo="CSS",dia.inicial)
   #Utilizamos la funcion arma_seleccion_df para obtener el rezago para incluir en la ecuacion segun el 
   #criterio de Akaike. Como queremos ver AR(p), MA.m = 0, y como todos los retornos son estacionarios, 
   #entonces d =0.
@@ -346,7 +345,7 @@ lag_function <- function(base_niveles,country,AR.m,MA.m,d,bool=TRUE,metodo="CSS"
 # ----Argumentos de salida  ----#
 #-- eq: ecuación de variable dependiente ~ regresoras.
 #---------------------------------------------------------------------------------------#
-model_equation <- function(database,country,exo){  ## En correccion_climate_change database = base_datos model_equation(base-datos,country,get(disaster))
+model_equation <- function(database,country,exo){  
   
   #Busca el dataframe con los rezagos
   lags_name <- paste0("lags_reduced_", country)
