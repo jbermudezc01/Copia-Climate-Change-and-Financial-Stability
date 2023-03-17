@@ -173,12 +173,12 @@ days <- function(x, m, months, dates){
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
 #-- excel_file: un archivo excel que contiene los dias correspondientes a las dummies
-#-- Retornos   : xxxx
-#-- no.rezagos : Numero de rezagos de xxxx
+#-- Retornos   : serie de tiempo, se usara su indice para generar las dummies
+#-- no.rezagos : Numero de rezagos de la primera dummy (t_0) se interpretan como n dias despues del desastre
 #-- first.calendar.days.tobe.evaluated: numero de dias despues del evento a ser evaluados
 # ----Argumentos de salida  ----#
-#-- xts_dummies: Array con las dummies de todos los tipos de desastres de tres dominsiones, 
-#                donde la primera es ....   
+#-- xts_dummies: Array con las dummies de todos los tipos de desastres de tres dominsiones, donde la primera es el tipo 
+#                de desastre, la segunda el indice de fechas y la tercera los pasos adelante del desastre (0,...,no.rezagos) 
 #---------------------------------------------------------------------------------------#
 
 create_dummies <- function(excel_file, Retornos, no.rezagos=4, first.calendar.days.tobe.evaluated = 10 ){
@@ -255,15 +255,16 @@ create_dummies <- function(excel_file, Retornos, no.rezagos=4, first.calendar.da
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
 #-- obj: un objeto xts
+#-- average: una columna con los promedios moviles
 #-- La función asume que "Promedio_movil" existe, vector que se tiene arriba en el codigo
 # ----Argumentos de salida  ----#
 #-- interaction_xts: objeto xts de la interacción entre D y el promedio movil
 #---------------------------------------------------------------------------------------#
 
-interaction_function <- function(obj){
+interaction_function <- function(obj,average){
   interaction <- c()
   for(i in 1:nrow(obj)){
-    interaction <- c(interaction, as.numeric(Promedio_movil[i])*as.numeric((obj[,ncol(obj)])[i]))
+    interaction <- c(interaction, as.numeric(average[i])*as.numeric((obj[,ncol(obj)])[i]))
   }
   interaction_xts <- xts(interaction, order.by = index(obj))
   return(interaction_xts)
@@ -282,18 +283,22 @@ interaction_function <- function(obj){
 # y crear un dataframe de todos los posibles modelos con el criterio de Akaike y bayesiano.
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
-#-- country: caracteres indicando un pais
-#-- AR.m  : rezago máximo de la parte autorregresiva
-#-- Ma.m  : rezago máximo de la parte de promedio movil
-#-- d     : orden de diferenciación
-#-- bool  : booleano que indica si realizar la estimación arima con constante (el default es TRUE)
-#-- metodo: método por el cual se hará la estimación ARIMA (existe CS, ML y CSS-ML) (el default es CSS)
+#-- base_niveles: base a la cual se le sacaran los rezagos
+#-- country     : caracteres indicando un pais
+#-- AR.m        : rezago máximo de la parte autorregresiva
+#-- Ma.m        : rezago máximo de la parte de promedio movil
+#-- d           : orden de diferenciación
+#-- bool        : booleano que indica si realizar la estimación arima con constante (el default es TRUE)
+#-- metodo      : metodo por el cual se hará la estimación ARIMA (existe CS, ML y CSS-ML) (el default es CSS)
+#-- dia.inicial : sirve para seleccionar el dia desde el cual debe empezar la base de rezagos 
+#                 (el default es el mismo de las otras bases, dia.inicial)
 # ----Argumentos de salida  ----#
 #-- lags_reduced: objeto xts con los p-rezagos para cada país.
 #---------------------------------------------------------------------------------------#
 
-lag_function <- function(country,AR.m,MA.m,d,bool=TRUE,metodo="CSS"){
+lag_function <- function(base_niveles,country,AR.m,MA.m,d,bool=TRUE,metodo="CSS",dia.inicial = dia.inicial){
   
+  #En correccion_climate_change la funcion seria lag_function(base_retornos,country,AR.m=20, MA.m=0, d=0, bool=TRUE, metodo="CSS",dia.inicial)
   
   arma_seleccion_df = function(object, AR.m, MA.m, d, bool, metodo){
     index = 1
@@ -315,12 +320,12 @@ lag_function <- function(country,AR.m,MA.m,d,bool=TRUE,metodo="CSS"){
   #Utilizamos la funcion arma_seleccion_df para obtener el rezago para incluir en la ecuacion segun el 
   #criterio de Akaike. Como queremos ver AR(p), MA.m = 0, y como todos los retornos son estacionarios, 
   #entonces d =0.
-  mod <- arma_seleccion_df(object=base_retornos[,country], AR.m, MA.m, d, bool, metodo)
+  mod <- arma_seleccion_df(object=base_niveles[,country], AR.m, MA.m, d, bool, metodo)
   p   <- mod[which.min(mod$AIC),'p']
   
   #generamos una base de datos que genere columnas de rezagos, el numero de columnas sera el mismo que el orden 
   #obtenido en el procedimiento anterior
-  if(p>0)lags_df <- timeSeries::lag((base_retornos[,country]),c(1:p))
+  if(p>0)lags_df <- timeSeries::lag((base_niveles[,country]),c(1:p))
   
   #Lo colocamos desde el 8 de febrero para cuadrar con el indice de la base de datos principal
   lags_reduced <- lags_df[paste0(dia.inicial,"/"),]
@@ -341,26 +346,29 @@ lag_function <- function(country,AR.m,MA.m,d,bool=TRUE,metodo="CSS"){
 # ecuaciones siguiendo el paper de Pagnottoni.
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
-#-- country: caracteres indicando un pais
-#-- exo    : conjunto de variables exogenas, especificamente las dummies. En el primer ejemplo son dummies 
+#-- database : base de datos donde se encuentran gran parte de las variables
+#-- country  : caracteres indicando un pais
+#-- exo      : conjunto de variables exogenas, especificamente las dummies. En el primer ejemplo son dummies 
 #            por tipo de desastre
 # ----Argumentos de salida  ----#
 #-- eq: ecuación de variable dependiente ~ regresoras.
 #---------------------------------------------------------------------------------------#
 
-model_equation <- function(country,exo){
+model_equation <- function(database,country,exo){  ## En correccion_climate_change database = base_datos model_equation(base-datos,country,get(disaster))
   
   #Busca el dataframe con los rezagos
   lags_name <- paste0("lags_reduced_", country)
-  lags_df <- get(lags_name)
+  if(exists(lags_name)==TRUE) lags_df <- get(lags_name) ## Primero toca ver si lags_name existe, ya que si existe algun país que no
+                                                        #  tenga matriz de rezagos, lags_name no existe. En nuestro caso todos los países
+                                                        #  tienen rezagos.
   
   #Busca las variables para el gdp y el fdi
   gdp_variable <- paste("gdp",country,sep="_")
   fdi_variable <- paste("gfdi",country,sep="_")
   
   #Genera la ecuacion n.4 por el país country
-  eq  <- base_datos[,country]  ~ base_datos[,"Mean_Returns_Moving_Averages"] +exo + base_datos[,gdp_variable] +
-    base_datos[,fdi_variable] + lags_df
+  eq  <- database[,country]  ~ database[,"Mean_Returns_Moving_Averages"] +exo + database[,gdp_variable] +
+    database[,fdi_variable] + lags_df  ## Se asume el nombre "Mean_Returns_Moving_Averages, que fue nombrada en la linea 99 del otro codigo
   return(eq)
 }
 
