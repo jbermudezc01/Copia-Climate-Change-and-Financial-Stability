@@ -354,7 +354,7 @@ lag_function <- function(base_niveles,country,AR.m,MA.m,d,bool=TRUE,metodo="CSS"
 #-- eq: ecuación de variable dependiente ~ regresoras.
 #---------------------------------------------------------------------------------------#
 
-model_equation <- function(database,country,exo){  ## En correccion_climate_change database = base_datos
+model_equation <- function(database,country,exo){  ## En correccion_climate_change database = base_datos model_equation(base-datos,country,get(disaster))
   
   #Busca el dataframe con los rezagos
   lags_name <- paste0("lags_reduced_", country)
@@ -368,7 +368,7 @@ model_equation <- function(database,country,exo){  ## En correccion_climate_chan
   
   #Genera la ecuacion n.4 por el país country
   eq  <- database[,country]  ~ database[,"Mean_Returns_Moving_Averages"] +exo + database[,gdp_variable] +
-    database[,fdi_variable] + lags_df
+    database[,fdi_variable] + lags_df  ## Se asume el nombre "Mean_Returns_Moving_Averages, que fue nombrada en la linea 99 del otro codigo
   return(eq)
 }
 
