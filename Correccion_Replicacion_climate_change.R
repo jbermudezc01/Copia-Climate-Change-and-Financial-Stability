@@ -236,13 +236,6 @@ dummies <- create_dummies(excel_file=paste0(Dir,"emdata_dummies_arregladas.xlsx"
                           Retornos, no.rezagos=no.rezagos.de.desatres, first.calendar.days.tobe.evaluated = 10 ) 
 
 # Calculo de interacciones entre D y Rmt
-#interaction_climatological <- interaction_function(climatological_dummies)
-#interaction_meteorological <- interaction_function(meteorological_dummies)
-#interaction_hydrological   <- interaction_function(hydrological_dummies)
-#interaction_geophysical    <- interaction_function(geophysical_dummies)
-#interaction_biological     <- interaction_function(biological_dummies) 
-
-# Calculo de interacciones entre D y Rmt
 names.int    = paste0('Int_D_', dimnames(dummies)[[1]])
 interactions = matrix( NA, nrow(Retornos), length(dimnames(dummies)[[1]]), dimnames=list(as.character(index(Retornos)), names.int))
 for (tip.desast in 1:ncol(interactions))
@@ -272,15 +265,6 @@ if(0){
 }
 
 ### Generacion de base de datos con todas las variables que serán usadas para la estimación ====
-# base_datos <- merge(Retornos,Promedio_movil,interaction_biological,interaction_climatological,
-#                     interaction_meteorological, interaction_hydrological,interaction_geophysical,
-#                     biological_dummies[,1:(ncol(biological_dummies)-1)],
-#                     climatological_dummies[,1:(ncol(climatological_dummies)-1)],
-#                     meteorological_dummies[,1:(ncol(meteorological_dummies)-1)],
-#                     hydrological_dummies[,1:(ncol(hydrological_dummies)-1)],
-#                     geophysical_dummies[,1:(ncol(geophysical_dummies)-1)],
-#                     Crecimiento_PIB, Crecimiento_FDI) 
-
 base_datos <- merge(Retornos,Promedio_movil, as.xts(interactions[,paste0('Int_D_',Tipos.Desastres)],order.by= index(Retornos)))
 for (desas in 1:length(Tipos.Desastres)){
   dummies.desas           = as.xts(dummies[desas,,paste0('t',0:no.rezagos.de.desatres)], order.by= index(Retornos))
@@ -300,31 +284,7 @@ if(0){
  write.xlsx(base_final,"Base_datos_final.xlsx",row.names= FALSE)
 }
 
-#### Variables exogenas por tipo de desastre =========
-
-# El siguiente codigo genera las variables exogenas que seran tenidas en cuenta en cada regresion para cada tipo de 
-# desastre
-###
-
-# bio_exo <- with(base_datos, cbind(interaction_biological,biological_t_0,
-#                                   biological_t_1,biological_t_2,biological_t_3,
-#                                   biological_t_4))
-# cli_exo <- with(base_datos, cbind(interaction_climatological, climatological_t_0,
-#                                   climatological_t_1, climatological_t_2, climatological_t_3,
-#                                   climatological_t_4))
-# hyd_exo <- with(base_datos, cbind(interaction_hydrological, hydrological_t_0,
-#                                   hydrological_t_1, hydrological_t_2, hydrological_t_3,
-#                                   hydrological_t_4))
-# geo_exo <- with(base_datos, cbind(interaction_geophysical, geophysical_t_0,
-#                                   geophysical_t_1, geophysical_t_2, geophysical_t_3,
-#                                   geophysical_t_4))
-# met_exo <- with(base_datos, cbind(interaction_meteorological,meteorological_t_0,
-#                                   meteorological_t_1,meteorological_t_2,meteorological_t_3,
-#                                   meteorological_t_4))
-
-
 ##### Revisar autocorrelacion serial ============
-
 #El siguiente codigo es para revisar la autocorrelacion serial de la serie de retornos de cada indice, con 
 #50, 100 y n/4 rezagos. Al 5% para todos los indices se viola la hipótesis nula para al menos un rezago
 if(0){
@@ -357,39 +317,32 @@ if(0){
 ## Loop para obtener las matrices de rezagos para cada pais
 for(country in countries){
   var_name <- paste0("lags_",country)
-  lags     <- lag_function(base_retornos,country,AR.m=20, MA.m=0, d=0, bool=TRUE, metodo="CSS",dia.inicial)
-  assign(var_name,lags)
+  Lags     <- lag_function(base_retornos,country,AR.m=20, MA.m=0, d=0, bool=TRUE, metodo="CSS",dia.inicial)
+  assign(var_name,Lags)
 }
 
 
-
-#### Funcion para la estimacion del modelo ==========
+#### Estimacion del modelo SUR ==========
 
 ### Realizar for loop a lo largo de todos los paises para obtener las ecuaciones a estimar. 
 # Tambien a lo largo de los 5 tipos de desastres
-
-eqsystem = list()
-
-#disasters_exo = c("bio_exo","cli_exo","hyd_exo","geo_exo","met_exo")  #<<<--- vector con tipos de desastres, son matrices definidas arriba
 
 # El siguiente for genera una estimacion para cada uno de los 5 tipos de desastres, los cuales tomaran
 # los nombres de fitsur_bio, fitsur_cli, fitsur_hyd, fitsur_geo, fitsur_met.
 # Por otro lado, en la lista fitted_models generamos el nombre de losmodelos estimados, que necesitaremos 
 # mas adelante.
 
-fitted_models <- c()
+eqsystem      = list()
+fitted_models = c()
 for(disaster in Tipos.Desastres){
   for(country in countries){
-    exo <- with(base_datos, cbind(interaction_biological,biological_t_0,
-                                      biological_t_1,biological_t_2,biological_t_3,biological_t_4))
-    #eqsystem[[country]] <- model_equation(base_datos,country,get(disaster))
-    eqsystem[[country]] <- base_datos[,country] ~ base_datos[,"Mean_Returns_Moving_Averages"] + exo + base_datos[, paste("gdp",country,sep="_")] +
-                                                  base_datos[,paste("gfdi",country,sep="_")] + lags_df
+    var.exo                =          c( 'Mean_Returns_Moving_Averages', c(paste0('Int_D_', disaster), paste0(disaster,'_t', 0:no.rezagos.de.desatres)) )
+    eqsystem[[country]]    =  model_equation.LF(database=base_datos, country, 
+                              var.exo=var.exo,  var.exo.pais=c('gdp','gfdi'),  Lags='lags')
   }
-  three_l = substr(disaster,1,3)
-  name = paste0("fitsur_",three_l)
-  fitted_models <- c(fitted_models,name)
-  assign(name,systemfit(eqsystem,method="SUR"))
+  name          = paste0("fitsur_", substr(disaster,1,3) )
+  fitted_models = c(fitted_models, name)
+  assign(name, systemfit(eqsystem, method="SUR"))
 } 
 
 # De acuerdo con la notacion de los modelos estimados, los coeficientes el dia del evento terminan en t_0, 
