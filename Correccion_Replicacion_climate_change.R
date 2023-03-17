@@ -49,6 +49,7 @@ countries <- c("Australia","Belgium", "Brazil", "Canada", "Chile", "Denmark", "F
                "SouthAfrica","SouthKorea", "Spain", "Sweden","Switzerland","Thailand","Turkey", 
                "UnitedKingdom","USA1","USA2") #<<<--- Lista de los paises analizados
 Tipos.Desastres  <- c("Biological","Climatological","Geophysical","Hydrological","Meteorological")  #<<<--- Tipos de desastres considerados
+no.rezagos.de.desatres <- 4  #<<<--- Numero de rezagos de los desastres <w> (i.e. t0, t1, ..., tw)
 
 # Establecemos el directorio de los datos
 Dir      = paste0(getwd(),'/Bases/') #Directorio de datos, se supone que el subdirectorio <Bases> existe
@@ -232,7 +233,7 @@ Crecimiento_FDI <- fdi_growth_base[paste0(dia.inicial,"/"),]
 
 # Corremos la función <create_dummies> sobre el archivo que contiene las fechas de las dummies
 dummies <- create_dummies(excel_file=paste0(Dir,"emdata_dummies_arregladas.xlsx"), 
-                          Retornos, no.rezagos=4, first.calendar.days.tobe.evaluated = 10 ) 
+                          Retornos, no.rezagos=no.rezagos.de.desatres, first.calendar.days.tobe.evaluated = 10 ) 
 
 # Calculo de interacciones entre D y Rmt
 #interaction_climatological <- interaction_function(climatological_dummies)
@@ -270,28 +271,33 @@ if(0){
   interaction_biological <- interaction_function(biological_dummies) ### hacer for
 }
 
-### Generacion de base de datos con las variables que serán usadas para la estimación ====
+### Generacion de base de datos con todas las variables que serán usadas para la estimación ====
+# base_datos <- merge(Retornos,Promedio_movil,interaction_biological,interaction_climatological,
+#                     interaction_meteorological, interaction_hydrological,interaction_geophysical,
+#                     biological_dummies[,1:(ncol(biological_dummies)-1)],
+#                     climatological_dummies[,1:(ncol(climatological_dummies)-1)],
+#                     meteorological_dummies[,1:(ncol(meteorological_dummies)-1)],
+#                     hydrological_dummies[,1:(ncol(hydrological_dummies)-1)],
+#                     geophysical_dummies[,1:(ncol(geophysical_dummies)-1)],
+#                     Crecimiento_PIB, Crecimiento_FDI) 
 
-Date <- as.character(index(Retornos))
-
-
-base_datos <- merge(Retornos,Promedio_movil,interaction_biological,interaction_climatological,
-                    interaction_meteorological, interaction_hydrological,interaction_geophysical,
-                    biological_dummies[,1:(ncol(biological_dummies)-1)],
-                    climatological_dummies[,1:(ncol(climatological_dummies)-1)],
-                    meteorological_dummies[,1:(ncol(meteorological_dummies)-1)],
-                    hydrological_dummies[,1:(ncol(hydrological_dummies)-1)],
-                    geophysical_dummies[,1:(ncol(geophysical_dummies)-1)],
-                    Crecimiento_PIB, Crecimiento_FDI) 
+base_datos <- merge(Retornos,Promedio_movil, as.xts(interactions[,paste0('Int_D_',Tipos.Desastres)],order.by= index(Retornos)))
+for (desas in 1:length(Tipos.Desastres)){
+  dummies.desas           = as.xts(dummies[desas,,paste0('t',0:no.rezagos.de.desatres)], order.by= index(Retornos))
+  colnames(dummies.desas) = paste0(Tipos.Desastres[desas],'_',colnames(dummies.desas))
+  base_datos              = merge(base_datos, dummies.desas)
+}
+base_datos <- merge(base_datos, Crecimiento_PIB, Crecimiento_FDI)
 
 ## Tambien es posible exportar a excel, en cuyo caso se sigue este codigo:
 if(0){
-# Cambiar a dataframe
-base_df <- as.data.frame(base_datos)
-#Agregar el indice, no se habia agregado antes porque la funcion merge ponia problema dada la clase de los objetos
-base_final <- cbind(Date,base_df)
-#Para crear un archivo excel con la base de datos
-write.xlsx(base_final,"Base_datos_final.xlsx",row.names= FALSE)
+ Date <- as.character(index(Retornos))
+ # Cambiar a dataframe
+ base_df <- as.data.frame(base_datos)
+ #Agregar el indice, no se habia agregado antes porque la funcion merge ponia problema dada la clase de los objetos
+ base_final <- cbind(Date,base_df)
+ #Para crear un archivo excel con la base de datos
+ write.xlsx(base_final,"Base_datos_final.xlsx",row.names= FALSE)
 }
 
 #### Variables exogenas por tipo de desastre =========
@@ -300,26 +306,21 @@ write.xlsx(base_final,"Base_datos_final.xlsx",row.names= FALSE)
 # desastre
 ###
 
-bio_exo <- with(base_datos, cbind(interaction_biological,biological_t_0,
-                                  biological_t_1,biological_t_2,biological_t_3,
-                                  biological_t_4))
-  
-  
-cli_exo <- with(base_datos, cbind(interaction_climatological, climatological_t_0,
-                                  climatological_t_1, climatological_t_2, climatological_t_3,
-                                  climatological_t_4))
-
-hyd_exo <- with(base_datos, cbind(interaction_hydrological, hydrological_t_0,
-                                  hydrological_t_1, hydrological_t_2, hydrological_t_3,
-                                  hydrological_t_4))
-
-geo_exo <- with(base_datos, cbind(interaction_geophysical, geophysical_t_0,
-                                  geophysical_t_1, geophysical_t_2, geophysical_t_3,
-                                  geophysical_t_4))
-
-met_exo <- with(base_datos, cbind(interaction_meteorological,meteorological_t_0,
-                                  meteorological_t_1,meteorological_t_2,meteorological_t_3,
-                                  meteorological_t_4))
+# bio_exo <- with(base_datos, cbind(interaction_biological,biological_t_0,
+#                                   biological_t_1,biological_t_2,biological_t_3,
+#                                   biological_t_4))
+# cli_exo <- with(base_datos, cbind(interaction_climatological, climatological_t_0,
+#                                   climatological_t_1, climatological_t_2, climatological_t_3,
+#                                   climatological_t_4))
+# hyd_exo <- with(base_datos, cbind(interaction_hydrological, hydrological_t_0,
+#                                   hydrological_t_1, hydrological_t_2, hydrological_t_3,
+#                                   hydrological_t_4))
+# geo_exo <- with(base_datos, cbind(interaction_geophysical, geophysical_t_0,
+#                                   geophysical_t_1, geophysical_t_2, geophysical_t_3,
+#                                   geophysical_t_4))
+# met_exo <- with(base_datos, cbind(interaction_meteorological,meteorological_t_0,
+#                                   meteorological_t_1,meteorological_t_2,meteorological_t_3,
+#                                   meteorological_t_4))
 
 
 ##### Revisar autocorrelacion serial ============
@@ -353,9 +354,9 @@ if(0){
 # criterio de Akaike
 
 
-##Realizar for loop para obtener las matrices de rezagos
+## Loop para obtener las matrices de rezagos para cada pais
 for(country in countries){
-  var_name <- paste0("lags_reduced_",country)
+  var_name <- paste0("lags_",country)
   lags     <- lag_function(base_retornos,country,AR.m=20, MA.m=0, d=0, bool=TRUE, metodo="CSS",dia.inicial)
   assign(var_name,lags)
 }
@@ -368,7 +369,7 @@ for(country in countries){
 
 eqsystem = list()
 
-disasters_exo = c("bio_exo","cli_exo","hyd_exo","geo_exo","met_exo")  #<<<--- vector con tipos de desastres, son matrices definidas arriba
+#disasters_exo = c("bio_exo","cli_exo","hyd_exo","geo_exo","met_exo")  #<<<--- vector con tipos de desastres, son matrices definidas arriba
 
 # El siguiente for genera una estimacion para cada uno de los 5 tipos de desastres, los cuales tomaran
 # los nombres de fitsur_bio, fitsur_cli, fitsur_hyd, fitsur_geo, fitsur_met.
@@ -376,10 +377,13 @@ disasters_exo = c("bio_exo","cli_exo","hyd_exo","geo_exo","met_exo")  #<<<--- ve
 # mas adelante.
 
 fitted_models <- c()
-for(disaster in disasters_exo){
+for(disaster in Tipos.Desastres){
   for(country in countries){
-    eqsystem[[country]] <- model_equation(base_datos,country,get(disaster))
-    
+    exo <- with(base_datos, cbind(interaction_biological,biological_t_0,
+                                      biological_t_1,biological_t_2,biological_t_3,biological_t_4))
+    #eqsystem[[country]] <- model_equation(base_datos,country,get(disaster))
+    eqsystem[[country]] <- base_datos[,country] ~ base_datos[,"Mean_Returns_Moving_Averages"] + exo + base_datos[, paste("gdp",country,sep="_")] +
+                                                  base_datos[,paste("gfdi",country,sep="_")] + lags_df
   }
   three_l = substr(disaster,1,3)
   name = paste0("fitsur_",three_l)
