@@ -1,8 +1,8 @@
 if(Sys.info()["sysname"]=='Windows') Sys.setlocale("LC_TIME","English")
 
 rm(list = ls())
-setwd('C:/Users/jpber/OneDrive/Documents/Codigo_compartido_Melo/Climate_Change_and_Financial_Stability/Climate-Change-and-Financial-Stability')
-#setwd('/Users/lumelo/archivos/Climate-Change-and-Financial-Stability/Github/Climate-Change-and-Financial-Stability')
+if (Sys.info()["sysname"]=='Windows')  setwd('C:/Users/jpber/OneDrive/Documents/Codigo_compartido_Melo/Climate_Change_and_Financial_Stability/Climate-Change-and-Financial-Stability')
+if (Sys.info()["sysname"]!='Windows')  setwd('/Users/lumelo/archivos/Climate-Change-and-Financial-Stability/Github/Climate-Change-and-Financial-Stability')
 
 cat("\014")
 
@@ -48,6 +48,7 @@ countries <- c("Australia","Belgium", "Brazil", "Canada", "Chile", "Denmark", "F
                "France", "Germany", "HongKong", "India", "Indonesia","Mexico","Netherlands","Norway","Poland","Russia",
                "SouthAfrica","SouthKorea", "Spain", "Sweden","Switzerland","Thailand","Turkey", 
                "UnitedKingdom","USA1","USA2") #<<<--- Lista de los paises analizados
+Tipos.Desastres  <- c("Biological","Climatological","Geophysical","Hydrological","Meteorological")  #<<<--- Tipos de desastres considerados
 
 # Establecemos el directorio de los datos
 Dir      = paste0(getwd(),'/Bases/') #Directorio de datos, se supone que el subdirectorio <Bases> existe
@@ -125,101 +126,102 @@ print(Stats, digits=3)
 # Las variables a desagregar diariamente son el crecimiento del GDP trimestral y el crecimiento del FDI anual.
 
 ### Datos para GDP trimestral ====
-#Leer la base de datos, establecer el formato fecha y generar la base de datos en xts y la lista a ser desagregada
-gdp_countries      <- read_xlsx(paste0(Dir,"GDP_countries_corregida.xlsx"), sheet="GDP") #<<<--- Base de datos con GDPs
-dates.low.freq     <- as.Date(as.yearqtr(gdp_countries$Time),frac=1) #date format, se supone que existe una col llamada <Time>
-quarterly_series   <- as.list(gdp_countries[,-1]) #Se quita la columna de fechas y se genera una lista de sus columnas
+if(1){
+ #Leer la base de datos, establecer el formato fecha y generar la base de datos en xts y la lista a ser desagregada
+ gdp_countries      <- read_xlsx(paste0(Dir,"GDP_countries_corregida.xlsx"), sheet="GDP") #<<<--- Base de datos con GDPs
+ dates.low.freq     <- as.Date(as.yearqtr(gdp_countries$Time),frac=1) #date format, se supone que existe una col llamada <Time>
+ quarterly_series   <- as.list(gdp_countries[,-1]) #Se quita la columna de fechas y se genera una lista de sus columnas
 
-### ----- Matriz de agregacion GDP trimestral <qtr_agr> ------
+ ### ----- Matriz de agregacion GDP trimestral <qtr_agr> ------
+ # El metodo de chow-lin requiere una matriz de agregacion. Sin embargo, en la version fast se tiene en cuenta las 
+ # diferencias de dias que puede haber en cada mes. Por tanto, es necesario crear una matriz de agregacion que 
+ # tenga lo anterior en cuenta. 
 
-# El metodo de chow-lin requiere una matriz de agregacion. Sin embargo, en la version fast se tiene en cuenta las 
-# diferencias de dias que puede haber en cada mes. Por tanto, es necesario crear una matriz de agregacion que 
-# tenga lo anterior en cuenta. 
+ nrows <- length(quarterly_series[[1]])   ## Hay 76 trimestres en la base de datos, numero de datos trimestrales
+ ncols <- nrow(base_precios)   ## No. de dias, con los retornos se pierde un dato, al tomarle diferencias se pierde otro dato
 
-nrows <- length(quarterly_series[[1]])   ## Hay 76 trimestres en la base de datos, numero de datos trimestrales
-ncols <- nrow(base_precios)   ## No. de dias, con los retornos se pierde un dato, al tomarle diferencias se pierde otro dato
+ qtr_agr <- matrix(0, nrow = nrows, ncol = ncols) #matriz de agregacion 
+ dates.high.freq   <- as.character(index(base_precios)) #Fechas de freq alta
+ cat('\nHigh frequency range:',range(dates.high.freq))
+ cat('\nLow frequency range:'); range(dates.low.freq)
 
-qtr_agr <- matrix(0, nrow = nrows, ncol = ncols) #matriz de agregacion 
-dates.high.freq   <- as.character(index(base_precios)) #Fechas de freq alta
-cat('\nHigh frequency range:',range(dates.high.freq))
-cat('\nLow frequency range:'); range(dates.low.freq)
+ ## WARNING si los rangos son distintos, primero pasar dates.high.freq al ultimo dia de su trimestre
+ quarter.high.freq <- ceiling_date(as.Date(dates.high.freq), unit = "quarter") - 1
+ cat('\nHigh frequency range in trimesters:');range(quarter.high.freq)
 
-## WARNING si los rangos son distintos, primero pasar dates.high.freq al ultimo dia de su trimestre
-quarter.high.freq <- ceiling_date(as.Date(dates.high.freq), unit = "quarter") - 1
-cat('\nHigh frequency range in trimesters:');range(quarter.high.freq)
+ if ((range(quarter.high.freq)[1] == range(dates.low.freq)[1] & range(quarter.high.freq)[2] == range(dates.low.freq)[2]) == FALSE)
+   warning("Los rangos de baja y alta frecuencia son distintos")
 
-if ((range(quarter.high.freq)[1] == range(dates.low.freq)[1] & range(quarter.high.freq)[2] == range(dates.low.freq)[2]) == FALSE)
-  warning("Los rangos de baja y alta frecuencia son distintos")
+ ## Extrae los meses de alta freq. en formato yyyy-mm sin repeticiones.
+ meses <- unique(substr(dates.high.freq,1,7))
 
-## Extrae los meses de alta freq. en formato yyyy-mm sin repeticiones.
-meses <- unique(substr(dates.high.freq,1,7))
+ #Realizamos la matriz de agregacion usando la funcion days. En este caso los enteros i iran de 0 a 75, 
+ # y de acuerdo con la función esto generara el primer a tercer mes de cada trimestre. (Explicar mejor)
+ for(i in 0:(nrows-1))
+   qtr_agr <- days(x=i, m=qtr_agr, months=meses, dates=dates.high.freq)
 
-#Realizamos la matriz de agregacion usando la funcion days. En este caso los enteros i iran de 0 a 75, 
-# y de acuerdo con la función esto generara el primer a tercer mes de cada trimestre. (Explicar mejor)
-for(i in 0:(nrows-1))
-  qtr_agr <- days(x=i, m=qtr_agr, months=meses, dates=dates.high.freq)
+ ### Definicion de parametros usados en Chow Lin. 
+ # <alpha>:            Coef. de persitencia del error del modelo  
+ # <matriz_var_cov_0>: La matriz de var-cov del error del modelo
 
-### Definicion de parametros usados en Chow Lin. 
-# <alpha>:            Coef. de persitencia del error del modelo  
-# <matriz_var_cov_0>: La matriz de var-cov del error del modelo
+ vec_cte <- c(rep(1, ncols)) ## vector constante usado como variable indicadora, dado que no tenemos otra
+ alpha_fast = 0.99999        #<<---- Parametro de la version fast de chow-Lin
 
-vec_cte <- c(rep(1, ncols)) ## vector constante usado como variable indicadora, dado que no tenemos otra
-alpha_fast = 0.99999        #<<---- Parametro de la version fast de chow-Lin
+ #generar la matriz de var-cov de acuerdo al paper analizado (falta multiplicarla por sigma^2/(1-alpha^2) )
+ matriz_var_cov_0 <- matrix(1, nrow=ncols, ncol=ncols)
+ for(i in 1:ncols){
+   for(j in 1:ncols)
+     if(j != i) matriz_var_cov_0[i, j] = alpha_fast^(abs(j-i))
+ } ##Crear la matriz de var-cov
 
-#generar la matriz de var-cov de acuerdo al paper analizado (falta multiplicarla por sigma^2/(1-alpha^2) )
-matriz_var_cov_0 <- matrix(1, nrow=ncols, ncol=ncols)
-for(i in 1:ncols){
-  for(j in 1:ncols)
-    if(j != i) matriz_var_cov_0[i, j] = alpha_fast^(abs(j-i))
-} ##Crear la matriz de var-cov
+ ## SE ejecuta la funcion de chow_lin, que da como resultado una base de datos de las series desagregadas.
+ daily_series    = chow_lin(time_Series_list=quarterly_series, c=qtr_agr, w=vec_cte, var_covar=matriz_var_cov_0)
+ gdp_growth_base = apply(daily_series, MARGIN=2, function(x) diff(log(x))) #diff(log(series))
+ gdp_growth_base = as.xts(gdp_growth_base, order.by=index(base_precios[-1,]))
 
-## SE ejecuta la funcion de chow_lin, que da como resultado una base de datos de las series desagregadas.
-daily_series    = chow_lin(time_Series_list=quarterly_series, c=qtr_agr, w=vec_cte, var_covar=matriz_var_cov_0)
-gdp_growth_base = apply(daily_series, MARGIN=2, function(x) diff(log(x))) #diff(log(series))
-gdp_growth_base  = as.xts(gdp_growth_base, order.by=index(base_precios[-1,]))
-
-#Colocamos los nombres de las series
-names                     <- colnames(base_retornos)
-colnames(gdp_growth_base) <- names[1:ncol(gdp_growth_base)]
-#Para diferenciar los nombres de los retornos le agregamos un prefijo gdp
-colnames(gdp_growth_base) <- paste("gdp",colnames(gdp_growth_base),sep="_")
-
-
-### DESAGREGACION TEMPORAL FDI - Datos ===============================================================================
-
-#Ahora para hacer la desagregacion temporal del FDI necesitaremos los mismos cinco argumentos: una lista de las 
-# series a desagregar, un vector constante, una matriz de agregación y una matriz de varianzas covarianzas-
-# el alpha puede seguir siendo el mismo, ya que para el metodo fast debe ser 0.99999.
-fdi_countries    = read_xlsx(paste0(Dir,"FDI_anual.xlsx"), sheet="FDI") #<<--- Base datos de los FDI
-fdi_countries_ts = as.ts(fdi_countries[,-1],start=2001,frequency=1)     #<<--- Fecha y freq inicial de los datos 
-fdi_series       = as.list(fdi_countries_ts)
-
-##Matriz de agregacion anual FDI 
-fdi_rows <- nrow(fdi_countries_ts)
-##El numero de columnas es igual al de gdp porque se quiere desagregar en esa cantidad de dias (ncols)
-fdi_agregacion_matriz  <- matrix(0, nrow = fdi_rows, ncol = ncols)
-
-#Se genera la matriz de agregacion, colocando uno a los dias que pertenezcan al año correspondiente.
-#Por ejemplo en la primera fila tendran uno aquellos dias que pertenezcan al 2001 (primer anho)
-i1 = 0
-for(i in as.numeric(unique(substr(dates.high.freq,1,4)))){
-  i1 = i1 + 1
-  for(date in dates.high.freq){
-    if(substr(date,1,4)==i){
-      pos <- which(dates.high.freq == date)
-      fdi_agregacion_matriz[i1, pos] <- 1
-    }
-  }
+ #Colocamos los nombres de las series
+ names                     <- colnames(base_retornos)
+ colnames(gdp_growth_base) <- names[1:ncol(gdp_growth_base)]
+ #Para diferenciar los nombres de los retornos le agregamos un prefijo gdp
+ colnames(gdp_growth_base) <- paste("gdp",colnames(gdp_growth_base),sep="_")
 }
 
-# <vec_cte> corresponde a la serie indicadora, al igual que la matriz de var-cov permanecen iguales a las usadas en los GDPs
-fdi_daily_series = chow_lin(fdi_series, fdi_agregacion_matriz, vec_cte, matriz_var_cov_0)
-fdi_growth_base  = apply(fdi_daily_series, MARGIN=2, function(x) diff(log(x))) #diff(log(series))
-fdi_growth_base  = as.xts(fdi_growth_base, order.by=index(base_precios[-1,]))
+### DESAGREGACION TEMPORAL FDI - Datos ===============================================================================
+if(1){
+ #Ahora para hacer la desagregacion temporal del FDI necesitaremos los mismos cinco argumentos: una lista de las 
+ # series a desagregar, un vector constante, una matriz de agregación y una matriz de varianzas covarianzas-
+ # el alpha puede seguir siendo el mismo, ya que para el metodo fast debe ser 0.99999.
+ fdi_countries    = read_xlsx(paste0(Dir,"FDI_anual.xlsx"), sheet="FDI") #<<--- Base datos de los FDI
+ fdi_countries_ts = as.ts(fdi_countries[,-1],start=2001,frequency=1)     #<<--- Fecha y freq inicial de los datos 
+ fdi_series       = as.list(fdi_countries_ts)
+
+ ##Matriz de agregacion anual FDI 
+ fdi_rows <- nrow(fdi_countries_ts)
+ ##El numero de columnas es igual al de gdp porque se quiere desagregar en esa cantidad de dias (ncols)
+ fdi_agregacion_matriz  <- matrix(0, nrow = fdi_rows, ncol = ncols)
+
+ #Se genera la matriz de agregacion, colocando uno a los dias que pertenezcan al año correspondiente.
+ #Por ejemplo en la primera fila tendran uno aquellos dias que pertenezcan al 2001 (primer anho)
+ i1 = 0
+ for(i in as.numeric(unique(substr(dates.high.freq,1,4)))){
+   i1 = i1 + 1
+   for(date in dates.high.freq){
+     if(substr(date,1,4)==i){
+       pos <- which(dates.high.freq == date)
+       fdi_agregacion_matriz[i1, pos] <- 1
+     }
+   }
+ }
+
+ # <vec_cte> corresponde a la serie indicadora, al igual que la matriz de var-cov permanecen iguales a las usadas en los GDPs
+ fdi_daily_series = chow_lin(fdi_series, fdi_agregacion_matriz, vec_cte, matriz_var_cov_0)
+ fdi_growth_base  = apply(fdi_daily_series, MARGIN=2, function(x) diff(log(x))) #diff(log(series))
+ fdi_growth_base  = as.xts(fdi_growth_base, order.by=index(base_precios[-1,]))
 
 #Colocamos los mismos nombres que la base de retornos pero le agregamos un prefijo gfdi
 colnames(fdi_growth_base) <- names[1:ncol(fdi_growth_base)]
 colnames(fdi_growth_base) <- paste("gfdi",colnames(fdi_growth_base),sep="_")
+}
 
 #Por otro lado, tambien es necesario reducir la muestra a las bases para que concuerden con la muestra de paper
 #Podemos usar la funcion que estaba anteriormente especificada
@@ -228,37 +230,25 @@ Crecimiento_FDI <- fdi_growth_base[paste0(dia.inicial,"/"),]
 
 ### Dummies corregidas =====
 
-# Corremos la función create_dummies sobre el archivo que contiene las fechas de las dummies
-dummies <- create_dummies(excel_file=paste0(Dir,"emdata_dummies_arregladas.xlsx")) 
+# Corremos la función <create_dummies> sobre el archivo que contiene las fechas de las dummies
+dummies <- create_dummies(excel_file=paste0(Dir,"emdata_dummies_arregladas.xlsx"), 
+                          Retornos, no.rezagos=4, first.calendar.days.tobe.evaluated = 10 ) 
 
-#Para cada tipo de desastre lo guardamos en un xts distinto
-biological_dummies           <- dummies$`Biological_dummies_xts}`
-colnames(biological_dummies) <- paste("biological",colnames(biological_dummies),sep="_")
+# Calculo de interacciones entre D y Rmt
+#interaction_climatological <- interaction_function(climatological_dummies)
+#interaction_meteorological <- interaction_function(meteorological_dummies)
+#interaction_hydrological   <- interaction_function(hydrological_dummies)
+#interaction_geophysical    <- interaction_function(geophysical_dummies)
+#interaction_biological     <- interaction_function(biological_dummies) 
 
-meteorological_dummies       <- dummies$`Meteorological_dummies_xts}`
-colnames(meteorological_dummies) <- paste("meteorological",colnames(meteorological_dummies),sep="_")
-
-hydrological_dummies         <- dummies$`Hydrological_dummies_xts}`
-colnames(hydrological_dummies) <- paste("hydrological",colnames(hydrological_dummies),sep="_")
-
-geophysical_dummies          <- dummies$`Geophysical_dummies_xts}`
-colnames(geophysical_dummies) <- paste("geophysical",colnames(geophysical_dummies),sep="_")
-
-climatological_dummies       <- dummies$`Climatological_dummies_xts}`
-colnames(climatological_dummies) <- paste("climatological",colnames(climatological_dummies),sep="_")
-
-# Tambien es necesario crear la interaccion entre D y Rmt
-
-interaction_climatological <- interaction_function(climatological_dummies)
-interaction_meteorological <- interaction_function(meteorological_dummies)
-interaction_hydrological <- interaction_function(hydrological_dummies)
-interaction_geophysical <- interaction_function(geophysical_dummies)
-interaction_biological <- interaction_function(biological_dummies) 
-
+# Calculo de interacciones entre D y Rmt
+names.int    = paste0('Int_D_', dimnames(dummies)[[1]])
+interactions = matrix( NA, nrow(Retornos), length(dimnames(dummies)[[1]]), dimnames=list(as.character(index(Retornos)), names.int))
+for (tip.desast in 1:ncol(interactions))
+  interactions[,tip.desast] =  as.numeric(Promedio_movil) * dummies[tip.desast,,'D']
+  
+### Version de JP de las Dummies (no dio buenos resultados) =====
 if(0){
-### Dummies anteriores =====
-
-
   dummies <- create_dummies_xts(paste0(Dir,"EMDATA_dummies.xlsx"))
 
   climatological_dummies <- xts(dummies$`Climatological_dummies_xts}`,order.by = index(Retornos))
@@ -279,6 +269,7 @@ if(0){
   interaction_geophysical <- interaction_function(geophysical_dummies)
   interaction_biological <- interaction_function(biological_dummies) ### hacer for
 }
+
 ### Generacion de base de datos con las variables que serán usadas para la estimación ====
 
 Date <- as.character(index(Retornos))
@@ -363,10 +354,9 @@ if(0){
 
 
 ##Realizar for loop para obtener las matrices de rezagos
-
 for(country in countries){
   var_name <- paste0("lags_reduced_",country)
-  lags <- lag_function(country,AR.m=20, MA.m=0, d=0, bool=TRUE, metodo="CSS")
+  lags     <- lag_function(country,AR.m=20, MA.m=0, d=0, bool=TRUE, metodo="CSS")
   assign(var_name,lags)
 }
 
