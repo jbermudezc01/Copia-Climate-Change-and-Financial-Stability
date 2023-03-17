@@ -37,6 +37,7 @@ read_csv <- function(dir,countries) {
 }
 #------------------------------------------------------------------------------------#
 
+#--- Falta comentario --#
 if(0){
 #---------------------------------- 2. moving_average  ------------------------------------#
 # Toma como argumento una base de datos, para la cual genera para cada columna
@@ -60,6 +61,7 @@ moving_average <- function(x,k){
 #---------------------------------------------------------------------------------------#
 }
 
+#--- Funcion anterior de XX, fue mejorada por la funcion XX ---#
 if(0){
 #---------------------------------- 3. muestra_paper  ------------------------------------#
 # Reduce la base de datos dependiendo del indice. Esta funcion toma un día en 
@@ -95,7 +97,6 @@ muestra_paper <- function(obj,t){
 # ----Argumentos de salida  ----#
 #-- return_base: base de datos con la desagregacion temporal de cada una de los elementos en la lista time_Series_list
 #---------------------------------------------------------------------------------------#
-
 chow_lin <- function(time_Series_list, c, w, var_covar){
   return_list <- list()
   for(series in time_Series_list){
@@ -114,7 +115,6 @@ chow_lin <- function(time_Series_list, c, w, var_covar){
   return_base <- do.call(merge,return_list)
   return(return_base)
 } 
-
 #---------------------------------------------------------------------------------------#
 
 #---------------------------------- 5. series_list_function  ------------------------------------#
@@ -126,7 +126,6 @@ chow_lin <- function(time_Series_list, c, w, var_covar){
 # ----Argumentos de salida  ----#
 #-- series_list: una lista que contiene los datos de cada columna de la base de datos
 #---------------------------------------------------------------------------------------#
-
 series_list_function <- function(ts1){
   series_list <- list()
   for(country in colnames(ts1)){
@@ -135,11 +134,9 @@ series_list_function <- function(ts1){
   }
   return(series_list)
 }
-
 #---------------------------------------------------------------------------------------#
 
 
-#---------------------------------------------------------------------------------------#
 
 #---------------------------------- 6. days  ------------------------------------#
 # Genera la matriz de agregación trimestral, anhadiendo uno a los dias que corresponden a cada trimestre
@@ -152,7 +149,6 @@ series_list_function <- function(ts1){
 # ----Argumentos de salida  ----#
 #-- m: la matriz de agregación ya con el valor de 1 en los días que pertenezcan a cierto trimestre
 #---------------------------------------------------------------------------------------#
-
 days <- function(x, m, months, dates){
   first_month  <- months[3*x+1] #Primer mes del trimeste
   second_month <- months[3*x+2]
@@ -180,7 +176,6 @@ days <- function(x, m, months, dates){
 #-- xts_dummies: Array con las dummies de todos los tipos de desastres de tres dominsiones, donde la primera es el tipo 
 #                de desastre, la segunda el indice de fechas y la tercera los pasos adelante del desastre (0,...,no.rezagos) 
 #---------------------------------------------------------------------------------------#
-
 create_dummies <- function(excel_file, Retornos, no.rezagos=4, first.calendar.days.tobe.evaluated = 10 ){
   #Lee el nombre de las hojas del archivo, cada hoja corresponde a un tipo de desastre
   sheet_names      <- excel_sheets(excel_file)
@@ -246,7 +241,6 @@ create_dummies <- function(excel_file, Retornos, no.rezagos=4, first.calendar.da
   }
   return(xts_dummies)
 }
-
 #---------------------------------------------------------------------------------------#
 
 
@@ -260,7 +254,6 @@ create_dummies <- function(excel_file, Retornos, no.rezagos=4, first.calendar.da
 # ----Argumentos de salida  ----#
 #-- interaction_xts: objeto xts de la interacción entre D y el promedio movil
 #---------------------------------------------------------------------------------------#
-
 interaction_function <- function(obj,average){
   interaction <- c()
   for(i in 1:nrow(obj)){
@@ -269,7 +262,27 @@ interaction_function <- function(obj,average){
   interaction_xts <- xts(interaction, order.by = index(obj))
   return(interaction_xts)
 }
+#---------------------------------------------------------------------------------------#
 
+#---------------------------------------------------------------------------------------#
+#---- Falta comentarla !!!!
+#---------------------------------------------------------------------------------------#
+arma_seleccion_df = function(object, AR.m, MA.m, d, bool, metodo){
+  index = 1
+  df = data.frame(p = double(), d = double(), q = double(), AIC = double(), BIC = double())
+  for (p in 0:AR.m) {
+    for (q in 0:MA.m)  {
+      fitp <- arima(object, order = c(p, d, q), include.mean = bool, 
+                    method = metodo)
+      T.model = length(resid(fitp))
+      Aic = T.model*log(sum(resid(fitp)^2))+ 2*(p+q+1)   ## De acuerdo con Enders 2014.
+      Bic = T.model*log(sum(resid(fitp)^2)) + T.model*(p+q+1)  
+      df[index,] = c(p, d, q, Aic, Bic)
+      index = index + 1
+    }
+  }  
+  return(df)
+}
 #---------------------------------------------------------------------------------------#
 
 
@@ -295,28 +308,10 @@ interaction_function <- function(obj,average){
 # ----Argumentos de salida  ----#
 #-- lags_reduced: objeto xts con los p-rezagos para cada país.
 #---------------------------------------------------------------------------------------#
-
-lag_function <- function(base_niveles,country,AR.m,MA.m,d,bool=TRUE,metodo="CSS",dia.inicial = dia.inicial){
+lag_function <- function(base_niveles,country,AR.m,MA.m,d,bool=TRUE,metodo="CSS",dia.inicial = dia.inicial)
+  {
   
   #En correccion_climate_change la funcion seria lag_function(base_retornos,country,AR.m=20, MA.m=0, d=0, bool=TRUE, metodo="CSS",dia.inicial)
-  
-  arma_seleccion_df = function(object, AR.m, MA.m, d, bool, metodo){
-    index = 1
-    df = data.frame(p = double(), d = double(), q = double(), AIC = double(), BIC = double())
-    for (p in 0:AR.m) {
-      for (q in 0:MA.m)  {
-        fitp <- arima(object, order = c(p, d, q), include.mean = bool, 
-                      method = metodo)
-        T.model = length(resid(fitp))
-        Aic = T.model*log(sum(resid(fitp)^2))+ 2*(p+q+1)   ## De acuerdo con Enders 2014.
-        Bic = T.model*log(sum(resid(fitp)^2)) + T.model*(p+q+1)  
-        df[index,] = c(p, d, q, Aic, Bic)
-        index = index + 1
-      }
-    }  
-    return(df)
-  }
-  
   #Utilizamos la funcion arma_seleccion_df para obtener el rezago para incluir en la ecuacion segun el 
   #criterio de Akaike. Como queremos ver AR(p), MA.m = 0, y como todos los retornos son estacionarios, 
   #entonces d =0.
@@ -335,8 +330,6 @@ lag_function <- function(base_niveles,country,AR.m,MA.m,d,bool=TRUE,metodo="CSS"
   
   return(lags_reduced)
 }
-
-
 #---------------------------------------------------------------------------------------#
 
 
@@ -353,7 +346,6 @@ lag_function <- function(base_niveles,country,AR.m,MA.m,d,bool=TRUE,metodo="CSS"
 # ----Argumentos de salida  ----#
 #-- eq: ecuación de variable dependiente ~ regresoras.
 #---------------------------------------------------------------------------------------#
-
 model_equation <- function(database,country,exo){  ## En correccion_climate_change database = base_datos model_equation(base-datos,country,get(disaster))
   
   #Busca el dataframe con los rezagos
@@ -371,8 +363,6 @@ model_equation <- function(database,country,exo){  ## En correccion_climate_chan
     database[,fdi_variable] + lags_df  ## Se asume el nombre "Mean_Returns_Moving_Averages, que fue nombrada en la linea 99 del otro codigo
   return(eq)
 }
-
-
 #---------------------------------------------------------------------------------------#
 
 
@@ -387,7 +377,6 @@ model_equation <- function(database,country,exo){  ## En correccion_climate_chan
 # ----Argumentos de salida  ----#
 #-- densidad: densidad kernel de los coeficientes del modelo estimado
 #---------------------------------------------------------------------------------------#
-
 dens <- function(fit, step){
   coefs <- coef(get(fit))
   interest_indices <- grep(step,names(coefs))
@@ -395,7 +384,6 @@ dens <- function(fit, step){
   densidad <- density(as.numeric(interest_coefficients))
   return(densidad)
 }
-
 #---------------------------------------------------------------------------------------#
 
 
@@ -421,7 +409,6 @@ densidad_CAR <- function(x,countries){
   densidad_C <- density(CAR)
   return(densidad_C)
 }
-
 #---------------------------------------------------------------------------------------#
 
 
@@ -438,7 +425,6 @@ densidad_CAR <- function(x,countries){
 #-- NA. No retorna argumentos, más bien un gráfico que incluye las 5 densidades (biologico, climatológico
 #-- hidrologico, geologico, meteorologico).
 #---------------------------------------------------------------------------------------#
-
 grafico_densidad <- function(vector,main,labels,colors){
   maximo_y <- c()
   minimo_x <- c()
@@ -459,7 +445,6 @@ grafico_densidad <- function(vector,main,labels,colors){
   }
   legend("topright",legend = labels,col = colors, lwd = 2)
 }
-
 #---------------------------------------------------------------------------------------#
 
 
@@ -474,7 +459,6 @@ grafico_densidad <- function(vector,main,labels,colors){
 #-- NA. No retorna argumentos, más bien un gráfico que incluye las 5 densidades (biologico, climatológico
 #-- hidrologico, geologico, meteorologico).
 #---------------------------------------------------------------------------------------#
-
 grafico_retornos <- function(list,vector,main,legends,colors){
   maximo_y <- c()
   minimo_x <- c()
@@ -509,7 +493,6 @@ grafico_retornos <- function(list,vector,main,legends,colors){
 # ----Argumentos de salida  ----#
 #-- xts_dummies_list: lasta de objetos xts de las dummies
 #---------------------------------------------------------------------------------------#
-
 create_dummies_xts <- function(excel_file) {
   # Get the names of all the sheets in the Excel file
   sheet_names <- excel_sheets(excel_file)
@@ -551,7 +534,6 @@ create_dummies_xts <- function(excel_file) {
   # Return the list of xts objects
   return(xts_dummies_list)
 }
-
 #---------------------------------------------------------------------------------------#
 
 
@@ -563,7 +545,6 @@ create_dummies_xts <- function(excel_file) {
 # ----Argumentos de salida  ----#
 #-- xts_dummies_list: lasta de objetos xts de las dummies
 #---------------------------------------------------------------------------------------#
-
 grafico_estimates <- function(object,yaxis,title){
   ggplot(object, aes(x=group,y=values,fill=subgroup))+
     geom_bar(stat="identity", position="dodge", width=0.7) +
@@ -572,5 +553,4 @@ grafico_estimates <- function(object,yaxis,title){
     theme(plot.title = element_text(hjust = 0.5),axis.text.x = element_blank(),
           axis.title.x = element_blank())
 }
-
 #---------------------------------------------------------------------------------------#
