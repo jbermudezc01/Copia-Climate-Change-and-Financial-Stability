@@ -362,6 +362,7 @@ for(country in countries){
 }
 
 
+
 #### Funcion para la estimacion del modelo ==========
 
 ### Realizar for loop a lo largo de todos los paises para obtener las ecuaciones a estimar. 
