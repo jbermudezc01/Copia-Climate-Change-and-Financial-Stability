@@ -283,7 +283,7 @@ interaction_function <- function(obj,average){
 # y crear un dataframe de todos los posibles modelos con el criterio de Akaike y bayesiano.
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
-#-- base_rezagos: base a la cual se le sacaran los rezagos
+#-- base_niveles: base a la cual se le sacaran los rezagos
 #-- country     : caracteres indicando un pais
 #-- AR.m        : rezago máximo de la parte autorregresiva
 #-- Ma.m        : rezago máximo de la parte de promedio movil
@@ -296,7 +296,7 @@ interaction_function <- function(obj,average){
 #-- lags_reduced: objeto xts con los p-rezagos para cada país.
 #---------------------------------------------------------------------------------------#
 
-lag_function <- function(base_rezagos,country,AR.m,MA.m,d,bool=TRUE,metodo="CSS",dia.inicial = dia.inicial){
+lag_function <- function(base_niveles,country,AR.m,MA.m,d,bool=TRUE,metodo="CSS",dia.inicial = dia.inicial){
   
   #En correccion_climate_change la funcion seria lag_function(base_retornos,country,AR.m=20, MA.m=0, d=0, bool=TRUE, metodo="CSS",dia.inicial)
   
@@ -320,12 +320,12 @@ lag_function <- function(base_rezagos,country,AR.m,MA.m,d,bool=TRUE,metodo="CSS"
   #Utilizamos la funcion arma_seleccion_df para obtener el rezago para incluir en la ecuacion segun el 
   #criterio de Akaike. Como queremos ver AR(p), MA.m = 0, y como todos los retornos son estacionarios, 
   #entonces d =0.
-  mod <- arma_seleccion_df(object=base_rezagos[,country], AR.m, MA.m, d, bool, metodo)
+  mod <- arma_seleccion_df(object=base_niveles[,country], AR.m, MA.m, d, bool, metodo)
   p   <- mod[which.min(mod$AIC),'p']
   
   #generamos una base de datos que genere columnas de rezagos, el numero de columnas sera el mismo que el orden 
   #obtenido en el procedimiento anterior
-  if(p>0)lags_df <- timeSeries::lag((base_rezagos[,country]),c(1:p))
+  if(p>0)lags_df <- timeSeries::lag((base_niveles[,country]),c(1:p))
   
   #Lo colocamos desde el 8 de febrero para cuadrar con el indice de la base de datos principal
   lags_reduced <- lags_df[paste0(dia.inicial,"/"),]
