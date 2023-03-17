@@ -319,7 +319,7 @@ lag_function <- function(base_niveles,country,AR.m,MA.m,d,bool=TRUE,metodo="CSS"
   
   #generamos una base de datos que genere columnas de rezagos, el numero de columnas sera el mismo que el orden 
   #obtenido en el procedimiento anterior
-  if(p>0)lags_df <- timeSeries::lag((base_niveles[,country]),c(1:p))
+  if(p>0) lags_df <- timeSeries::lag((base_niveles[,country]), c(1:p) )
   
   #Lo colocamos desde el 8 de febrero para cuadrar con el indice de la base de datos principal
   lags_reduced <- lags_df[paste0(dia.inicial,"/"),]
@@ -360,6 +360,29 @@ model_equation <- function(database,country,exo){
   #Genera la ecuacion n.4 por el país country
   eq  <- database[,country]  ~ database[,"Mean_Returns_Moving_Averages"] +exo + database[,gdp_variable] +
     database[,fdi_variable] + lags_df  ## Se asume el nombre "Mean_Returns_Moving_Averages, que fue nombrada en la linea 99 del otro codigo
+  return(eq)
+}
+#---------------------------------------------------------------------------------------#
+
+#---------------------------------------------------------------------------------------#
+model_equation.LF <- function(database, country, var.exo=c("Mean_Returns_Moving_Averages", c(paste0('Int_D_', disaster), paste0(disaster,'_t', 0:no.rezagos.de.desatres))),
+                              var.exo.pais=c('gdp','gfdi'),  Lags){  
+  
+  #Busca el dataframe con los rezagos
+  #lags_name <- paste0("lags_reduced_", country)
+  #if(exists(lags_name)==TRUE) lags_df <- get(lags_name) ## Primero toca ver si lags_name existe, ya que si existe algun país que no
+  #  tenga matriz de rezagos, lags_name no existe. En nuestro caso todos los países
+  #  tienen rezagos.
+  
+  #Busca las variables para el gdp y el fdi
+  var.exo.pais.total = c()
+  for (i in 1:length(var.exo.pais))
+    var.exo.pais.total = c(var.exo.pais.total, paste(var.exo.pais[i], country, sep="_"))
+  
+  lag.matrix             =  get(paste0(Lags,'_',country))
+
+  #Genera la ecuacion n.4 por el país country
+  eq  <- database[,country]  ~ database[,c(var.exo, var.exo.pais.total)] + lag.matrix  
   return(eq)
 }
 #---------------------------------------------------------------------------------------#
