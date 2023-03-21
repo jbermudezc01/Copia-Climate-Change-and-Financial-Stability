@@ -1,87 +1,90 @@
-#---------------------------------- 1. read_csv ------------------------------------#
-# Lee los archivos csv para los indices bursatiles, genera una base de datos de los indices 
-# bursatiles en formato xts. 
-#---------------------------------------------------------------------------------------#
-# ----Argumentos de entrada ----#
-#-- dir      : el directorio en donde se encuentran las bases de los países
-#-- countries: lista que denota los paises de los cuales se cuenta el índice bursátil
-# ----Argumentos de salida  ----#
-#-- base: es una base de datos en formato xts que incluye todos los indices bursátiles para los países en countries
-#---------------------------------------------------------------------------------------#
-read_csv <- function(dir,countries) {
-  # Se forma una lista vacía, en la cual se irán añadiendo los elementos xts de los indices por cada país
-  xts_list     <- list() 
-  for (country in countries) {
-    # generar el nombre del archivo csv, siguiendo el directorio especificado, añadiendole /Stocks_ country.csv
-    csv_file <- paste0(dir,"Stocks_", country, ".csv")
-    # genera un archivo csv para el país country
-    csv      <- read.csv(csv_file, header = TRUE, sep = ";", quote = "\"", col.names = c("Date","Price", "Open", 
-                                                                                         "High","Low","Vol.","Change%"))
-    colnames <- names(csv)
+#--- Funcion anterior que leia los archivos csv, pero los argumentos no estaban explicitos, por lo que se prescinde de la funcion ---#
+if(0){
+  #---------------------------------- 1. read_csv ------------------------------------#
+  # Lee los archivos csv para los indices bursatiles, genera una base de datos de los indices 
+  # bursatiles en formato xts. 
+  #---------------------------------------------------------------------------------------#
+  # ----Argumentos de entrada ----#
+  #-- dir      : el directorio en donde se encuentran las bases de los países
+  #-- countries: lista que denota los paises de los cuales se cuenta el índice bursátil
+  # ----Argumentos de salida  ----#
+  #-- base: es una base de datos en formato xts que incluye todos los indices bursátiles para los países en countries
+  #---------------------------------------------------------------------------------------#
+  read_csv <- function(dir,countries) {
+    # Se forma una lista vacía, en la cual se irán añadiendo los elementos xts de los indices por cada país
+    xts_list     <- list() 
+    for (country in countries) {
+      # generar el nombre del archivo csv, siguiendo el directorio especificado, añadiendole /Stocks_ country.csv
+      csv_file <- paste0(dir,"Stocks_", country, ".csv")
+      # genera un archivo csv para el país country
+      csv      <- read.csv(csv_file, header = TRUE, sep = ";", quote = "\"", col.names = c("Date","Price", "Open", 
+                                                                                           "High","Low","Vol.","Change%"))
+      colnames <- names(csv)
+      
+      # Loop que corre por todas las columnas del archivo csv menos la primera (ya que es un dia), retirandole las
+      # comas que podrían generar problemas para reconocerlo como formato número
+      for (colname in colnames[2:length(colnames)]) {
+        csv[, colname] <- as.numeric(gsub(",","",csv[, colname]))
+      } ## Muestra warning() ya quehay una columna que contiene caracteres "M" 
+      
+      csv$Date <- as.Date(csv$Date, "%m/%d/%Y")
+      
+      #Generar la lista de los xts, solamente de la columna "Price", teniendo en cuenta los índices incluidos en "Date"
+      xts_list[[country]] <- xts(csv$Price, csv$Date)
+    }
     
-    # Loop que corre por todas las columnas del archivo csv menos la primera (ya que es un dia), retirandole las
-    # comas que podrían generar problemas para reconocerlo como formato número
-    for (colname in colnames[2:length(colnames)]) {
-      csv[, colname] <- as.numeric(gsub(",","",csv[, colname]))
-    } ## Muestra warning() ya quehay una columna que contiene caracteres "M" 
-    
-    csv$Date <- as.Date(csv$Date, "%m/%d/%Y")
-    
-    #Generar la lista de los xts, solamente de la columna "Price", teniendo en cuenta los índices incluidos en "Date"
-    xts_list[[country]] <- xts(csv$Price, csv$Date)
+    #Generar una base de datos que junte todos los indices bursatiles en formato xts.
+    base <- do.call(merge,xts_list)
+    return(base)
+  }
+  #------------------------------------------------------------------------------------#
+}
+
+#--- Funcion anterior que generaba el promedio movil, no es necesaria ya que con apply se hace lo mismo --#
+if(0){
+  #---------------------------------- 2. moving_average  ------------------------------------#
+  # Toma como argumento una base de datos, para la cual genera para cada columna
+  # el promedio movil de orden k.
+  #---------------------------------------------------------------------------------------#
+  # ----Argumentos de entrada ----#
+  #-- x: Nombre de la base de datos
+  #-- k: Orden del promedio móvil
+  # ----Argumentos de salida  ----#
+  #-- mov_average_base: base de datos con el promedio movil de orden <k> de cada una de las columnas de la base <x>
+  #---------------------------------------------------------------------------------------#
+  moving_average <- function(x,k){
+    mov_average_list <- list()
+    for(column in 1:ncol(x)){
+      rolling_average <- rollmean(x=x[, column], k=k, align="right")
+      mov_average_list[[length(mov_average_list)+1]] <- rolling_average
+    }
+    mov_average_base <- do.call(merge, mov_average_list)
+    return(mov_average_base)
+  }
+  #---------------------------------------------------------------------------------------#
+}
+
+#--- Funcion anterior de reducir el indice de una serie, fue mejorada por una propiedad de xts, donde solo tocaba especificar la fecha de inicio ---#
+if(0){
+  #---------------------------------- 3. muestra_paper  ------------------------------------#
+  # Reduce la base de datos dependiendo del indice. Esta funcion toma un día en 
+  # específico y tomará desde ese día en adelante para generar la base recortada.
+  #---------------------------------------------------------------------------------------#
+  # ----Argumentos de entrada ----#
+  #-- obj: el argumento denota una base de datos
+  #-- t: el argumento denota un día en específico que hace parte del índice de la base de datos obj
+  # ----Argumentos de salida  ----#
+  #-- obj: la misma base de datos de entrada pero las filas irán desde aquella que corresponda al dia t 
+  #---------------------------------------------------------------------------------------#
+  
+  muestra_paper <- function(obj,t){
+    indice           <- index(obj)
+    base_start       <- which(indice == t)
+    obj              <- obj[base_start:nrow(obj),]
+    return(obj)
   }
   
-  #Generar una base de datos que junte todos los indices bursatiles en formato xts.
-  base <- do.call(merge,xts_list)
-  return(base)
-}
-#------------------------------------------------------------------------------------#
-
-#--- Falta comentario --#
-if(0){
-#---------------------------------- 2. moving_average  ------------------------------------#
-# Toma como argumento una base de datos, para la cual genera para cada columna
-# el promedio movil de orden k.
-#---------------------------------------------------------------------------------------#
-# ----Argumentos de entrada ----#
-#-- x: Nombre de la base de datos
-#-- k: Orden del promedio móvil
-# ----Argumentos de salida  ----#
-#-- mov_average_base: base de datos con el promedio movil de orden <k> de cada una de las columnas de la base <x>
-#---------------------------------------------------------------------------------------#
-moving_average <- function(x,k){
-  mov_average_list <- list()
-  for(column in 1:ncol(x)){
-    rolling_average <- rollmean(x=x[, column], k=k, align="right")
-    mov_average_list[[length(mov_average_list)+1]] <- rolling_average
-  }
-  mov_average_base <- do.call(merge, mov_average_list)
-  return(mov_average_base)
-}
-#---------------------------------------------------------------------------------------#
-}
-
-#--- Funcion anterior de XX, fue mejorada por la funcion XX ---#
-if(0){
-#---------------------------------- 3. muestra_paper  ------------------------------------#
-# Reduce la base de datos dependiendo del indice. Esta funcion toma un día en 
-# específico y tomará desde ese día en adelante para generar la base recortada.
-#---------------------------------------------------------------------------------------#
-# ----Argumentos de entrada ----#
-#-- obj: el argumento denota una base de datos
-#-- t: el argumento denota un día en específico que hace parte del índice de la base de datos obj
-# ----Argumentos de salida  ----#
-#-- obj: la misma base de datos de entrada pero las filas irán desde aquella que corresponda al dia t 
-#---------------------------------------------------------------------------------------#
-
-muestra_paper <- function(obj,t){
-  indice           <- index(obj)
-  base_start       <- which(indice == t)
-  obj              <- obj[base_start:nrow(obj),]
-  return(obj)
-}
-
-#---------------------------------------------------------------------------------------#
+  #---------------------------------------------------------------------------------------#
 }
 
 #---------------------------------- 4. chow_lin ------------------------------------#
@@ -94,10 +97,11 @@ muestra_paper <- function(obj,t){
 #-- c               : matriz de agregacion
 #-- w               : vector constante de valores 1
 #-- var_covar       : matriz de varianzas y covarianzas
+#-- base_indice     : base de datos en xts que dara el indice para la base de datos desagregada
 # ----Argumentos de salida  ----#
 #-- return_base: base de datos con la desagregacion temporal de cada una de los elementos en la lista time_Series_list
 #---------------------------------------------------------------------------------------#
-chow_lin <- function(time_Series_list, c, w, var_covar){
+chow_lin <- function(time_Series_list, c, w, var_covar,base_indice){
   return_list <- list()
   for(series in time_Series_list){
     CW        <- c%*%w
@@ -107,7 +111,7 @@ chow_lin <- function(time_Series_list, c, w, var_covar){
     CVC       <- solve(c%*%(var_covar%*%t(c)))
     beta      <- (solve(t(CW)%*%(CVC%*%CW))%*%t(CW))%*%(CVC%*%series)
     y         <- w%*%beta + ((var_covar%*%t(c))%*%CVC)%*%(series-CW%*%beta)
-    y          <- xts(y,order.by= index(base_precios)) 
+    y          <- xts(y,order.by= index(base_indice)) 
     #gdp_growth <- diff(log(y))[2:nrow(y),]
     #return_list[[length(return_list)+1]] <- gdp_growth
     return_list[[length(return_list)+1]] <- y
@@ -117,44 +121,48 @@ chow_lin <- function(time_Series_list, c, w, var_covar){
 } 
 #---------------------------------------------------------------------------------------#
 
-#---------------------------------- 5. series_list_function  ------------------------------------#
-# Teniendo en cuenta que la función de chow_lin requiere de primer argumento una lista, se necesita una función
-# que genere una lista teniendo en cuenta los objetos xts
-#---------------------------------------------------------------------------------------#
-# ----Argumentos de entrada ----#
-#-- ts1: el argumento denota una base de datos, puede ser en formato xts
-# ----Argumentos de salida  ----#
-#-- series_list: una lista que contiene los datos de cada columna de la base de datos
-#---------------------------------------------------------------------------------------#
-series_list_function <- function(ts1){
-  series_list <- list()
-  for(country in colnames(ts1)){
-    func_series <- as.vector(ts1[,country])
-    series_list[[tolower(country)]] <- func_series
+#--- Funcion anterior que generaba una lista de series de tiempo, arreglada con as.list()---#
+if(0){
+  #---------------------------------- 5. series_list_function  ------------------------------------#
+  # Teniendo en cuenta que la función de chow_lin requiere de primer argumento una lista, se necesita una función
+  # que genere una lista teniendo en cuenta los objetos xts
+  #---------------------------------------------------------------------------------------#
+  # ----Argumentos de entrada ----#
+  #-- ts1: el argumento denota una base de datos, puede ser en formato xts
+  # ----Argumentos de salida  ----#
+  #-- series_list: una lista que contiene los datos de cada columna de la base de datos
+  #---------------------------------------------------------------------------------------#
+  series_list_function <- function(ts1){
+    series_list <- list()
+    for(country in colnames(ts1)){
+      func_series <- as.vector(ts1[,country])
+      series_list[[tolower(country)]] <- func_series
+    }
+    return(series_list)
   }
-  return(series_list)
+  #---------------------------------------------------------------------------------------#
 }
-#---------------------------------------------------------------------------------------#
-
 
 
 #---------------------------------- 6. days  ------------------------------------#
 # Genera la matriz de agregación trimestral, anhadiendo uno a los dias que corresponden a cada trimestre
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
-#-- x: un entero que corresponde al trimestre (menos uno) tenido en cuenta
-#-- m: matriz de agregación (inicializada con ceros)
-#-- months: vector caracter tipo "yyyy-mm" de los meses que hacen parte de los trimestres a desagregar 
-#-- dates: vector caracter que contiene todos los dias que están en cierta base de datos (high-freq)
+#-- x           : un entero que corresponde al trimestre (menos uno) tenido en cuenta
+#-- m           : matriz de agregación (inicializada con ceros)
+#-- months      : vector caracter tipo "yyyy-mm" de los meses que hacen parte de los trimestres a desagregar 
+#-- dates       : vector caracter que contiene todos los dias que están en cierta base de datos (high-freq)
+#-- startstring : numero que indica el inicio de la string a comparar (default = 1) 
+#-- endstring   : numero que indica el final de la string a comparar (default = 7, ya que de ese modo la fecha de cada día estara en formato "yyyy-mm")
 # ----Argumentos de salida  ----#
 #-- m: la matriz de agregación ya con el valor de 1 en los días que pertenezcan a cierto trimestre
 #---------------------------------------------------------------------------------------#
-days <- function(x, m, months, dates){
+days <- function(x, m, months, dates, startstring=1, endstring=7){
   first_month  <- months[3*x+1] #Primer mes del trimeste
   second_month <- months[3*x+2]
   third_month  <- months[3*x+3]
   for(date in dates){
-    if(substr(date,1,7)==first_month |substr(date,1,7)==second_month|substr(date,1,7)==third_month){
+    if(substr(date,startstring,endstring)==first_month |substr(date,startstring,endstring)==second_month|substr(date,startstring,endstring)==third_month){
       pos <- which(dates == date)
       m[x+1,pos] <- 1
     }
@@ -243,29 +251,43 @@ create_dummies <- function(excel_file, Retornos, no.rezagos=4, first.calendar.da
 }
 #---------------------------------------------------------------------------------------#
 
+#--- Funcion anterior que generaba las interacciones entre la dummy D y el promedio movil, arreglada usando matrices y *---#
+if(0){
+  #---------------------------------- 8. interaction_function  ------------------------------------#
+  # Genera el vector de interacción entre la dummy D y el promedio movil
+  #---------------------------------------------------------------------------------------#
+  # ----Argumentos de entrada ----#
+  #-- obj: un objeto xts
+  #-- average: una columna con los promedios moviles
+  #-- La función asume que "Promedio_movil" existe, vector que se tiene arriba en el codigo
+  # ----Argumentos de salida  ----#
+  #-- interaction_xts: objeto xts de la interacción entre D y el promedio movil
+  #---------------------------------------------------------------------------------------#
+  interaction_function <- function(obj,average){
+    interaction <- c()
+    for(i in 1:nrow(obj)){
+      interaction <- c(interaction, as.numeric(average[i])*as.numeric((obj[,ncol(obj)])[i]))
+    }
+    interaction_xts <- xts(interaction, order.by = index(obj))
+    return(interaction_xts)
+  }
+  #---------------------------------------------------------------------------------------#
+}
 
-#---------------------------------- 8. interaction_function  ------------------------------------#
-# Genera el vector de interacción entre la dummy D y el promedio movil
+#---------------------------9. arma_seleccion_df --------------------------------------------#
+#---- Toma una serie de tiempo, un rezago p y q maximos del modelo ARMA(p,q)
+# y crea un dataframe de todos los posibles modelos con el criterio de Akaike y bayesiano.
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
-#-- obj: un objeto xts
-#-- average: una columna con los promedios moviles
-#-- La función asume que "Promedio_movil" existe, vector que se tiene arriba en el codigo
+#-- object: la serie de tiempo a al cual se le quiere encontrar el modelo
+#-- AR.m  : rezago máximo de la parte autorregresiva
+#-- Ma.m  : rezago máximo de la parte de promedio movil
+#-- d     : orden de diferenciación
+#-- bool  : booleano que indica si realizar la estimación arima con constante
+#-- metodo: método por el cual se hará la estimación ARIMA (existe CS, ML y CSS-ML)
 # ----Argumentos de salida  ----#
-#-- interaction_xts: objeto xts de la interacción entre D y el promedio movil
-#---------------------------------------------------------------------------------------#
-interaction_function <- function(obj,average){
-  interaction <- c()
-  for(i in 1:nrow(obj)){
-    interaction <- c(interaction, as.numeric(average[i])*as.numeric((obj[,ncol(obj)])[i]))
-  }
-  interaction_xts <- xts(interaction, order.by = index(obj))
-  return(interaction_xts)
-}
-#---------------------------------------------------------------------------------------#
-
-#---------------------------------------------------------------------------------------#
-#---- Falta comentarla !!!!
+#-- df : dataframe de todos los modelos ARMA(p,q) de las posibles combinaciones (0,AR.m)x(0,MA.m) con su respectivo
+#-- criterio de Akaike y bayesiano
 #---------------------------------------------------------------------------------------#
 arma_seleccion_df = function(object, AR.m, MA.m, d, bool, metodo){
   index = 1
@@ -287,13 +309,10 @@ arma_seleccion_df = function(object, AR.m, MA.m, d, bool, metodo){
 
 
 
-#---------------------------------- 9. lag_function  ------------------------------------#
-# Encuentra los rezagos optimos para cada pais utilizando el criterio de Akaike, utilizando la función arma_seleccion_df, 
-# la cual está dentro de lag_function. 
+#---------------------------------- 10. lag_function  ------------------------------------#
+# Encuentra los rezagos optimos para cada pais utilizando el criterio de Akaike, utilizando la función arma_seleccion_df.
 # Además, la función tambien va a generar los rezagos y agregarlos a un dataframe. 
 # Como tiene una función adentro, lag_function hereda los parámetros de arma_seleccion_df.
-# arma_seleccion_df se encarga de tomar una serie de tiempo, un rezago p y q maximos del modelo ARMA(p,q)
-# y crear un dataframe de todos los posibles modelos con el criterio de Akaike y bayesiano.
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
 #-- base_niveles: base a la cual se le sacaran los rezagos
@@ -309,7 +328,7 @@ arma_seleccion_df = function(object, AR.m, MA.m, d, bool, metodo){
 #-- lags_reduced: objeto xts con los p-rezagos para cada país.
 #---------------------------------------------------------------------------------------#
 lag_function <- function(base_niveles,country,AR.m,MA.m,d,bool=TRUE,metodo="CSS",dia.inicial = dia.inicial)
-  {
+{
   
   #Utilizamos la funcion arma_seleccion_df para obtener el rezago para incluir en la ecuacion segun el 
   #criterio de Akaike. Como queremos ver AR(p), MA.m = 0, y como todos los retornos son estacionarios, 
@@ -331,42 +350,55 @@ lag_function <- function(base_niveles,country,AR.m,MA.m,d,bool=TRUE,metodo="CSS"
 }
 #---------------------------------------------------------------------------------------#
 
+#--- Funcion que generaba el sistema de ecuaciones para estimar, fue mejorada por model_equation.LF ---#
+if(0){
+  #---------------------------------- 11. model_equation  ------------------------------------#
+  # Genera una ecuación para el país country y teniendo en cuenta las variables 
+  # exógenas exo. Lo anterior dado que vamos a estimar por el metodo SUR, el cual necesitara las 27 
+  # ecuaciones siguiendo el paper de Pagnottoni.
+  #---------------------------------------------------------------------------------------#
+  # ----Argumentos de entrada ----#
+  #-- database : base de datos donde se encuentran gran parte de las variables
+  #-- country  : caracteres indicando un pais
+  #-- exo      : conjunto de variables exogenas, especificamente las dummies. En el primer ejemplo son dummies 
+  #            por tipo de desastre
+  # ----Argumentos de salida  ----#
+  #-- eq: ecuación de variable dependiente ~ regresoras.
+  #---------------------------------------------------------------------------------------#
+  model_equation <- function(database,country,exo){  
+    
+    #Busca el dataframe con los rezagos
+    lags_name <- paste0("lags_reduced_", country)
+    if(exists(lags_name)==TRUE) lags_df <- get(lags_name) ## Primero toca ver si lags_name existe, ya que si existe algun país que no
+    #  tenga matriz de rezagos, lags_name no existe. En nuestro caso todos los países
+    #  tienen rezagos.
+    
+    #Busca las variables para el gdp y el fdi
+    gdp_variable <- paste("gdp",country,sep="_")
+    fdi_variable <- paste("fdi",country,sep="_")
+    
+    #Genera la ecuacion n.4 por el país country
+    eq  <- database[,country]  ~ database[,"Mean_Returns_Moving_Averages"] +exo + database[,gdp_variable] +
+      database[,fdi_variable] + lags_df  ## Se asume el nombre "Mean_Returns_Moving_Averages, que fue nombrada en la linea 99 del otro codigo
+    return(eq)
+  }
+  #---------------------------------------------------------------------------------------#
+}
 
-#---------------------------------- 10. model_equation  ------------------------------------#
+#-------------------------------- 12. model_equation.LF----------------------------------------#
 # Genera una ecuación para el país country y teniendo en cuenta las variables 
-# exógenas exo. Lo anterior dado que vamos a estimar por el metodo SUR, el cual necesitara las 27 
-# ecuaciones siguiendo el paper de Pagnottoni.
+# Lo anterior dado que vamos a estimar por el metodo SUR, el cual necesitara las 27 ecuaciones siguiendo el paper de Pagnottoni.
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
-#-- database : base de datos donde se encuentran gran parte de las variables
-#-- country  : caracteres indicando un pais
-#-- exo      : conjunto de variables exogenas, especificamente las dummies. En el primer ejemplo son dummies 
-#            por tipo de desastre
+#-- database     : base de datos donde se encuentran gran parte de las variables
+#-- country      : caracteres indicando un pais
+#-- var.exo      : conjunto de variables exogenas que no dependen del pais 
+#-- var.exo.pais : conjunto de variables exogenas que dependen del país
+#-- Lags         : string que indica el nombre por el cual empiezan las matrices de rezagos en el codigo principal
 # ----Argumentos de salida  ----#
-#-- eq: ecuación de variable dependiente ~ regresoras.
+#-- eq: ecuación de variable dependiente ~ regresoras para el país country.s
 #---------------------------------------------------------------------------------------#
-model_equation <- function(database,country,exo){  
-  
-  #Busca el dataframe con los rezagos
-  lags_name <- paste0("lags_reduced_", country)
-  if(exists(lags_name)==TRUE) lags_df <- get(lags_name) ## Primero toca ver si lags_name existe, ya que si existe algun país que no
-                                                        #  tenga matriz de rezagos, lags_name no existe. En nuestro caso todos los países
-                                                        #  tienen rezagos.
-  
-  #Busca las variables para el gdp y el fdi
-  gdp_variable <- paste("gdp",country,sep="_")
-  fdi_variable <- paste("gfdi",country,sep="_")
-  
-  #Genera la ecuacion n.4 por el país country
-  eq  <- database[,country]  ~ database[,"Mean_Returns_Moving_Averages"] +exo + database[,gdp_variable] +
-    database[,fdi_variable] + lags_df  ## Se asume el nombre "Mean_Returns_Moving_Averages, que fue nombrada en la linea 99 del otro codigo
-  return(eq)
-}
-#---------------------------------------------------------------------------------------#
-
-#---------------------------------------------------------------------------------------#
-model_equation.LF <- function(database, country, var.exo=c("Mean_Returns_Moving_Averages", c(paste0('Int_D_', disaster), paste0(disaster,'_t', 0:no.rezagos.de.desatres))),
-                              var.exo.pais=c('gdp','gfdi'),  Lags){  
+model_equation.LF <- function(database, country, var.exo, var.exo.pais, Lags){  
   
   #Busca el dataframe con los rezagos
   #lags_name <- paste0("lags_reduced_", country)
@@ -380,7 +412,7 @@ model_equation.LF <- function(database, country, var.exo=c("Mean_Returns_Moving_
     var.exo.pais.total = c(var.exo.pais.total, paste(var.exo.pais[i], country, sep="_"))
   
   lag.matrix             =  get(paste0(Lags,'_',country))
-
+  
   #Genera la ecuacion n.4 por el país country
   eq  <- database[,country]  ~ database[,c(var.exo, var.exo.pais.total)] + lag.matrix  
   return(eq)
@@ -388,10 +420,8 @@ model_equation.LF <- function(database, country, var.exo=c("Mean_Returns_Moving_
 #---------------------------------------------------------------------------------------#
 
 
-#---------------------------------- 11. dens  ------------------------------------#
-# Genera una ecuación para el país country y teniendo en cuenta las variables 
-# exógenas exo. Lo anterior dado que vamos a estimar por el metodo SUR, el cual necesitara las 27 
-# ecuaciones siguiendo el paper de Pagnottoni.
+#---------------------------------- 13. dens  ------------------------------------#
+# Genera la densidad kernel para los coeficientes de las dummies dependiendo de <step> y del modelo <fit>
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
 #-- fit : modelo estimado al que se le puede sacar coeficientes
@@ -409,7 +439,7 @@ dens <- function(fit, step){
 #---------------------------------------------------------------------------------------#
 
 
-#---------------------------------- 12. densidad_CAR ------------------------------------#
+#---------------------------------- 14. densidad_CAR ------------------------------------#
 # Genera la densidad de los retornos acumulados. 
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
@@ -435,19 +465,21 @@ densidad_CAR <- function(x,countries){
 
 
 
-#---------------------------------- 13. grafico_densidad  ------------------------------------#
+#---------------------------------- 15. grafico_densidad  ------------------------------------#
 # Genera la densidad de los retornos acumulados. 
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
-#-- vector: un vector especifico que incluye el nombre del gráfico más los objetos a graficar
-#-- labels: leyenda del grafico
-#-- colors: colores de las lineas del gráfico
-#-- main: título del grafico
+#-- vector   : un vector que indica los objetos a graficar
+#-- labels   : leyenda del grafico
+#-- colors   : colores de las lineas del gráfico
+#-- main     : título del grafico
+#-- width    : ancho de las lineas (default = 2)
+#-- position : posicion de la leyenda (default = "topright")
 # ----Argumentos de salida  ----#
 #-- NA. No retorna argumentos, más bien un gráfico que incluye las 5 densidades (biologico, climatológico
 #-- hidrologico, geologico, meteorologico).
 #---------------------------------------------------------------------------------------#
-grafico_densidad <- function(vector,main,labels,colors){
+grafico_densidad <- function(vector,main,labels,colors,width=2, position = "topright"){
   maximo_y <- c()
   minimo_x <- c()
   maximo_x <- c()
@@ -461,32 +493,36 @@ grafico_densidad <- function(vector,main,labels,colors){
   limite_max_x      <-  max(maximo_x)
   
   x11()
-  plot(get(vector[1]), main = main, col = colors[1],lwd=2,ylim=c(0,limite_y),xlim=c(limite_min_x,limite_max_x))
+  plot(get(vector[1]), main = main, col = colors[1],lwd=width,ylim=c(0,limite_y),xlim=c(limite_min_x,limite_max_x))
   for(i in 2:length(vector)){
-    lines(get(vector[i]),col=colors[i],lwd=2)
+    lines(get(vector[i]),col=colors[i],lwd=width)
   }
-  legend("topright",legend = labels,col = colors, lwd = 2)
+  legend(position,legend = labels,col = colors, lwd = width)
 }
 #---------------------------------------------------------------------------------------#
 
 
-#---------------------------------- 15. grafico_retornos  ------------------------------------#
+#---------------------------------- 16. grafico_retornos  ------------------------------------#
 # Genera la densidad de los retornos acumulados. 
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
-#-- vector: un vector especifico que incluye el nombre del gráfico más los objetos a graficar
-#-- labels: leyenda del grafico
-#-- colors: colores de las lineas del gráfico
+#-- list     : lista que contiene las densidades a graficar
+#-- vector   : un vector especifico que incluye el nombre del gráfico más los objetos a graficar
+#-- main     : titulo del grafico
+#-- legends  : leyenda del grafico
+#-- colors   : colores de las lineas del gráfico
+#-- width    : tamaño de las lineas (default = 3)
+#-- position : posicion de la leyenda (default = "topleft")
 # ----Argumentos de salida  ----#
-#-- NA. No retorna argumentos, más bien un gráfico que incluye las 5 densidades (biologico, climatológico
-#-- hidrologico, geologico, meteorologico).
+#-- NA. No retorna argumentos, más bien un gráfico que incluye las densidades de los retornos de los indices relacionados 
+#-- a los paises incluidos en vector.
 #---------------------------------------------------------------------------------------#
-grafico_retornos <- function(list,vector,main,legends,colors){
+grafico_retornos <- function(list,vector,main,legends,colors, width=3, position="topleft"){
   maximo_y <- c()
   minimo_x <- c()
   maximo_x <- c()
   
-  for(country in vector[2:length(vector)]){
+  for(country in vector[1:length(vector)]){
     
     maximo_y <- c(maximo_y, max(list[[country]]$y))
     minimo_x <- c(minimo_x, min(list[[country]]$x))
@@ -498,81 +534,104 @@ grafico_retornos <- function(list,vector,main,legends,colors){
   limite_max_x      <-  max(maximo_x)
   
   x11()
-  plot(list[[vector[1]]], main = main, col = colors[1],lwd=4,ylim=c(0,limite_y),xlim=c(limite_min_x,limite_max_x))
+  plot(list[[vector[1]]], main = main, col = colors[1],lwd=width,ylim=c(0,limite_y),xlim=c(limite_min_x,limite_max_x))
   for(i in 2:length(vector)){
-    lines(list[[vector[i]]],col=colors[i],lwd=2)
+    lines(list[[vector[i]]],col=colors[i], lwd=width)
   }
-  legend("topleft",legend = legends,col = colors, lwd = 2)
+  legend(position,legend = legends,col = colors, lwd=width)
 }
 #---------------------------------------------------------------------------------------#
 
-
-#---------------------------------- 16. create_dummies_xts  ------------------------------------#
-# Genera las dummies sin tener  en cuenta los días hábiles . Es decir las dummies originales
-#---------------------------------------------------------------------------------------#
-# ----Argumentos de entrada ----#
-#-- excel_file: archivo de excel
-# ----Argumentos de salida  ----#
-#-- xts_dummies_list: lasta de objetos xts de las dummies
-#---------------------------------------------------------------------------------------#
-create_dummies_xts <- function(excel_file) {
-  # Get the names of all the sheets in the Excel file
-  sheet_names <- excel_sheets(excel_file)
-  
-  # Create an empty list to store the xts objects
-  xts_dummies_list <- list()
-  
-  # Loop through all the sheet names
-  for (sheet_name in sheet_names[1:length(sheet_names)]) {
-    # Read the current sheet into a data frame
-    current_sheet <- read.xlsx(excel_file, sheet = sheet_name, detectDates = TRUE)
+#--- Funcion que generaba el las dummies sin tener en cuenta los dias habiles, fue mejorada por create_dummies ---#
+if(0){
+  #---------------------------------- 17. create_dummies_xts  ------------------------------------#
+  # Genera las dummies sin tener  en cuenta los días hábiles . Es decir las dummies originales
+  #---------------------------------------------------------------------------------------#
+  # ----Argumentos de entrada ----#
+  #-- excel_file: archivo de excel
+  # ----Argumentos de salida  ----#
+  #-- xts_dummies_list: lasta de objetos xts de las dummies
+  #---------------------------------------------------------------------------------------#
+  create_dummies_xts <- function(excel_file) {
+    # Get the names of all the sheets in the Excel file
+    sheet_names <- excel_sheets(excel_file)
     
-    # Perform the necessary operations on the current sheet to create the xts object
-    dates <- index(Retornos)
-    dummies <- data.frame(t_0 = double(),t_1 = double(), t_2 = double(),t_3 = double(),t_4 = double())
-    for(i in 1:ncol(current_sheet)){
-      for(j in 1:nrow(Retornos)){
-        if(dates[j] %in% current_sheet[[i]]){
-          dummies[j,i] <- 1
-        }else if(!(dates[j] %in% current_sheet[[i]])){
-          dummies[j,i] <- 0
+    # Create an empty list to store the xts objects
+    xts_dummies_list <- list()
+    
+    # Loop through all the sheet names
+    for (sheet_name in sheet_names[1:length(sheet_names)]) {
+      # Read the current sheet into a data frame
+      current_sheet <- read.xlsx(excel_file, sheet = sheet_name, detectDates = TRUE)
+      
+      # Perform the necessary operations on the current sheet to create the xts object
+      dates <- index(Retornos)
+      dummies <- data.frame(t_0 = double(),t_1 = double(), t_2 = double(),t_3 = double(),t_4 = double())
+      for(i in 1:ncol(current_sheet)){
+        for(j in 1:nrow(Retornos)){
+          if(dates[j] %in% current_sheet[[i]]){
+            dummies[j,i] <- 1
+          }else if(!(dates[j] %in% current_sheet[[i]])){
+            dummies[j,i] <- 0
+          }
         }
       }
-    }
-    D <- c()
-    for(i in 1:nrow(dummies)){
-      if(sum(dummies[i,]) == 0){
-        D <- c(D,sum(dummies[i,]))
-      }else if(sum(dummies[i,]) != 0){
-        D <- c(D,sum(dummies[i,])/sum(dummies[i,])) 
+      D <- c()
+      for(i in 1:nrow(dummies)){
+        if(sum(dummies[i,]) == 0){
+          D <- c(D,sum(dummies[i,]))
+        }else if(sum(dummies[i,]) != 0){
+          D <- c(D,sum(dummies[i,])/sum(dummies[i,])) 
+        }
       }
+      xts_object <- as.xts(cbind(dummies,D), order.by = index(Retornos))
+      
+      # Use the sheet name to create a variable name for the xts object and store it in the list
+      xts_name <- paste0(sheet_name, "_dummies_xts}")
+      xts_dummies_list[[xts_name]] <- xts_object
     }
-    xts_object <- as.xts(cbind(dummies,D), order.by = index(Retornos))
-    
-    # Use the sheet name to create a variable name for the xts object and store it in the list
-    xts_name <- paste0(sheet_name, "_dummies_xts}")
-    xts_dummies_list[[xts_name]] <- xts_object
+    # Return the list of xts objects
+    return(xts_dummies_list)
   }
-  # Return the list of xts objects
-  return(xts_dummies_list)
+  #---------------------------------------------------------------------------------------#
 }
-#---------------------------------------------------------------------------------------#
 
-
-#---------------------------------- 17. Graficos AR estimates  ------------------------------------#
+#---------------------------------- 18. grafico_estimates  ------------------------------------#
 # La siguiente función es para evitar la repeticion en los graficos AR_estimate y sus t-tests. 
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
-#-- excel_file: archivo de excel
+#-- object : objeto a graficar (el dataframe incluye group, values, subgroup)
+#-- yaxis  : titulo del eje y
+#-- title  : titulo del grafico
+#-- colors : colores
 # ----Argumentos de salida  ----#
-#-- xts_dummies_list: lasta de objetos xts de las dummies
+#-- NA. No genera argumentos, pero si un grafico de los retornos anormales o estadísticos t.
 #---------------------------------------------------------------------------------------#
-grafico_estimates <- function(object,yaxis,title){
+grafico_estimates <- function(object,yaxis,title,colors){
   ggplot(object, aes(x=group,y=values,fill=subgroup))+
     geom_bar(stat="identity", position="dodge", width=0.7) +
-    scale_fill_manual(values=c("#1964C4", "#C9675A", "#D5B259","darkorchid4","#709E3D")) +
+    scale_fill_manual(values= colors) +
     labs(y=yaxis,title=title) +
     theme(plot.title = element_text(hjust = 0.5),axis.text.x = element_blank(),
           axis.title.x = element_blank())
 }
 #---------------------------------------------------------------------------------------#
+
+#----------------------------------- 19. order_coef --------------------------------------------------#
+# Ordena un vector de nombres de coeficientes basado en otro vector
+# ------------------------------------------------------------------------------------------------
+# ----Argumentos de entrada ----#
+#-- vec_desordenado : vector que se esta buscando ordenar
+#-- vec_orden       : vector que dara el orden
+# ----Argumentos de salida  ----#
+#-- vec_ordenado    : vector numerico con el orden 
+#---------------------------------------------------------------------------------------#
+
+order_coef <- function(vec_desordenado, vec_orden){
+  indexes <- c()
+  for (i in 1:length(vec_orden)){
+    indexes <- c(indexes, grep(vec_orden[i],vec_desordenado))
+  }
+  vec_ordenado = vec_desordenado[indexes]
+  return(vec_ordenado)
+}
