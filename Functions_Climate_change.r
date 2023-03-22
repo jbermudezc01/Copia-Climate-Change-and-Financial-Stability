@@ -286,8 +286,9 @@ if(0){
 #-- bool  : booleano que indica si realizar la estimación arima con constante
 #-- metodo: método por el cual se hará la estimación ARIMA (existe CS, ML y CSS-ML)
 # ----Argumentos de salida  ----#
-#-- df : dataframe de todos los modelos ARMA(p,q) de las posibles combinaciones (0,AR.m)x(0,MA.m) con su respectivo
-#-- criterio de Akaike y bayesiano
+#-- df : dataframe donde cada fila representa los modelos ARIMA estimados. Las variables 
+#--      del dataframe son: orden del polinomino AR (p), orden de integracion (d),
+#--      orden del polinomio MA (q), criterio de Akaike (AIC) y Bayesiano (BIC)
 #---------------------------------------------------------------------------------------#
 arma_seleccion_df = function(object, AR.m, MA.m, d, bool, metodo){
   index = 1

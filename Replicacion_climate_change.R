@@ -137,7 +137,7 @@ Promedio_movil = mean_mov_average[paste0(dia.inicial,"/")]
 ### Table 1 de Pagnottoni: Estadistica descriptivas ===============
 ## Generar (skewness, kurtosis, mean, max, min, sd) de los retornos de los indices acc. 
 skewness <- moments::skewness(Retornos)
-kurtosis <- kurtosis(Retornos)
+kurtosis <- moments::kurtosis(Retornos)
 mean     <- apply(Retornos, MARGIN=2, FUN=mean)
 max      <- apply(Retornos, MARGIN=2, FUN=max)
 min      <- apply(Retornos, MARGIN=2, FUN=min)
@@ -167,11 +167,11 @@ if(1){
   qtr_agr <- matrix(0, nrow = nrows, ncol = ncols) #matriz de agregacion 
   dates.high.freq   <- as.character(index(base_precios)) #Fechas de freq alta
   cat('\nHigh frequency range:',range(dates.high.freq))
-  cat('\nLow frequency range:'); range(dates.low.freq)
+  cat('\nLow frequency range:'); print(range(dates.low.freq))
   
   ## WARNING si los rangos son distintos, primero pasar dates.high.freq al ultimo dia de su trimestre
   quarter.high.freq <- ceiling_date(as.Date(dates.high.freq), unit = "quarter") - 1
-  cat('\nHigh frequency range in trimesters:');range(quarter.high.freq)
+  cat('\nHigh frequency range in trimesters:');print(range(quarter.high.freq))
   
   if ((range(quarter.high.freq)[1] == range(dates.low.freq)[1] & range(quarter.high.freq)[2] == range(dates.low.freq)[2]) == FALSE)
     warning("Los rangos de baja y alta frecuencia son distintos")
@@ -359,7 +359,7 @@ eqsystem      = list()
 fitted_models = c()
 for(disaster in Tipos.Desastres){
   for(country in countries){
-    var.exo                =          c( 'Mean_Returns_Moving_Averages', c(paste0('Int_D_', disaster), paste0(disaster,'_t', 0:no.rezagos.de.desatres)) )
+    var.exo                =  c( 'Mean_Returns_Moving_Averages', c(paste0('Int_D_', disaster), paste0(disaster,'_t', 0:no.rezagos.de.desatres)) )
     eqsystem[[country]]    =  model_equation.LF(database=base_datos, country, 
                                                 var.exo=var.exo,  var.exo.pais=c('gdp','fdi'),  Lags='lags')
   }
