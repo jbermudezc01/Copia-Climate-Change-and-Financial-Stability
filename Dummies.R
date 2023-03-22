@@ -1,12 +1,18 @@
+if (Sys.info()["sysname"]=='Windows')  setwd('C:/Users/jpber/OneDrive/Documents/Codigo_compartido_Melo/Climate_Change_and_Financial_Stability/Climate-Change-and-Financial-Stability')
+if (Sys.info()["sysname"]!='Windows')  setwd('/Users/lumelo/archivos/Climate-Change-and-Financial-Stability/Github/Climate-Change-and-Financial-Stability')
+Dir      = paste0(getwd(),'/Bases/') #Directorio de datos, se supone que el subdirectorio <Bases> existe
+
 library(dplyr)
 library(openxlsx)
 library(lubridate)
 library(tidyr)
 library(xlsx)
 library(writexl)
+library(stringr)
+
 
 #Primero creo la base de datos original, y la transformo en un objeto tbl ya que es más facil de manejar usando la libreria dplyr
-emdat     <- openxlsx::read.xlsx("C:/Users/jpber/OneDrive/Documents/BASE_EMDAT.xlsx",sheet = "Table1")
+emdat     <- openxlsx::read.xlsx(paste0(Dir,"BASE_EMDAT.xlsx"),sheet = "Table1")
 emdat_tbl <- tbl_df(emdat)
 
 #Selecciono solamente las variables que me interesan para poder manejar mejor la base
@@ -56,8 +62,19 @@ emdat_selected <- emdat_final %>%
   dplyr::select(Country, na_start, Start.Date) %>% 
   distinct()
 
+## Los nombres de los paises generan problemas en la estimacion al contener espacios y parentesis, por lo cual es necesario eliminarlos
+
+## Revisar como hacerlo mas general
+emdat_selected$Country <- gsub(" ","_",emdat_selected$Country) 
+emdat_selected$Country <- str_remove_all(emdat_selected$Country, "[(),']")
+emdat_selected$Country <- gsub("[\u2018\u2019']", "", emdat_selected$Country) # Revisar por que este si elimina todos los '
+emdat_selected$Country <- iconv(emdat_selected$Country, to = "ASCII//TRANSLIT") #Cambia caracteres acentuados a caracteres sin acento.
+
+
 countries_base <- unique(emdat_selected$Country)
 countries_base <- sort(countries_base)
+
+
 
 wb <- xlsx::createWorkbook()
 
@@ -69,7 +86,7 @@ for(country in countries_base){
   addDataFrame(country_data,sheet,startRow = 1,startColumn = 1)
 }
 
-saveWorkbook(wb, "C:/Users/jpber/OneDrive/Documents/data_by_country.xlsx")
+saveWorkbook(wb, paste0(Dir,"emdata_dummies_countries.xlsx"))
 
 
 
