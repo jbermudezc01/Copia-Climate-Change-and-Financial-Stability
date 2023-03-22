@@ -218,7 +218,7 @@ plot_Met <- ggplot(ar_data_frame_Met, aes(x=group,y=values,fill=subgroup))+
 #graficas juntas
 
 complete_plot <- grid.arrange(plot_Bio,plot_Cli,plot_Geo,plot_Hyd,plot_Met,nrow=5,ncol=1,heights = c(1,1,1,1,1.7))
-ggsave("abnormal_returns.pdf",plot=complete_plot,device="pdf", width = 8.27, height = 11.69)
+#ggsave("abnormal_returns.pdf",plot=complete_plot,device="pdf", width = 8.27, height = 11.69) # Ya esta guardado en el github por lo que no es necesario volverlo a cargar
 
 ### ===========================  Grafico A.4 Pagnottoni, t-tests =======================================================
 
@@ -302,4 +302,9 @@ plot_t_Met <- ggplot(t_data_frame_Met, aes(x=group,y=values,fill=subgroup))+
 #graficas juntas
 
 complete_t_plot <- grid.arrange(plot_t_Bio,plot_t_Cli,plot_t_Hyd,plot_t_Geo,plot_t_Met,nrow=5,ncol=1,heights = c(1,1,1,1,1.7))
-ggsave("t_tests.pdf",plot=complete_t_plot,device="pdf", width = 8.27, height = 11.69)
+#ggsave("t_tests.pdf",plot=complete_t_plot,device="pdf", width = 8.27, height = 11.69) # Ya esta guardado en el github por lo que no es necesario volverlo a cargar
+
+
+#####=========================================== FIGURA 4 Y A.8 Pagnottoni  ==============================================###
+
+

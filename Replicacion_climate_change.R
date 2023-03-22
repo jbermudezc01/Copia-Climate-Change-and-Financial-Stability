@@ -37,6 +37,8 @@ library(dynlm)
 library(systemfit)
 library(ks)
 library(gridExtra)
+library(xlsx)
+library(stringr)
 
 #--- Carga de funciones ---#
 source('Functions_Climate_change.r')
@@ -363,7 +365,7 @@ for(disaster in Tipos.Desastres){
     eqsystem[[country]]    =  model_equation.LF(database=base_datos, country, 
                                                 var.exo=var.exo,  var.exo.pais=c('gdp','fdi'),  Lags='lags')
   }
-  name          = paste0("fitdes_", substr(disaster,1,3) )
+  name          = paste0("fitsur_", substr(disaster,1,3) )
   fitted_models = c(fitted_models, name)
   assign(name, systemfit(eqsystem, method="SUR"))
 } 
@@ -373,41 +375,81 @@ for(disaster in Tipos.Desastres){
 ## ---------------------- SEGUNDA REGRESION, AHORA ES POR PAISES, NO POR TIPO DE DESASTRE. ---------- ##
 
 ##falta terminar
-if(0){
-  ## Regresion con dummies de paises ====
-  
-  dummies_countries <- create_dummies(excel_file=paste0(Dir,"emdata_dummies_countries.xlsx"),Retornos)  ## Genera un array de dimensiones 104, 4828, 6
-  
-  ## Generamos un vector de los nombres de los paises
-  paises <- dimnames(dummies_countries)[[1]]
-  
-  # Calculo de interacciones entre D y Rmt
-  names.countries.int    = paste0('Int_D_', dimnames(dummies_countries)[[1]])
-  interactions.countries = matrix( NA, nrow(Retornos), length(dimnames(dummies_countries)[[1]]), dimnames=list(as.character(index(Retornos)), names.countries.int))
-  for (tip.desast in 1:ncol(interactions.countries))
-    interactions.countries[,tip.desast] =  as.numeric(Promedio_movil) * dummies_countries[tip.desast,,'D']
-  
-  ### Generacion de base de datos con todas las variables que serán usadas para la estimación ====
-  base_datos <- merge(base_datos, as.xts(interactions.countries,order.by= index(Retornos)))
-  # length(dimnames(dummies_countries)[[1]]) indica el total de paises que hay
-  for (pais in 1:length(dimnames(dummies_countries)[[1]])){
-    dummies.pais           = as.xts(dummies_countries[pais,,paste0('t',0:no.rezagos.de.desatres)], order.by= index(Retornos))
-    colnames(dummies.pais) = paste0(paises[pais],'_',colnames(dummies.pais))
-    base_datos             = merge(base_datos, dummies.pais)
+
+## Regresion con dummies de paises ====
+
+excel_countries   <- paste0(Dir,"emdata_dummies_countries.xlsx")
+dummies_countries <- create_dummies(excel_file=excel_countries,Retornos)  ## Genera un array de dimensiones 104, 4828, 6
+
+## Generamos un vector de los nombres de los paises
+paises <- dimnames(dummies_countries)[[1]]
+
+# Calculo de interacciones entre D y Rmt
+names.countries.int    = paste0('Int_D_', dimnames(dummies_countries)[[1]])
+interactions.countries = matrix( NA, nrow(Retornos), length(dimnames(dummies_countries)[[1]]), dimnames=list(as.character(index(Retornos)), names.countries.int))
+for (tip.desast in 1:ncol(interactions.countries))
+  interactions.countries[,tip.desast] =  as.numeric(Promedio_movil) * dummies_countries[tip.desast,,'D']
+
+### Generacion de base de datos con todas las variables que serán usadas para la estimación ====
+base_datos <- merge(base_datos, as.xts(interactions.countries,order.by= index(Retornos)))
+# length(dimnames(dummies_countries)[[1]]) indica el total de paises que hay
+for (pais in 1:length(dimnames(dummies_countries)[[1]])){
+  dummies.pais           = as.xts(dummies_countries[pais,,paste0('t',0:no.rezagos.de.desatres)], order.by= index(Retornos))
+  colnames(dummies.pais) = paste0(paises[pais],'_',colnames(dummies.pais))
+  base_datos             = merge(base_datos, dummies.pais)
+}
+
+## Regresion con las nuevas dummies. Es importante resaltar que en este caso paises indica el pais en el que sucedio el desastre, mientras que 
+#  countries indica el pais donde esta el indice (Ejemplo: Brazil-Bovespa) 
+eqsystem2      = list()
+fitted_models2 = c()
+for(pais in paises){
+  for(country in countries){
+    var.exo2                =  c('Mean_Returns_Moving_Averages', c(paste0('Int_D_', pais), paste0(pais,'_t', 0:no.rezagos.de.desatres)))
+    eqsystem2[[country]]    =  model_equation.LF(database=base_datos, country, 
+                                                var.exo=var.exo2,  var.exo.pais=c('gdp','fdi'),  Lags='lags')
   }
-  
-  ## Regresion con las nuevas dummies. Es importante resaltar que en este caso paises indica el pais en el que sucedio el desastre, mientras que 
-  #  countries indica el pais donde esta el indice (Ejemplo: Brazil-Bovespa) 
-  eqsystem2      = list()
-  fitted_models2 = c()
-  for(pais in paises){
-    for(country in countries[1:2]){
-      var.exo2                =  c('Mean_Returns_Moving_Averages', c(paste0('Int_D_', pais), paste0(pais,'_t', 0:no.rezagos.de.desatres)))
-      eqsystem2[[country]]    =  model_equation.LF(database=base_datos, country, 
-                                                  var.exo=var.exo2,  var.exo.pais=c('gdp','fdi'),  Lags='lags')
-    }
-    name2          = paste0("fitcoun_", substr(pais,1,11)) #revisar si solo poner pais en vez de substr(pais,1,11)
-    fitted_models2 = c(fitted_models2, name2)
-    assign(name2, systemfit(eqsystem2, method="SUR"))
-  } 
+  name2          = paste0("fitcoun_", pais)
+  fitted_models2 = c(fitted_models2, name2)
+  assign(name2, systemfit(eqsystem2, method="SUR"))
 } 
+
+### Para poder generar las graficas 4 y A.8 de Pagnottoni es necesario saber a que continente pertenece cada pais, por lo cual hice el siguiente codigo
+
+# Primero creo la base de datos original, y la transformo en un objeto tbl ya que es más facil de manejar usando la libreria dplyr
+emdat     <- openxlsx::read.xlsx(paste0(Dir,"BASE_EMDAT.xlsx"),sheet = "Table1")
+emdat_tbl <- tibble::as_tibble(emdat)
+
+# Para poder generar el vector por cada continente que incluya los paises de dicho continente selecciono de la base de datos solamente las columnas country y continent
+emdat_country_continent <- emdat_tbl %>% 
+  dplyr::select(Country,Continent)
+
+# En el dataframe se repiten tanto el continente como el pais, por  lo que solamente cogere los valores unicos
+emdat_continents <- emdat_country_continent %>%  
+  distinct()
+
+# En el vector continents tendre los valores unicos para el continente, en este caso Asia, Europe, Americas, Oceania, Africa
+continents <- unique(emdat_continents$Continent)
+
+# Generar un vector por cada continente que incluya los paises de dicho contiente
+for (continent in continents){
+  paises_continent <- c()
+  varname          <- paste0("countries_",continent)
+  emdat_countries  <- emdat_continents %>% 
+    filter(Continent == continent)
+  paises_continent <- unique(emdat_countries$Country)
+  # Por otro lado, en la estimacion SUR los paises no pueden tener caracteres especiales. Falta ver como volver mas general las lineas 37 a 40 
+  paises_continent <- gsub(" ","_",paises_continent) 
+  paises_continent <- str_remove_all(paises_continent, "[(),']")
+  paises_continent <- gsub("[\u2018\u2019']", "", paises_continent) # Revisar por que este si elimina todos los '
+  paises_continent <- iconv(paises_continent, to = "ASCII//TRANSLIT") #Cambia caracteres acentuados a caracteres sin acento. 
+  assign(varname, paises_continent)
+}
+
+max(sapply(fitted_models2,FUN = nchar)) ## Problema, systemfit solo genero maximo 39caracteres
+
+for (continent in continents){
+  #for (model in fitted_models2){
+  varname <- paste0("fitted_models2_",continent)
+  assign(varname, mget(paste0("fitcoun_",get(paste0("countries_",continent))))) 
+}

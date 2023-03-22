@@ -59,7 +59,7 @@ emdat_final <- emdat_final %>%
 #write_xlsx(emdat_final, "C:/Users/jpber/OneDrive/Documents/EMDAT.xlsx")
 
 emdat_selected <- emdat_final %>% 
-  dplyr::select(Country, na_start, Start.Date) %>% 
+  dplyr::select(Country, Continent, na_start, Start.Date) %>% 
   distinct()
 
 ## Los nombres de los paises generan problemas en la estimacion al contener espacios y parentesis, por lo cual es necesario eliminarlos
