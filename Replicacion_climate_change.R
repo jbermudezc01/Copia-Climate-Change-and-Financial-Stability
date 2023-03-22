@@ -379,7 +379,8 @@ for(disaster in Tipos.Desastres){
 ## Regresion con dummies de paises ====
 
 excel_countries   <- paste0(Dir,"emdata_dummies_countries.xlsx")
-dummies_countries <- create_dummies(excel_file=excel_countries,Retornos)  ## Genera un array de dimensiones 104, 4828, 6
+dummies_countries <- create_dummies(excel_file=excel_countries,Retornos, no.rezagos=4,
+                                    first.calendar.days.tobe.evaluated = 10)  ## Genera un array de dimensiones 104, 4828, 6
 
 ## Generamos un vector de los nombres de los paises
 paises <- dimnames(dummies_countries)[[1]]
@@ -413,6 +414,10 @@ for(pais in paises){
   fitted_models2 = c(fitted_models2, name2)
   assign(name2, systemfit(eqsystem2, method="SUR"))
 } 
+
+#--- XXX ---#
+save(list=ls(),file=paste0('Resul_Desastres_',today()))
+#load(paste0('Resul_Desastres_',today()))
 
 ### Para poder generar las graficas 4 y A.8 de Pagnottoni es necesario saber a que continente pertenece cada pais, por lo cual hice el siguiente codigo
 
