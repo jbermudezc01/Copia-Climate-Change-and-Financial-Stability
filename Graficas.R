@@ -314,35 +314,35 @@ europe_plot <- car_countries(continent_model=fitted_models2_Europe, significance
                              pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
                              labels=labels_grafico, color="orange", title.graph="Europe")
 europe_plot
-ggsave("C:/Users/jpber/OneDrive/Documents/Graficos_CAR/Europe_1.png",plot=europe_plot,device="png")
+#ggsave("Graficos_CAR/Europe_1.png",plot=europe_plot,device="png")
 
 #====
 america_plot <- car_countries(continent_model=fitted_models2_Americas, significance.level=niv.significancia, pattern.step=pattern_step, 
                              pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
                              labels=labels_grafico, color="blue", title.graph="America")
 america_plot
-ggsave("C:/Users/jpber/OneDrive/Documents/Graficos_CAR/America_1.png",plot=america_plot,device="png")
+#ggsave("Graficos_CAR/America_1.png",plot=america_plot,device="png")
 
 #====
 asia_plot <- car_countries(continent_model=fitted_models2_Asia, significance.level=niv.significancia, pattern.step=pattern_step, 
                               pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
                               labels=labels_grafico, color="tomato", title.graph="Asia")
 asia_plot
-ggsave("C:/Users/jpber/OneDrive/Documents/Graficos_CAR/Asia_1.png",plot=asia_plot,device="png")
+#ggsave("Graficos_CAR/Asia_1.png",plot=asia_plot,device="png")
 
 #====
 africa_plot <- car_countries(continent_model=fitted_models2_Africa, significance.level=niv.significancia, pattern.step=pattern_step, 
                              pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
                              labels=labels_grafico, color="magenta4", title.graph="Africa")
 africa_plot
-ggsave("C:/Users/jpber/OneDrive/Documents/Graficos_CAR/Africa_1.png",plot=africa_plot,device="png")
+#ggsave("Graficos_CAR/Africa_1.png",plot=africa_plot,device="png")
 
 #====
 oceania_plot <- car_countries(continent_model=fitted_models2_Oceania, significance.level=niv.significancia, pattern.step=pattern_step, 
                            pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
                            labels=labels_grafico, color="olivedrab3", title.graph="Oceania")
 oceania_plot
-ggsave("C:/Users/jpber/OneDrive/Documents/Graficos_CAR/Oceania_1.png",plot=oceania_plot,device="png")
+#ggsave("Graficos_CAR/Oceania_1.png",plot=oceania_plot,device="png")
 
 
 
