@@ -357,8 +357,9 @@ for(country in countries){
 # Por otro lado, en la lista fitted_models generamos el nombre de losmodelos estimados, que necesitaremos 
 # mas adelante.
 
-eqsystem      = list()
-fitted_models = c()
+eqsystem              = list()
+fitted_models         = c()
+models_disasters_list = list()
 for(disaster in Tipos.Desastres){
   for(country in countries){
     var.exo                =  c( 'Mean_Returns_Moving_Averages', c(paste0('Int_D_', disaster), paste0(disaster,'_t', 0:no.rezagos.de.desatres)) )
@@ -368,9 +369,8 @@ for(disaster in Tipos.Desastres){
   name          = paste0("fitsur_", substr(disaster,1,3) )
   fitted_models = c(fitted_models, name)
   assign(name, systemfit(eqsystem, method="SUR"))
+  models_disasters_list[[name]] <- get(name)
 } 
-
-
 
 ## ---------------------- SEGUNDA REGRESION, AHORA ES POR PAISES, NO POR TIPO DE DESASTRE. ---------- ##
 
@@ -378,7 +378,8 @@ for(disaster in Tipos.Desastres){
 
 ## Regresion con dummies de paises ====
 
-excel_countries   <- paste0(Dir,"emdata_dummies_countries.xlsx")
+excel_countries   <- paste0(Dir,"emdata_dummies_countries.xlsx")     #<<<--- base de datos con las dummies de cada pais donde ocurrio un desastre
+# La base de datos <excel_countries> tiene 2 columnas que interesan, <Country>, que indica el pais, y <t0> que indica el dia de los desastres en ese pais
 dummies_countries <- create_dummies(excel_file=excel_countries,Retornos, no.rezagos=4,
                                     first.calendar.days.tobe.evaluated = 10)  ## Genera un array de dimensiones 104, 4828, 6
 
@@ -402,8 +403,9 @@ for (pais in 1:length(dimnames(dummies_countries)[[1]])){
 
 ## Regresion con las nuevas dummies. Es importante resaltar que en este caso paises indica el pais en el que sucedio el desastre, mientras que 
 #  countries indica el pais donde esta el indice (Ejemplo: Brazil-Bovespa) 
-eqsystem2      = list()
-fitted_models2 = c()
+eqsystem2             = list()
+fitted_models2        = c()
+models_countries_list = list()
 for(pais in paises){
   for(country in countries){
     var.exo2                =  c('Mean_Returns_Moving_Averages', c(paste0('Int_D_', pais), paste0(pais,'_t', 0:no.rezagos.de.desatres)))
@@ -413,17 +415,21 @@ for(pais in paises){
   name2          = paste0("fitcoun_", pais)
   fitted_models2 = c(fitted_models2, name2)
   assign(name2, systemfit(eqsystem2, method="SUR"))
+  models_countries_list[[name2]] <- get(name2)
 } 
 
-#--- XXX ---#
-save(list=ls(),file=paste0('Resul_Desastres_',today()))
-#load(paste0('Resul_Desastres_',today()))
+#--- Como la estimacion de los modelos es demorada, guardamos los resultados de ambas en un objeto, para luego poder  ---#
+#--- cargarlo sin tener que correr toda la estimacion ---#
+
+# save_day = "2023-03-24"   #<<<--- dia en que se utilizo por ultima vez save() en formato yyyy-mm-dd
+#save(models_countries_list,models_disasters_list,file=paste0(paste0('Resul_Desastres_',today()),'.RData')) #Tomo 41 minutos
+#load(paste0(paste0(paste0('Resul_Desastres_',save_day),'.RData')))
 
 ### Para poder generar las graficas 4 y A.8 de Pagnottoni es necesario saber a que continente pertenece cada pais, por lo cual hice el siguiente codigo
 
 # Primero creo la base de datos original, y la transformo en un objeto tbl ya que es más facil de manejar usando la libreria dplyr
-emdat     <- openxlsx::read.xlsx(paste0(Dir,"BASE_EMDAT.xlsx"),sheet = "Table1")
-emdat_tbl <- tibble::as_tibble(emdat)
+emdat     <- openxlsx::read.xlsx(paste0(Dir,"BASE_EMDAT.xlsx"),sheet = "Table1") #<<<---cargar base de la web (aunque tiene algunos cambios como los dias y paises estudiados)
+emdat_tbl <- tibble::as_tibble(emdat) #las columnas que nos interesan son <Country>, pais del desastre, <Continent>, continente del desastre  
 
 # Para poder generar el vector por cada continente que incluya los paises de dicho continente selecciono de la base de datos solamente las columnas country y continent
 emdat_country_continent <- emdat_tbl %>% 
@@ -451,10 +457,15 @@ for (continent in continents){
   assign(varname, paises_continent)
 }
 
-max(sapply(fitted_models2,FUN = nchar)) ## Problema, systemfit solo genero maximo 39caracteres
+max.length <- max(sapply(fitted_models2,FUN = nchar)) ## Problema, systemfit solo genero maximo 39caracteres
+
 
 for (continent in continents){
-  #for (model in fitted_models2){
-  varname <- paste0("fitted_models2_",continent)
-  assign(varname, mget(paste0("fitcoun_",get(paste0("countries_",continent))))) 
+  varname          <- paste0("fitted_models2_",continent)
+  countries_models <- paste0("fitcoun_",get(paste0("countries_",continent)))
+  countries_models <- substr(countries_models,1,max.length)  ## Como systemfit creo objetos de maximo max.length, toca cortar los nombres en esta linea 
+                                                              # para que tengan el mismo numero de caracteres
+  assign(varname, mget(countries_models)) 
 }
+
+

@@ -12,8 +12,10 @@ library(stringr)
 
 
 #Primero creo la base de datos original, y la transformo en un objeto tbl ya que es más facil de manejar usando la libreria dplyr
-emdat     <- openxlsx::read.xlsx(paste0(Dir,"BASE_EMDAT.xlsx"),sheet = "Table1")
-emdat_tbl <- tbl_df(emdat)
+emdat     <- openxlsx::read.xlsx(paste0(Dir,"BASE_EMDAT.xlsx"),sheet = "Table1") #<<<---cargar base de la web (aunque tiene algunos cambios como los dias y paises estudiados) 
+emdat_tbl <- tbl_df(emdat) # las columnas que nos interesan son <Country>, pais del desastre, <Continent>, continente del desastre, <Disaster.subgroup>, tipo de desastre
+                           # <Start.Year>, anho en que inicio el desastre, <Start.Month>, mes en que inicio el desastre, <Start.Day>, dia en que inicio el desastre
+                           # <End.Year>, anho en que temrino el desastre, <End.Month>, mes en que termino el desastre, <End.Day> dia en que termino el desastre
 
 #Selecciono solamente las variables que me interesan para poder manejar mejor la base
 emdat_interest_variables <- emdat_tbl %>% 

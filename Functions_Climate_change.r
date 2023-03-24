@@ -181,8 +181,8 @@ days <- function(x, m, months, dates, startstring=1, endstring=7){
 #-- no.rezagos : Numero de rezagos de la primera dummy (t_0) se interpretan como n dias despues del desastre
 #-- first.calendar.days.tobe.evaluated: numero de dias despues del evento a ser evaluados
 # ----Argumentos de salida  ----#
-#-- xts_dummies: Array con las dummies de todos los tipos de desastres de tres dominsiones, donde la primera es el tipo 
-#                de desastre, la segunda el indice de fechas y la tercera los pasos adelante del desastre (0,...,no.rezagos) 
+#-- xts_dummies: Array con las dummies de todos los tipos de desastres (o paises) de tres dominsiones, donde la primera es el tipo 
+#                de desastre (o el pais), la segunda el indice de fechas y la tercera los pasos adelante del desastre (0,...,no.rezagos) 
 #---------------------------------------------------------------------------------------#
 create_dummies <- function(excel_file, Retornos, no.rezagos=4, first.calendar.days.tobe.evaluated = 10 ){
   #Lee el nombre de las hojas del archivo, cada hoja corresponde a un tipo de desastre
@@ -326,7 +326,7 @@ arma_seleccion_df = function(object, AR.m, MA.m, d, bool, metodo){
 #-- dia.inicial : sirve para seleccionar el dia desde el cual debe empezar la base de rezagos 
 #                 (el default es el mismo de las otras bases, dia.inicial)
 # ----Argumentos de salida  ----#
-#-- lags_reduced: objeto xts con los p-rezagos para cada país.
+#-- lags_reduced: objeto xts con los p-rezagos para cada país. La columna n de este objeto es el n-rezago de la serie original
 #---------------------------------------------------------------------------------------#
 lag_function <- function(base_niveles,country,AR.m,MA.m,d,bool=TRUE,metodo="CSS",dia.inicial = dia.inicial)
 {
@@ -397,7 +397,7 @@ if(0){
 #-- var.exo.pais : conjunto de variables exogenas que dependen del país
 #-- Lags         : string que indica el nombre por el cual empiezan las matrices de rezagos en el codigo principal
 # ----Argumentos de salida  ----#
-#-- eq: ecuación de variable dependiente ~ regresoras para el país country.s
+#-- eq: ecuación de variable dependiente ~ regresoras para el país country. 
 #---------------------------------------------------------------------------------------#
 model_equation.LF <- function(database, country, var.exo, var.exo.pais, Lags){  
   
@@ -635,4 +635,92 @@ order_coef <- function(vec_desordenado, vec_orden){
   }
   vec_ordenado = vec_desordenado[indexes]
   return(vec_ordenado)
+}
+
+#----------------------------------- 20. car_countries --------------------------------------------------#
+# Genera una grafica para cada indice de los retornos anormales acumulados (CAR) promedios dependiendo del continente y un
+# nivel de significancia.
+# ------------------------------------------------------------------------------------------------
+# ----Argumentos de entrada ----#
+# continent_model    : Un modelo estimado, el cual tiene ciertas propiedades, se le puede hacer summary y sacar los coeficientes
+#                      con $ coeficients, los cuales incluyen el coeficiente estimado, error estandar, t_value y p_value.
+# significance.level : El nivel de significancia que deben tener los coeficientes estimados para graficarlos
+# pattern.step       : Al estimar los modelos por continente, los coeficientes tienen un nombre característico, pattern.step
+#                      se utiliza para extraer la parte que corresponde a en que dia despues del evento se refiere el coeficiente (t0,t1,t2...)
+# pattern.indexes    : string que es la parte del nombre del coeficiente que se refiere al pais del indice bursatil
+# pattern.countries  : string que es la parte del nombre del coeficiente que se refiere al pais donde ocurre el desastre
+# order.graph        : vector de nombres de paises que indicara el orden en que se graficara
+# labels             : leyendas del eje de los indices bursatiles
+# color              : color para la grafica
+# title.graph        : titulo para la grafica
+# ----Argumentos de salida  ----#
+#-- plot_continent   : objeto tipo ggplot para poder graficar los retornos anormales acumulados (CAR) promedio para cada continente
+#                      dependiendo de un nivel de significancia
+#---------------------------------------------------------------------------------------#
+
+car_countries <- function(continent_model, significance.level, pattern.step, pattern.indexes, pattern.countries, order.graph, labels, color, title.graph){
+  
+  # Generamos un dataframe que va a guardar los parametros estimados, el error estandar, el valor del t test y el p_value.
+  dataframe_modelo <- data.frame(Estimate=double(), SD_error=double(), t_value=double(), p_value=double()) 
+  
+  # Filtrar por aquellos que acaben en t0, t1, t2, t3 o t4.
+  for (element in continent_model){
+    ## Genera un dataframe con el estimado, error estandar, t_value, p_value, que salen de la estimacion element
+    dataframe_coef <- as.data.frame(summary(element)$coefficients) 
+    ## Le cambiamos nombres al dataframe para mejor manejo, pero reflejan lo mismo
+    colnames(dataframe_coef) <- c("Estimate","SD_error","t_value","p_value")
+    ## Extraemos las filas que nos interesan, es decir aquellas de las dummies, que acaban en t0, t1, t2, t3 o t4, es decir steps
+    dataframe_coef_filtrado  <- dataframe_coef %>% 
+      dplyr::filter(str_ends(row.names(.),pattern = pattern.step)) %>% 
+      # Filtramos tambien para aquellos coeficientes que tengan un nivel de significancia menor que niv.significancia
+      dplyr::filter(p_value < significance.level)
+    ## Dejamos todos los coeficientes que cumplen con las condiciones en un solo dataframe
+    dataframe_modelo   <- rbind(dataframe_modelo, dataframe_coef_filtrado)
+  }
+  
+  ## Ahora para poder promediar los retornos anormales es necesario poder extraer el pais del indice y el step, usando la funcion
+  ## str_extract, que extrae el primer valor identico entre dos strings. Esto permite extraer el indice, que en cada fila aparece 
+  ## de primer lugar
+  string_start <- stringr::str_extract(row.names(dataframe_modelo), pattern.indexes) # collapse = "|" indica que puede ser 
+  # cualquier valor de countries
+  string_end   <- stringr::str_extract(row.names(dataframe_modelo), pattern.step)  #En caso de querer revisar coeficientes por step
+  
+  ## Aparte, necesitamos hacer el CAR por cada pais del desastre por lo que el siguiente codigo obtiene todos los valores identicos entre 
+  #  dos strings. Sin embargo, para algunas filas va a encontrar dos coincidencias, la primera refiriendose al indice bursatil y la segunda 
+  #  al pais del desastre, por lo que necesitaremos por cada sublista guardar solamente el ultimo elemento.
+  string_pais     <- stringr::str_extract_all(row.names(dataframe_modelo), pattern.countries) 
+  string_pais_vec <- sapply(string_pais, function(x) x[[length(x)]])
+  
+  dataframe_modelo <- cbind(dataframe_modelo,string_start,string_pais_vec,string_end)
+  
+  ## Ellos mencionan que realizaran un promedio del CAR, por lo cual realizaremos el CAR de cada pais que tenemos datos
+  #  para cada indice y realizaremos un promedio
+  
+  promedio_car <- dataframe_modelo %>% 
+    group_by(string_start, string_pais_vec) %>% 
+    summarise(CAR = sum(Estimate)) %>% # El nombre Estimate sale del nombre que le colocamos anteriormente
+    group_by(string_start) %>% 
+    summarise(mean_CAR = mean(CAR)) %>% 
+    arrange(match(string_start,order.graph))
+  
+  ## Por ultimo, se agregan a las graficas los indices que no contienen valores, de modo que al graficar no saldra dato (es 0)
+  #  pero sirve para comparar con la grafica del paper
+  
+  dataframe_pagnorden <- data.frame(string_start = order.graph)
+  #Juntar las dos dataframes y rellenar con 0 los datos faltantes
+  promedio_car_all <- left_join(dataframe_pagnorden, promedio_car, by = "string_start") # string_start sale de un nombre que le colocamos en la funcion
+  promedio_car_all$mean_CAR <- ifelse(is.na(promedio_car_all$mean_CAR), 0, promedio_car_all$mean_CAR)
+  
+  promedio_car_all$string_start <- factor(promedio_car_all$string_start, levels = promedio_car_all$string_start)
+  
+  plot_continent <- ggplot(data = promedio_car_all, aes(y = mean_CAR, x = string_start, fill = mean_CAR < 0)) +
+    geom_col() +
+    scale_fill_manual(values = c(color, color)) +
+    coord_flip()+
+    scale_x_discrete(labels = labels)+
+    theme_light() + 
+    theme(plot.title = element_text(hjust = 0.5)) + 
+    guides(fill = "none") +
+    labs(y = paste0("Average CAR | p-value < ",percent(niv.significancia)),x="Index",title = title.graph)
+  return(plot_continent)
 }

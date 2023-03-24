@@ -1,10 +1,8 @@
 
 ### CODIGO PARA GRAFICAS
 
-
 # De acuerdo con la notacion de los modelos estimados, los coeficientes el dia del evento terminan en t0, 
-# el dia siguiente en t1, dos dias despues t2, y asi hasta llegar a t4. Por otro lado, tambien 
-# generamos una lista con los modelos estimados que tenemos
+# el dia siguiente en t1, dos dias despues t2, y asi hasta llegar a t4. 
 
 steps <- c("t0","t1","t2","t3","t4")  #<<<--- vector con los días adelante del evento, hace referencia a como termina el nombre de las dummies
 
@@ -306,5 +304,45 @@ complete_t_plot <- grid.arrange(plot_t_Bio,plot_t_Cli,plot_t_Hyd,plot_t_Geo,plot
 
 
 #####=========================================== FIGURA 4 Y A.8 Pagnottoni  ==============================================###
+
+niv.significancia <- 0.01 #<<<--- nivel de significancia para los estimados de retornos anormales
+pattern_step      <- paste(steps, collapse = "|") # patron que indica los pasos
+pattern_indexes   <- paste(countries, collapse = "|") #patron que indica los paises de los indices
+pattern_countries <- paste(paises, collapse = "|")    #patron que indica los paises del desastre
+
+europe_plot <- car_countries(continent_model=fitted_models2_Europe, significance.level=niv.significancia, pattern.step=pattern_step, 
+                             pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
+                             labels=labels_grafico, color="orange", title.graph="Europe")
+europe_plot
+ggsave("C:/Users/jpber/OneDrive/Documents/Graficos_CAR/Europe_1.png",plot=europe_plot,device="png")
+
+#====
+america_plot <- car_countries(continent_model=fitted_models2_Americas, significance.level=niv.significancia, pattern.step=pattern_step, 
+                             pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
+                             labels=labels_grafico, color="blue", title.graph="America")
+america_plot
+ggsave("C:/Users/jpber/OneDrive/Documents/Graficos_CAR/America_1.png",plot=america_plot,device="png")
+
+#====
+asia_plot <- car_countries(continent_model=fitted_models2_Asia, significance.level=niv.significancia, pattern.step=pattern_step, 
+                              pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
+                              labels=labels_grafico, color="tomato", title.graph="Asia")
+asia_plot
+ggsave("C:/Users/jpber/OneDrive/Documents/Graficos_CAR/Asia_1.png",plot=asia_plot,device="png")
+
+#====
+africa_plot <- car_countries(continent_model=fitted_models2_Africa, significance.level=niv.significancia, pattern.step=pattern_step, 
+                             pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
+                             labels=labels_grafico, color="magenta4", title.graph="Africa")
+africa_plot
+ggsave("C:/Users/jpber/OneDrive/Documents/Graficos_CAR/Africa_1.png",plot=africa_plot,device="png")
+
+#====
+oceania_plot <- car_countries(continent_model=fitted_models2_Oceania, significance.level=niv.significancia, pattern.step=pattern_step, 
+                           pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
+                           labels=labels_grafico, color="olivedrab3", title.graph="Oceania")
+oceania_plot
+ggsave("C:/Users/jpber/OneDrive/Documents/Graficos_CAR/Oceania_1.png",plot=oceania_plot,device="png")
+
 
 
