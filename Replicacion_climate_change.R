@@ -357,9 +357,9 @@ for(country in countries){
 # Por otro lado, en la lista fitted_models generamos el nombre de losmodelos estimados, que necesitaremos 
 # mas adelante.
 
-eqsystem              = list()
-fitted_models         = c()
-models_disasters_list = list()
+eqsystem                    = list()
+fitted_models               = c()
+models_disasters_list       = list()
 for(disaster in Tipos.Desastres){
   for(country in countries){
     var.exo                =  c( 'Mean_Returns_Moving_Averages', c(paste0('Int_D_', disaster), paste0(disaster,'_t', 0:no.rezagos.de.desatres)) )
@@ -373,8 +373,6 @@ for(disaster in Tipos.Desastres){
 } 
 
 ## ---------------------- SEGUNDA REGRESION, AHORA ES POR PAISES, NO POR TIPO DE DESASTRE. ---------- ##
-
-##falta terminar
 
 ## Regresion con dummies de paises ====
 
@@ -401,29 +399,45 @@ for (pais in 1:length(dimnames(dummies_countries)[[1]])){
   base_datos             = merge(base_datos, dummies.pais)
 }
 
-## Regresion con las nuevas dummies. Es importante resaltar que en este caso paises indica el pais en el que sucedio el desastre, mientras que 
-#  countries indica el pais donde esta el indice (Ejemplo: Brazil-Bovespa) 
-eqsystem2             = list()
-fitted_models2        = c()
-models_countries_list = list()
-for(pais in paises){
-  for(country in countries){
-    var.exo2                =  c('Mean_Returns_Moving_Averages', c(paste0('Int_D_', pais), paste0(pais,'_t', 0:no.rezagos.de.desatres)))
-    eqsystem2[[country]]    =  model_equation.LF(database=base_datos, country, 
-                                                var.exo=var.exo2,  var.exo.pais=c('gdp','fdi'),  Lags='lags')
-  }
-  name2          = paste0("fitcoun_", pais)
-  fitted_models2 = c(fitted_models2, name2)
-  assign(name2, systemfit(eqsystem2, method="SUR"))
-  models_countries_list[[name2]] <- get(name2)
-} 
-
+## REGRESION POR PAISES. Los coeficientes, errores estandar, t_Values y p_values de la estimacion fueron guardados usando el comando
+#  save() con el fin de no tener que correr siempre esta estimacion, por lo cual se pone el if(0).
+if(0){
+  ## Regresion con las nuevas dummies. Es importante resaltar que en este caso paises indica el pais en el que sucedio el desastre, mientras que 
+  #  countries indica el pais donde esta el indice (Ejemplo: Brazil-Bovespa) 
+  
+  #Con busqueda de guardar los objetos en un archivo .RData se crean las listas models_countries_list, que guardara cada modelo en una 
+  #lista, y coefficients_countries_list, que guardara los coeficientes de cada modelo en una lista. La lista coefficients_countries_list
+  #se creo para buscar guardar objetos que pesaran menos. Está comentado porque al agregar esa linea el codigo de la estimacion se demora 
+  #más tiempo en correr.
+  
+  eqsystem2             = list()
+  fitted_models2        = c()
+  models_countries_list = list()
+  #coefficients_countries_list = list()
+  for(pais in paises){
+    for(country in countries){
+      var.exo2                =  c('Mean_Returns_Moving_Averages', c(paste0('Int_D_', pais), paste0(pais,'_t', 0:no.rezagos.de.desatres)))
+      eqsystem2[[country]]    =  model_equation.LF(database=base_datos, country, 
+                                                  var.exo=var.exo2,  var.exo.pais=c('gdp','fdi'),  Lags='lags')
+    }
+    name2          = paste0("fitcoun_", pais)
+    fitted_models2 = c(fitted_models2, name2)
+    assign(name2, systemfit(eqsystem2, method="SUR"))
+    models_countries_list[[name2]] <- get(name2)
+    #coefficients_countries_list[[name2]]   <- summary(get(name2))$coefficients
+  } 
+}
+  
 #--- Como la estimacion de los modelos es demorada, guardamos los resultados de ambas en un objeto, para luego poder  ---#
 #--- cargarlo sin tener que correr toda la estimacion ---#
 
-# save_day = "2023-03-24"   #<<<--- dia en que se utilizo por ultima vez save() en formato yyyy-mm-dd
-#save(models_countries_list,models_disasters_list,file=paste0(paste0('Resul_Desastres_',today()),'.RData')) #Tomo 41 minutos
-#load(paste0(paste0(paste0('Resul_Desastres_',save_day),'.RData')))
+#save_day = "2023-03-25"   #<<<--- dia en que se utilizo por ultima vez save() en formato yyyy-mm-dd
+#save(models_countries_list,models_disasters_list,file=paste0(paste0('Resul_Desastres_',today()),'.RData')) #Codigo que guarda los modelos, tomo 41 minutos
+#save(coefficients_countries_list, file=paste0(paste0('Coeficientes_Desastres_',today()),'.RData')) # Codigo que solamente guarda los coeficientes, tomo menos de 10 segundos
+#load(paste0(paste0(paste0('Coeficientes_Desastres_',save_day),'.RData')))
+
+# Cargar solamente los coeficientes, no el modelo
+
 
 ### Para poder generar las graficas 4 y A.8 de Pagnottoni es necesario saber a que continente pertenece cada pais, por lo cual hice el siguiente codigo
 
@@ -457,15 +471,24 @@ for (continent in continents){
   assign(varname, paises_continent)
 }
 
-max.length <- max(sapply(fitted_models2,FUN = nchar)) ## Problema, systemfit solo genero maximo 39caracteres
-
-
-for (continent in continents){
-  varname          <- paste0("fitted_models2_",continent)
-  countries_models <- paste0("fitcoun_",get(paste0("countries_",continent)))
-  countries_models <- substr(countries_models,1,max.length)  ## Como systemfit creo objetos de maximo max.length, toca cortar los nombres en esta linea 
-                                                              # para que tengan el mismo numero de caracteres
-  assign(varname, mget(countries_models)) 
+# El siguiente codigo se utilizaba para revisar los modelos por continentes, pero fue mejorado por el codigo en 483, ya que
+# usa el objeto de los coeficientes, y no de los modelos.
+if(0){
+  max.length <- max(sapply(fitted_models2,FUN = nchar)) ## Problema, systemfit solo genero maximo 39 caracteres
+  for (continent in continents){
+    varname          <- paste0("fitted_models2_",continent)
+    countries_models <- paste0("fitcoun_",get(paste0("countries_",continent)))
+    countries_models <- substr(countries_models,1,max.length)  ## Como systemfit creo objetos de maximo max.length, toca cortar los nombres en esta linea 
+                                                                # para que tengan el mismo numero de caracteres
+    assign(varname, mget(countries_models)) 
+  }
 }
 
+max.length <- max(sapply(names(coefficients_countries_list),FUN = nchar))## Problema, systemfit solo genero maximo 39 caracteres
 
+for (continent in continents){
+  varname                <- paste0("fitted_coefficients_",continent)
+  countries_coefficients <- paste0("fitcoun_",get(paste0("countries_",continent)))
+  countries_coefficients <- substr(countries_coefficients,1,max.length)  
+  assign(varname, subset(coefficients_countries_list, names(coefficients_countries_list) %in% countries_coefficients)) 
+}

@@ -310,39 +310,74 @@ pattern_step      <- paste(steps, collapse = "|") # patron que indica los pasos
 pattern_indexes   <- paste(countries, collapse = "|") #patron que indica los paises de los indices
 pattern_countries <- paste(paises, collapse = "|")    #patron que indica los paises del desastre
 
-europe_plot <- car_countries(continent_model=fitted_models2_Europe, significance.level=niv.significancia, pattern.step=pattern_step, 
+# Graficas del CAR, pero fue cambiado, ya que ahora se utiliza la funcion car_countries2
+if(0){
+  europe_plot <- car_countries(continent_model=fitted_models2_Europe, significance.level=niv.significancia, pattern.step=pattern_step, 
+                               pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
+                               labels=labels_grafico, color="orange", title.graph="Europe")
+  europe_plot
+  #ggsave("Graficos_CAR/Europe_1.png",plot=europe_plot,device="png")
+  
+  #====
+  america_plot <- car_countries(continent_model=fitted_models2_Americas, significance.level=niv.significancia, pattern.step=pattern_step, 
+                               pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
+                               labels=labels_grafico, color="blue", title.graph="America")
+  america_plot
+  #ggsave("Graficos_CAR/America_1.png",plot=america_plot,device="png")
+  
+  #====
+  asia_plot <- car_countries(continent_model=fitted_models2_Asia, significance.level=niv.significancia, pattern.step=pattern_step, 
+                                pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
+                                labels=labels_grafico, color="tomato", title.graph="Asia")
+  asia_plot
+  #ggsave("Graficos_CAR/Asia_1.png",plot=asia_plot,device="png")
+  
+  #====
+  africa_plot <- car_countries(continent_model=fitted_models2_Africa, significance.level=niv.significancia, pattern.step=pattern_step, 
+                               pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
+                               labels=labels_grafico, color="magenta4", title.graph="Africa")
+  africa_plot
+  #ggsave("Graficos_CAR/Africa_1.png",plot=africa_plot,device="png")
+  
+  #====
+  oceania_plot <- car_countries(continent_model=fitted_models2_Oceania, significance.level=niv.significancia, pattern.step=pattern_step, 
+                             pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
+                             labels=labels_grafico, color="olivedrab3", title.graph="Oceania")
+  oceania_plot
+  #ggsave("Graficos_CAR/Oceania_1.png",plot=oceania_plot,device="png")
+}
+
+
+europe_plot2 <- car_countries2(continent_coefficients=fitted_coefficients_Europe, significance.level=niv.significancia, pattern.step=pattern_step, 
                              pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
                              labels=labels_grafico, color="orange", title.graph="Europe")
-europe_plot
-#ggsave("Graficos_CAR/Europe_1.png",plot=europe_plot,device="png")
+europe_plot2
+#ggsave("Graficos_CAR/Europe_1.png",plot2=europe_plot2,device="png")
 
 #====
-america_plot <- car_countries(continent_model=fitted_models2_Americas, significance.level=niv.significancia, pattern.step=pattern_step, 
-                             pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
-                             labels=labels_grafico, color="blue", title.graph="America")
-america_plot
-#ggsave("Graficos_CAR/America_1.png",plot=america_plot,device="png")
-
-#====
-asia_plot <- car_countries(continent_model=fitted_models2_Asia, significance.level=niv.significancia, pattern.step=pattern_step, 
+america_plot2 <- car_countries2(continent_coefficients=fitted_coefficients_Americas, significance.level=niv.significancia, pattern.step=pattern_step, 
                               pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
-                              labels=labels_grafico, color="tomato", title.graph="Asia")
-asia_plot
-#ggsave("Graficos_CAR/Asia_1.png",plot=asia_plot,device="png")
+                              labels=labels_grafico, color="blue", title.graph="America")
+america_plot2
+#ggsave("Graficos_CAR/America_1.png",plot2=america_plot2,device="png")
 
 #====
-africa_plot <- car_countries(continent_model=fitted_models2_Africa, significance.level=niv.significancia, pattern.step=pattern_step, 
+asia_plot2 <- car_countries2(continent_coefficients=fitted_coefficients_Asia, significance.level=niv.significancia, pattern.step=pattern_step, 
+                           pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
+                           labels=labels_grafico, color="tomato", title.graph="Asia")
+asia_plot2
+#ggsave("Graficos_CAR/Asia_1.png",plot2=asia_plot2,device="png")
+
+#====
+africa_plot2 <- car_countries2(continent_coefficients=fitted_coefficients_Africa, significance.level=niv.significancia, pattern.step=pattern_step, 
                              pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
                              labels=labels_grafico, color="magenta4", title.graph="Africa")
-africa_plot
-#ggsave("Graficos_CAR/Africa_1.png",plot=africa_plot,device="png")
+africa_plot2
+#ggsave("Graficos_CAR/Africa_1.png",plot2=africa_plot2,device="png")
 
 #====
-oceania_plot <- car_countries(continent_model=fitted_models2_Oceania, significance.level=niv.significancia, pattern.step=pattern_step, 
-                           pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
-                           labels=labels_grafico, color="olivedrab3", title.graph="Oceania")
-oceania_plot
-#ggsave("Graficos_CAR/Oceania_1.png",plot=oceania_plot,device="png")
-
-
-
+oceania_plot2 <- car_countries2(continent_coefficients=fitted_coefficients_Oceania, significance.level=niv.significancia, pattern.step=pattern_step, 
+                              pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
+                              labels=labels_grafico, color="olivedrab3", title.graph="Oceania")
+oceania_plot2
+#ggsave("Graficos_CAR/Oceania_1.png",plot2=oceania_plot2,device="png")
