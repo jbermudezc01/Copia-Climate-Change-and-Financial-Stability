@@ -388,79 +388,78 @@ dummies_countries <- create_dummies(excel_file=excel_countries,Retornos, no.reza
 ## Generamos un vector de los nombres de los paises
 paises <- dimnames(dummies_countries)[[1]]
 
-# Calculo de interacciones entre D y Rmt
+# Calculo de interacciones entre D y Rmt (Rmt:<Promedio_movil>)
 names.countries.int    = paste0('Int_D_', dimnames(dummies_countries)[[1]])
 interactions.countries = matrix( NA, nrow(Retornos), length(dimnames(dummies_countries)[[1]]), dimnames=list(as.character(index(Retornos)), names.countries.int))
 for (tip.desast in 1:ncol(interactions.countries))
   interactions.countries[,tip.desast] =  as.numeric(Promedio_movil) * dummies_countries[tip.desast,,'D']
 
 ### Generacion de base de datos con todas las variables que serán usadas para la estimación ====
+### Primero se agregan las interacciones por paises ====
 base_datos <- merge(base_datos, as.xts(interactions.countries,order.by= index(Retornos)))
 # length(dimnames(dummies_countries)[[1]]) indica el total de paises que hay
-for (pais in 1:length(dimnames(dummies_countries)[[1]])){
+### Ahora se agregan las dummies por pais a la base de datos ====
+for (pais in 1:length(paises)){
   dummies.pais           = as.xts(dummies_countries[pais,,paste0('t',0:no.rezagos.de.desatres)], order.by= index(Retornos))
   colnames(dummies.pais) = paste0(paises[pais],'_',colnames(dummies.pais))
   base_datos             = merge(base_datos, dummies.pais)
 }
 
 ## REGRESION POR PAISES. Los coeficientes, errores estandar, t_Values y p_values de la estimacion fueron guardados usando el comando
-#  save() con el fin de no tener que correr siempre esta estimacion, por lo cual se pone el if(0).
+#  save() con el fin de no tener que correr siempre esta estimacion, por lo cual se usa el if(0).
 if(0){
-  ## Regresion con las nuevas dummies. Es importante resaltar que en este caso paises indica el pais en el que sucedio el desastre, mientras que 
-  #  countries indica el pais donde esta el indice (Ejemplo: Brazil-Bovespa) 
+  ## Regresion con las dummies por pais. Es importante resaltar que en este caso <paises> indica el pais en el que sucedio el desastre, 
+  #  mientras que <countries> indica el pais donde esta el indice (Ejemplo de <countries>: 'Brazil' que corresponde a 'Bovespa') 
   
-  #Con busqueda de guardar los objetos en un archivo .RData se crean las listas models_countries_list, que guardara cada modelo en una 
-  #lista, y coefficients_countries_list, que guardara los coeficientes de cada modelo en una lista. La lista coefficients_countries_list
-  #se creo para buscar guardar objetos que pesaran menos. Está comentado porque al agregar esa linea el codigo de la estimacion se demora 
-  #más tiempo en correr.
+  #Con el objetivo de guardar los objetos en un archivo .RData se crean las listas <resid_countries_list>, que contiene los residuales del 
+  #modelo de cada <pais>, y <coefficients_countries_list>, que contiene los coeficientes del modelo de cada <pais>. La lista <coefficients_countries_list>
+  #se creo para buscar guardar objetos que pesaran menos, si se guardara <models_countries_list> esta pesaria 13 Gb..
   
-  eqsystem2             = list()
-  fitted_models2        = c()
-  models_countries_list = list()
-  #coefficients_countries_list = list()
-  for(pais in paises){
-    for(country in countries){
+  fitted_models2              = c()   # inicializar un vector que guardara los nombres de los modelos
+  #models_countries_list      = list()
+  coefficients_countries_list = list() 
+  resid_countries_list        = list() 
+  for(pais in paises){ #Loop de paises
+    eqsystem2                 = list()
+    for(country in countries){ #Loop de stock indexes
       var.exo2                =  c('Mean_Returns_Moving_Averages', c(paste0('Int_D_', pais), paste0(pais,'_t', 0:no.rezagos.de.desatres)))
       eqsystem2[[country]]    =  model_equation.LF(database=base_datos, country, 
                                                   var.exo=var.exo2,  var.exo.pais=c('gdp','fdi'),  Lags='lags')
     }
-    name2          = paste0("fitcoun_", pais)
+    name2          = paste0("fitcoun_", pais) # genera el nombre de cada modelo depediendo del <pais>
     fitted_models2 = c(fitted_models2, name2)
     assign(name2, systemfit(eqsystem2, method="SUR"))
-    models_countries_list[[name2]] <- get(name2)
-    #coefficients_countries_list[[name2]]   <- summary(get(name2))$coefficients
+    #models_countries_list[[name2]] <- get(name2)
+    coefficients_countries_list[[name2]]   <- summary(get(name2))$coefficients
+    resid_countries_list[[name2]]          <- resid(get(name2))
   } 
 }
   
-#--- Como la estimacion de los modelos es demorada, guardamos los resultados de ambas en un objeto, para luego poder  ---#
-#--- cargarlo sin tener que correr toda la estimacion ---#
-
+#--- Guardado de los coeficientes y residuales para cada <pais>. ----#
 save_day = "2023-03-25"   #<<<--- dia en que se utilizo por ultima vez save() en formato yyyy-mm-dd
 #save(models_countries_list,models_disasters_list,file=paste0(paste0('Resul_Desastres_',today()),'.RData')) #Codigo que guarda los modelos, tomo 41 minutos
-#save(coefficients_countries_list, file=paste0(paste0('Coeficientes_Desastres_',today()),'.RData')) # Codigo que solamente guarda los coeficientes, tomo menos de 10 segundos
-load(paste0(paste0(paste0('Coeficientes_Desastres_',save_day),'.RData')))
-
-# Cargar solamente los coeficientes, no el modelo
-
+#save(coefficients_countries_list,resid_countries_list, file=paste0(paste0('Coef_Resid_Desastres_',today()),'.RData')) # Codigo que solamente guarda los coeficientes, tomo menos de 10 segundos
+#load(paste0(paste0(paste0('Coef_Resid_Desastres_',save_day),'.RData')))
+load(paste0(paste0(paste0('Coeficientes_Desastres_',save_day),'.RData'))) # Carga solamente los coeficientes y residules por <pais>
 
 ### Para poder generar las graficas 4 y A.8 de Pagnottoni es necesario saber a que continente pertenece cada pais, por lo cual hice el siguiente codigo
+# Primero se carga la base de datos original, y se transforma en un objeto <tbl>, usando la libreria <dplyr>
 
-# Primero creo la base de datos original, y la transformo en un objeto tbl ya que es más facil de manejar usando la libreria dplyr
 emdat     <- openxlsx::read.xlsx(paste0(Dir,"BASE_EMDAT.xlsx"),sheet = "Table1") #<<<---cargar base de la web (aunque tiene algunos cambios como los dias y paises estudiados)
 emdat_tbl <- tibble::as_tibble(emdat) #las columnas que nos interesan son <Country>, pais del desastre, <Continent>, continente del desastre  
 
 # Para poder generar el vector por cada continente que incluya los paises de dicho continente selecciono de la base de datos solamente las columnas country y continent
-emdat_country_continent <- emdat_tbl %>% 
+emdat_country_continent <- emdat_tbl %>%
   dplyr::select(Country,Continent)
 
-# En el dataframe se repiten tanto el continente como el pais, por  lo que solamente cogere los valores unicos
+# En el dataframe se repiten tanto el continente como el pais, por  lo que solamente se toman los valores unicos
 emdat_continents <- emdat_country_continent %>%  
   distinct()
 
-# En el vector continents tendre los valores unicos para el continente, en este caso Asia, Europe, Americas, Oceania, Africa
+# En el vector <continents> se tienen  los valores unicos para el continente: Asia, Europe, Americas, Oceania, Africa
 continents <- unique(emdat_continents$Continent)
 
-# Generar un vector por cada continente que incluya los paises de dicho contiente
+# Generar un vector por cada continente que incluya los paises que lo conforman
 for (continent in continents){
   paises_continent <- c()
   varname          <- paste0("countries_",continent)
@@ -468,15 +467,16 @@ for (continent in continents){
     dplyr::filter(Continent == continent)
   paises_continent <- unique(emdat_countries$Country)
   # Por otro lado, en la estimacion SUR los paises no pueden tener caracteres especiales. Falta ver como volver mas general las lineas 37 a 40 
-  paises_continent <- gsub(" ","_",paises_continent) 
-  paises_continent <- str_remove_all(paises_continent, "[(),']")
-  paises_continent <- gsub("[\u2018\u2019']", "", paises_continent) # Revisar por que este si elimina todos los '
-  paises_continent <- iconv(paises_continent, to = "ASCII//TRANSLIT") #Cambia caracteres acentuados a caracteres sin acento. 
+  paises_continent <- gsub(" ","_",paises_continent) # Cambiar los espacios de <paises_continent> por '_'
+  paises_continent <- str_remove_all(paises_continent, "[(),'^]") # quitar los caracteres especificados de <paises_continent>
+  paises_continent <- gsub("[\u2018\u2019']", "", paises_continent) # Asegurar que todos los caracteres <'> hayan sido removidos de <paises_continent>
+  paises_continent <- iconv(paises_continent, to = "ASCII//TRANSLIT") #Cambiar caracteres acentuados a caracteres sin acento. 
+  paises_continent <- str_remove_all(paises_continent, "[(),'^]") # quitar los caracteres especificados de <paises_continent>
   assign(varname, paises_continent)
 }
 
-# El siguiente codigo se utilizaba para revisar los modelos por continentes, pero fue mejorado por el codigo en 483, ya que
-# usa el objeto de los coeficientes, y no de los modelos.
+# El siguiente codigo se utilizaba para revisar los modelos por continentes, pero fue mejorado por el codigo que sigue, ya que
+# usa el objeto <coefficients_countries_list>, y no <models_countries_list>.
 if(0){
   max.length <- max(sapply(fitted_models2,FUN = nchar)) ## Problema, systemfit solo genero maximo 39 caracteres
   for (continent in continents){
@@ -488,11 +488,30 @@ if(0){
   }
 }
 
+# maxima longitud de los nombres de la lista <coefficients_countries_list> [<fitcount_pais>]
 max.length <- max(sapply(names(coefficients_countries_list),FUN = nchar))## Problema, systemfit solo genero maximo 39 caracteres
 
+# El siguiente codigo genera una lista para cada continente: <fitted_coefficients_Africa> .. <fitted_coefficients_Oceania> 
+# La longitud de cada lista anterior es el no. de paises del <continente> correspondiente. Su elto <i> corresponde al SUR 
+# que incluye dummies del i-esimo <pais> del <continente> analizado
+#   Y es una matriz de orden Nx4:
+#      N: No.coeff.stock1 + No.coeff.stock2 + ... + No.coeff.stockFINAL (Ecuaciones que hace parte de cada SUR)
+#      4: c(Estimate, Std. Error, t value, Pr(>|t|) )   
 for (continent in continents){
   varname                <- paste0("fitted_coefficients_",continent)
   countries_coefficients <- paste0("fitcoun_",get(paste0("countries_",continent)))
   countries_coefficients <- substr(countries_coefficients,1,max.length)  
   assign(varname, subset(coefficients_countries_list, names(coefficients_countries_list) %in% countries_coefficients)) 
+}
+
+# prueba fallida de mejora del codigo anterior
+if(0){
+ Coeff.por.pais = list(); ii = 0
+ for (continent in continents){
+   ii = ii +10
+   Coeff.por.pais[[ii]]        <- paste0("fitcoun_",get(paste0("countries_",continent)))
+   names(Coeff.por.pais[[ii]]) <- paste0("fitted_coefficients_",continent)
+   #countries_coefficients      <- substr(countries_coefficients,1,max.length) 
+   assign(varname, subset(coefficients_countries_list, names(coefficients_countries_list) %in% countries_coefficients)) 
+ }
 }
