@@ -8,10 +8,9 @@ cat("\014")
 
 ### Libraries ====
 
+library(tidyverse)
 library(lubridate)
-library(ggplot2)
 library(xts)
-library(tidyr)
 library(timeDate)
 library(zoo)
 library(tempdisagg)
@@ -26,7 +25,6 @@ library(openxlsx)
 library(urca)
 library(fable)
 library(lmtest)
-library(dplyr)
 library(moments)
 library(stargazer)
 library(Hmisc)
@@ -39,6 +37,12 @@ library(ks)
 library(gridExtra)
 library(xlsx)
 library(stringr)
+library(maps)
+library(mapproj)
+library(ggthemes)
+library(tmap)
+library(sf)
+library(ggsci)
 
 #--- Carga de funciones ---#
 source('Functions_Climate_change.r')
@@ -431,10 +435,10 @@ if(0){
 #--- Como la estimacion de los modelos es demorada, guardamos los resultados de ambas en un objeto, para luego poder  ---#
 #--- cargarlo sin tener que correr toda la estimacion ---#
 
-#save_day = "2023-03-25"   #<<<--- dia en que se utilizo por ultima vez save() en formato yyyy-mm-dd
+save_day = "2023-03-25"   #<<<--- dia en que se utilizo por ultima vez save() en formato yyyy-mm-dd
 #save(models_countries_list,models_disasters_list,file=paste0(paste0('Resul_Desastres_',today()),'.RData')) #Codigo que guarda los modelos, tomo 41 minutos
 #save(coefficients_countries_list, file=paste0(paste0('Coeficientes_Desastres_',today()),'.RData')) # Codigo que solamente guarda los coeficientes, tomo menos de 10 segundos
-#load(paste0(paste0(paste0('Coeficientes_Desastres_',save_day),'.RData')))
+load(paste0(paste0(paste0('Coeficientes_Desastres_',save_day),'.RData')))
 
 # Cargar solamente los coeficientes, no el modelo
 
@@ -461,7 +465,7 @@ for (continent in continents){
   paises_continent <- c()
   varname          <- paste0("countries_",continent)
   emdat_countries  <- emdat_continents %>% 
-    filter(Continent == continent)
+    dplyr::filter(Continent == continent)
   paises_continent <- unique(emdat_countries$Country)
   # Por otro lado, en la estimacion SUR los paises no pueden tener caracteres especiales. Falta ver como volver mas general las lineas 37 a 40 
   paises_continent <- gsub(" ","_",paises_continent) 

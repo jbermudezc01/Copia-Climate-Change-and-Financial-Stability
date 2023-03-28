@@ -305,7 +305,7 @@ complete_t_plot <- grid.arrange(plot_t_Bio,plot_t_Cli,plot_t_Hyd,plot_t_Geo,plot
 
 #####=========================================== FIGURA 4 Y A.8 Pagnottoni  ==============================================###
 
-niv.significancia <- 0.01 #<<<--- nivel de significancia para los estimados de retornos anormales
+niv.significancia <- 0.05 #<<<--- nivel de significancia para los estimados de retornos anormales
 pattern_step      <- paste(steps, collapse = "|") # patron que indica los pasos
 pattern_indexes   <- paste(countries, collapse = "|") #patron que indica los paises de los indices
 pattern_countries <- paste(paises, collapse = "|")    #patron que indica los paises del desastre
@@ -352,32 +352,200 @@ europe_plot2 <- car_countries2(continent_coefficients=fitted_coefficients_Europe
                              pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
                              labels=labels_grafico, color="orange", title.graph="Europe")
 europe_plot2
-#ggsave("Graficos_CAR/Europe_1.png",plot2=europe_plot2,device="png")
+#ggsave(paste0(paste0("Graficos_CAR/Europe_",as.character(niv.significancia*100)),".png"),plot=europe_plot2,device="png")
 
 #====
 america_plot2 <- car_countries2(continent_coefficients=fitted_coefficients_Americas, significance.level=niv.significancia, pattern.step=pattern_step, 
                               pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
                               labels=labels_grafico, color="blue", title.graph="America")
 america_plot2
-#ggsave("Graficos_CAR/America_1.png",plot2=america_plot2,device="png")
+#ggsave(paste0(paste0("Graficos_CAR/America_",as.character(niv.significancia*100)),".png"),plot=america_plot2,device="png")
 
 #====
 asia_plot2 <- car_countries2(continent_coefficients=fitted_coefficients_Asia, significance.level=niv.significancia, pattern.step=pattern_step, 
                            pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
                            labels=labels_grafico, color="tomato", title.graph="Asia")
 asia_plot2
-#ggsave("Graficos_CAR/Asia_1.png",plot2=asia_plot2,device="png")
+#ggsave(paste0(paste0("Graficos_CAR/Asia_",as.character(niv.significancia*100)),".png"),plot=asia_plot2,device="png")
 
 #====
 africa_plot2 <- car_countries2(continent_coefficients=fitted_coefficients_Africa, significance.level=niv.significancia, pattern.step=pattern_step, 
                              pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
                              labels=labels_grafico, color="magenta4", title.graph="Africa")
 africa_plot2
-#ggsave("Graficos_CAR/Africa_1.png",plot2=africa_plot2,device="png")
+#ggsave(paste0(paste0("Graficos_CAR/Africa_",as.character(niv.significancia*100)),".png"),plot=africa_plot2,device="png")
 
 #====
 oceania_plot2 <- car_countries2(continent_coefficients=fitted_coefficients_Oceania, significance.level=niv.significancia, pattern.step=pattern_step, 
                               pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
                               labels=labels_grafico, color="olivedrab3", title.graph="Oceania")
 oceania_plot2
-#ggsave("Graficos_CAR/Oceania_1.png",plot2=oceania_plot2,device="png")
+#ggsave(paste0(paste0("Graficos_CAR/Oceania_",as.character(niv.significancia*100)),".png"),plot=oceania_plot2,device="png")
+
+### Grafica con promedios en vez de CAR ======
+
+europe_plot_aver <- average_countries2(continent_coefficients=fitted_coefficients_Europe, significance.level=niv.significancia, pattern.step=pattern_step, 
+                               pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
+                               labels=labels_grafico, color="orange", title.graph="Europe")
+europe_plot_aver
+
+#====
+america_plot_aver <- average_countries2(continent_coefficients=fitted_coefficients_Americas, significance.level=niv.significancia, pattern.step=pattern_step, 
+                                pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
+                                labels=labels_grafico, color="blue", title.graph="America")
+america_plot_aver
+
+#====
+asia_plot_aver <- average_countries2(continent_coefficients=fitted_coefficients_Asia, significance.level=niv.significancia, pattern.step=pattern_step, 
+                             pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
+                             labels=labels_grafico, color="tomato", title.graph="Asia")
+asia_plot_aver
+
+#====
+africa_plot_aver <- average_countries2(continent_coefficients=fitted_coefficients_Africa, significance.level=niv.significancia, pattern.step=pattern_step, 
+                               pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
+                               labels=labels_grafico, color="magenta4", title.graph="Africa")
+africa_plot_aver
+
+#====
+oceania_plot_aver <- average_countries2(continent_coefficients=fitted_coefficients_Oceania, significance.level=niv.significancia, pattern.step=pattern_step, 
+                                pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
+                                labels=labels_grafico, color="olivedrab3", title.graph="Oceania")
+oceania_plot_aver
+
+
+#### Graficas 1, A.1, A.6 y A.7 (mapamundi) ============================
+
+# Primero debemos cargar la base de datos EMDAT.
+emdat_completa     <- openxlsx::read.xlsx(paste0(Dir,"EMDAT  COMPLETA.xlsx"),sheet = "emdat data") #<<<---cargar base de la web (aunque tiene algunos cambios como los dias y paises estudiados) 
+emdat_tbl_completa <- tibble::as_tibble(emdat_completa) # las columnas que nos interesan son <Country>, pais del desastre, <Continent>, continente del desastre, <Disaster.subgroup>, tipo de desastre
+                           # <Start.Year>, anho en que inicio el desastre, <Start.Month>, mes en que inicio el desastre, <Start.Day>, dia en que inicio el desastre
+                           # <End.Year>, anho en que temrino el desastre, <End.Month>, mes en que termino el desastre, <End.Day> dia en que termino el desastre
+
+#Selecciono solamente las variables que me interesan para poder manejar mejor la base, y renombro Country como region, para poder juntarla con una base 
+#de datos de coordenadas para poder graficar.
+emdat_interest_variables <- emdat_tbl_completa %>% 
+  dplyr::select(Disaster.Subgroup,region = Country,Continent,Start.Year,Start.Month,Start.Day,End.Year,End.Month,End.Day)
+
+#Filtro la base,eliminando las filas que contengan NA en el mes de inicio, ya que no se puede suponer el mes en que empezo el desastre.
+#Siendo la base final que vamos a manejar la llamaré emdat_final.
+emdat_final <- emdat_interest_variables %>% 
+  dplyr::filter(!is.na(Start.Month))
+
+# Cargo los datos del mapamundi
+world <- map_data("world")
+
+## En primer lugar, los datos en world ponen una dificultad: Hong Kong y Macao aparecen como regiones de China, no como "pais" propio,
+#  mientras que en la base de desastres los tenemos como "paises" propios. Es por tanto que tenemos que volverlos una region en la
+#  base world
+
+hong_kong = which(world$subregion=="Hong Kong")
+world[hong_kong,"region"] <- "Hong Kong"
+macao = which(world$subregion == "Macao")
+world[macao, "region"] <- "Macao"
+
+# Por otro lado, en la base de desastres consideraron a Antigua y Barbuda como un solo pais, mientras que en world los separan,
+# por lo cual tenemos que unificar esas dos regiones en la base world.
+
+antigua = which(world$region=="Antigua")
+barbuda = which(world$region=="Barbuda")
+world[c(antigua,barbuda),"region"] <- "Antigua and Barbuda"
+
+# Lo mismo con Trinidad y Tobago
+trinidad = which(world$region=="Trinidad")
+tobago = which(world$region=="Tobago")
+world[c(trinidad,tobago),"region"] <- "Trinidad and Tobago"
+
+# Con las islas virgenes tenemos dos nombres distintos en emdata_final mientras que en world tenemos solamente uno, por lo 
+# que tambien se coloca el mismo nombre para ambos en emdata_final
+virgin_british = which(emdat_final$region=="Virgin Island (British)" )
+virgin_us      = which(emdat_final$region=="Virgin Island (U.S.)"  )
+emdat_final[c(virgin_british,virgin_us),"region"] <- "Virgin Islands"
+
+# Por otro lado, en la base de datos world_data no existe Tokelau, territorio dependiente de Nueva Zelanda, por lo cual
+# se le cambiara el nombre a nueva zelanda en la base emdat_final
+
+tokelau = which(emdat_final$region == "Tokelau")
+emdat_final[tokelau,"region"] <- "New Zealand"
+
+# Tuvalu no existe en world_data, por lo que es mejor quitarla.
+tuvalu = which(emdat_final$region == "Tuvalu")
+emdat_final <- emdat_final %>% 
+  slice(-tuvalu)
+
+## Por ultimo las regiones que mas ponen problema son Serbia y Montenegro, ya que en la matriz emdat_final tenemos que hay datos para
+#  Montenegro, Serbia y aparte Serbia Montenegro, mientras que para world solamente hay datos para Serbia y Montenegro.
+#  El mejor procedimiento seria agregar en ambas matrices Serbia y Montenegro como Serbia Montenegro
+serbia     = which(emdat_final$region=="Serbia" )
+montenegro = which(emdat_final$region=="Montenegro"  )
+emdat_final[c(serbia,montenegro),"region"] <- "Serbia Montenegro"
+
+serbia2     = which(world$region == "Serbia")
+montenegro2 = which(world$region == "Montenegro")
+world[c(serbia2,montenegro2),"region"] <- "Serbia Montenegro"
+
+## Sin embargo, toca verificar si hay diferencias en los paises, que estan en la columna region para ambas bases
+diff <- sort(setdiff(emdat_final$region, world$region))
+
+## Toca cambiar los nombres de emdat_final para que cuadren con los de world.
+
+diff.world <- c("Bahamas","Bolivia", "Cape Verde", "Canary Islands","Cayman Islands", "Comoros", 
+                "Democratic Republic of the Congo","Republic of Congo", "Cook Islands", "Ivory Coast", "Czech Republic",
+                "Dominican Republic","Swaziland", "Gambia", "Iran", "North Korea" ,"South Korea", "Laos", "North Macedonia",
+                "Marshall Islands", "Micronesia", "Moldova","Netherlands", "Niger" , "Northern Mariana Islands" ,"Palestine",
+                "Philippines","Reunion","Russia" ,"Saint Barthelemy","Saint Helena", "Saint Kitts","Saint Martin" ,"Saint Vincent",
+                "Sint Maarten","Sudan","Syria", "Taiwan","Tanzania", "Turks and Caicos Islands","United Arab Emirates",
+                "UK","USA","Venezuela","Vietnam")
+
+for (i in 0:length(diff)){
+  element <- diff[i]
+  indexes <- which(emdat_final$region == element)
+  emdat_final[indexes,"region"] <- diff.world[i]
+}
+
+# Para el primer grafico es necesario agrupar solamente por pais para contar cuantos desastres hubo
+
+emdat_country <- emdat_final %>% 
+  dplyr::group_by(region) %>% 
+  tally()
+
+# Junto las dos bases de datos, world y emdat_final
+merged_data <- inner_join(world, emdat_country ,by = "region", all.x = TRUE)
+
+deciles <- quantile(unique(merged_data$n), probs = seq(0, 1, by = 0.1), include.lowest = TRUE)
+
+min_value <- min(merged_data$n)
+deciles_adj <- c(deciles[1]-0.0001, deciles[-1]) ## Problema al generar deciles, poniendo NA al valor minimo
+merged_data$decile <- cut(merged_data$n, breaks = deciles_adj, labels = FALSE)
+
+merged_data_full <- merged_data %>% 
+  distinct(region, .keep_all = TRUE)
+  
+
+plain <- theme(
+  axis.text = element_blank(),
+  axis.line = element_blank(),
+  axis.ticks = element_blank(),
+  panel.border = element_blank(),
+  panel.grid = element_blank(),
+  axis.title = element_blank(),
+  panel.background = element_rect(fill = "white"),
+  plot.title = element_text(hjust = 0.5)
+)
+
+merged_data$decile <- factor(merged_data$decile) ## Dejar claro que es variable discreta, no continua
+
+my_colors <- c("#24203B", "#0028C1", "#C4E5F2", "#4891A8", "#63CB92",
+               "#F7D73B", "#D0706C", "#8D5355", "#DB48A3", "#BC92F2")
+
+disasters <- ggplot(data = merged_data, mapping = aes(x = long, y = lat, group = group)) + 
+  coord_fixed(1.3) +
+  geom_polygon(aes(fill = decile)) +
+  scale_fill_manual(values = my_colors) +
+  ggtitle("Distribution of natural disasters by countries") +
+  plain
+
+disasters + 
+  geom_path(data = world, aes(x = long, y = lat, group = group), 
+            color = "black", size = 0.5)
+
