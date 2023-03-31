@@ -432,10 +432,9 @@ model_equation.LF <- function(database, country, ind, var.exo, var.exo.pais, Lag
 #-- densidad: densidad kernel de los coeficientes del modelo estimado
 #---------------------------------------------------------------------------------------#
 dens <- function(fit, step){
-  coefs <- coef(fit)
-  interest_indices <- grep(step,names(coefs))
-  interest_coefficients <- coefs[interest_indices]
-  densidad <- density(as.numeric(interest_coefficients))
+  interest_indices <- grep(step,names(fit))
+  interest_coefficients <- fit[interest_indices]
+  densidad <- density((interest_coefficients))
   return(densidad)
 }
 #---------------------------------------------------------------------------------------#

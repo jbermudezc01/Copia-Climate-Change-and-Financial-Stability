@@ -405,7 +405,8 @@ for(indice in indexes){
 if(0){
   eqsystem              = list()
   fitted_models         = c()
-  models_disasters_list = list()
+  #models_disasters_list = list()
+  coefficients_disasters_list = list()
   resid_disasters_list  = list() 
   for(disaster in Tipos.Desastres){
     for(i in 1:length(countries)){
@@ -416,8 +417,9 @@ if(0){
     name          = paste0("fitsur_", substr(disaster,1,3) )
     fitted_models = c(fitted_models, name)
     assign(name, systemfit(eqsystem, method="SUR"))
-    models_disasters_list[[name]] <- get(name)
-    resid_disasters_list[[name]] <- resid(get(name))
+    coefficients_disasters_list[[name]]   <- summary(get(name))$coefficients
+    resid_disasters_list[[name]]          <- resid(get(name))
+    #models_disasters_list[[name]] <- get(name)
   } 
 }
 
@@ -717,10 +719,9 @@ if(0){
 # Guardar datos para graficacion ------------------------------------------
 
 #--- Guardado de los modelos por tipo de desastre , mas la base de retornos---#
-saved.day = "2023-03-30" #<<<--- dia en que se utilizo por ultima vez save() en formato yyyy-mm-dd
-# save(models_disasters_list,fitted_models, Retornos, paises,coefficients_countries_list,coefficients_continents_list,
-#      resid_countries_list,resid_disasters_list, file=paste0(paste0('Resultados_Desastres_',today()),'.RData'))
+saved.day = "2023-03-31" #<<<--- dia en que se utilizo por ultima vez save() en formato yyyy-mm-dd
+#save(coefficients_disasters_list,resid_disasters_list,fitted_models, Retornos, paises,coefficients_countries_list,
+#     coefficients_continents_list,resid_countries_list, file=paste0(paste0('Resultados_Desastres_',today()),'.RData'))
 #save(merged_data, world, file=paste0(paste0('Datos_Mapamundi_',today()),'.RData'))
 load(paste0(paste0('Resultados_Desastres_',saved.day),'.RData'))
 load(paste0(paste0('Datos_Mapamundi_',saved.day),'.RData'))
-

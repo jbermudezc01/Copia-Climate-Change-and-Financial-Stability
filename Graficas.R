@@ -9,9 +9,9 @@ steps <- c("t0","t1","t2","t3","t4")  #<<<--- vector con los días adelante del 
 ## El siguiente ciclo genera la densidad Kernel de los coeficientes para cada tipo de desastre 
 ## y para todos los t0, t1 ...
 for(step in steps){
-  for(model_name in names(models_disasters_list)){
+  for(model_name in names(coefficients_disasters_list)){
     dens_name <- paste("dens",model_name,step,sep="_")
-    assign(dens_name,dens(models_disasters_list[[model_name]],step))
+    assign(dens_name,dens(coefficients_disasters_list[[model_name]][,"Estimate"],step))
   }
 }
 
@@ -21,13 +21,13 @@ for(step in steps){
 # dummies temporales para todos los paises. Lo anterior para posteriormente ser sumadas por cada país para 
 # generar el retorno anormal acumulado t_0+t_1+t_2+t_3+t_4
 
-for(model_name in names(models_disasters_list)){
+for(model_name in names(coefficients_disasters_list)){
   #Vamos a generar una lista para cada modelo
   var_name <- paste0("coef_vec_",model_name)
   coef_vec <- c()
   for(step in steps){
     #reunimos los coeficientes en coefs
-    coefs <- coef(models_disasters_list[[model_name]])
+    coefs <- coefficients_disasters_list[[model_name]][,"Estimate"]
     
     #seleccionamos solamente los coeficientes que acaben con step y lo añadimos a coef_vec
     interest_indices <- grep(step,names(coefs))
@@ -221,9 +221,9 @@ complete_plot <- grid.arrange(plot_Bio,plot_Cli,plot_Geo,plot_Hyd,plot_Met,nrow=
 
 #Primero necesitamos el valor de los estadísticos t
 
-for(model_name in names(models_disasters_list)){
+for(model_name in names(coefficients_disasters_list)){
   #Vamos a generar una lista para cada modelo
-  tests <- summary(models_disasters_list[[model_name]])$coefficients[, "t value"]
+  tests <- coefficients_disasters_list[[model_name]][,"t value"]
   var_name <- paste0("t_test_",model_name)
   t_test <- c()
   for(step in steps){
