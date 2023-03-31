@@ -317,7 +317,7 @@ arma_seleccion_df = function(object, AR.m, MA.m, d, bool, metodo){
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
 #-- base_niveles: base a la cual se le sacaran los rezagos
-#-- country     : caracteres indicando un pais
+#-- ind         : caracteres indicando un indice bursatil
 #-- AR.m        : rezago máximo de la parte autorregresiva
 #-- Ma.m        : rezago máximo de la parte de promedio movil
 #-- d           : orden de diferenciación
@@ -328,24 +328,24 @@ arma_seleccion_df = function(object, AR.m, MA.m, d, bool, metodo){
 # ----Argumentos de salida  ----#
 #-- lags_reduced: objeto xts con los p-rezagos para cada país. La columna n de este objeto es el n-rezago de la serie original
 #---------------------------------------------------------------------------------------#
-lag_function <- function(base_niveles,country,AR.m,MA.m,d,bool=TRUE,metodo="CSS",dia.inicial = dia.inicial)
+lag_function <- function(base_niveles,ind,AR.m,MA.m,d,bool=TRUE,metodo="CSS",dia.inicial = dia.inicial)
 {
   
   #Utilizamos la funcion arma_seleccion_df para obtener el rezago para incluir en la ecuacion segun el 
   #criterio de Akaike. Como queremos ver AR(p), MA.m = 0, y como todos los retornos son estacionarios, 
   #entonces d =0.
-  mod <- arma_seleccion_df(object=base_niveles[,country], AR.m, MA.m, d, bool, metodo)
+  mod <- arma_seleccion_df(object=base_niveles[,ind], AR.m, MA.m, d, bool, metodo)
   p   <- mod[which.min(mod$AIC),'p']
   
   #generamos una base de datos que genere columnas de rezagos, el numero de columnas sera el mismo que el orden 
   #obtenido en el procedimiento anterior
-  if(p>0) lags_df <- timeSeries::lag((base_niveles[,country]), c(1:p) )
+  if(p>0) lags_df <- timeSeries::lag((base_niveles[,ind]), c(1:p) )
   
   #Lo colocamos desde el 8 de febrero para cuadrar con el indice de la base de datos principal
   lags_reduced <- lags_df[paste0(dia.inicial,"/"),]
   
   #Nombres del dataframe de rezagos
-  colnames(lags_reduced) <- paste0(country,'.l',1:p) 
+  colnames(lags_reduced) <- paste0(ind,'.l',1:p) 
   
   return(lags_reduced)
 }
@@ -393,13 +393,14 @@ if(0){
 # ----Argumentos de entrada ----#
 #-- database     : base de datos donde se encuentran gran parte de las variables
 #-- country      : caracteres indicando un pais
+#-- ind          : caracteres indicandon un indice
 #-- var.exo      : conjunto de variables exogenas que no dependen del pais 
 #-- var.exo.pais : conjunto de variables exogenas que dependen del país
 #-- Lags         : string que indica el nombre por el cual empiezan las matrices de rezagos en el codigo principal
 # ----Argumentos de salida  ----#
 #-- eq: ecuación de variable dependiente ~ regresoras para el país country. 
 #---------------------------------------------------------------------------------------#
-model_equation.LF <- function(database, country, var.exo, var.exo.pais, Lags){  
+model_equation.LF <- function(database, country, ind, var.exo, var.exo.pais, Lags){  
   
   #Busca el dataframe con los rezagos
   #lags_name <- paste0("lags_reduced_", country)
@@ -412,10 +413,10 @@ model_equation.LF <- function(database, country, var.exo, var.exo.pais, Lags){
   for (i in 1:length(var.exo.pais))
     var.exo.pais.total = c(var.exo.pais.total, paste(var.exo.pais[i], country, sep="_"))
   
-  lag.matrix             =  get(paste0(Lags,'_',country))
+  lag.matrix           =  get(paste0(Lags,'_',ind))
   
-  #Genera la ecuacion n.4 por el país country
-  eq  <- database[,country]  ~ database[,c(var.exo, var.exo.pais.total)] + lag.matrix  
+  #Genera la ecuacion n.4 por el indice ind
+  eq  <- database[,ind]  ~ database[,c(var.exo, var.exo.pais.total)] + lag.matrix  
   return(eq)
 }
 #---------------------------------------------------------------------------------------#
@@ -431,7 +432,7 @@ model_equation.LF <- function(database, country, var.exo, var.exo.pais, Lags){
 #-- densidad: densidad kernel de los coeficientes del modelo estimado
 #---------------------------------------------------------------------------------------#
 dens <- function(fit, step){
-  coefs <- coef(get(fit))
+  coefs <- coef(fit)
   interest_indices <- grep(step,names(coefs))
   interest_coefficients <- coefs[interest_indices]
   densidad <- density(as.numeric(interest_coefficients))
@@ -450,11 +451,11 @@ dens <- function(fit, step){
 #-- densidad_c: densidad de los retornos acumulados 
 #---------------------------------------------------------------------------------------#
 
-densidad_CAR <- function(x,countries){
+densidad_CAR <- function(x,indices){
   CAR <- c()
-  for(country in countries){
-    #Mira dentro el vector de coeficientes cuales inician con country, es decir el pais y luego los suma
-    start_with <- paste0("^",country)
+  for(ind in indices){
+    #Mira dentro el vector de coeficientes cuales inician con ind, es decir el pais y luego los suma
+    start_with <- paste0("^",ind)
     sum_of_coefficients <- sum(as.numeric(x[grep(start_with, names(x))]))
     #Agrega la suma (el CAR) en un vector, para luego hallar la densidad
     CAR <- c(CAR,sum_of_coefficients)
@@ -777,19 +778,16 @@ car_countries2 <- function(continent_coefficients, significance.level, pattern.s
   # cualquier valor de countries
   string_end   <- stringr::str_extract(row.names(dataframe_modelo), pattern.step)  #En caso de querer revisar coeficientes por step
   
-  ## Aparte, necesitamos hacer el CAR por cada pais del desastre por lo que el siguiente codigo obtiene todos los valores identicos entre 
-  #  dos strings. Sin embargo, para algunas filas va a encontrar dos coincidencias, la primera refiriendose al indice bursatil y la segunda 
-  #  al pais del desastre, por lo que necesitaremos por cada sublista guardar solamente el ultimo elemento.
-  string_pais     <- stringr::str_extract_all(row.names(dataframe_modelo), pattern.countries) 
-  string_pais_vec <- sapply(string_pais, function(x) x[[length(x)]])
+  ## Usamos la misma funcion para extraer el nombre del pais donde sucedio el desastre
+  string_pais <- stringr::str_extract(row.names(dataframe_modelo), pattern.countries)
   
-  dataframe_modelo <- cbind(dataframe_modelo,string_start,string_pais_vec,string_end)
+  dataframe_modelo <- cbind(dataframe_modelo,string_start,string_pais,string_end)
   
   ## Ellos mencionan que realizaran un promedio del CAR, por lo cual realizaremos el CAR de cada pais que tenemos datos
   #  para cada indice y realizaremos un promedio
   
   promedio_car <- dataframe_modelo %>% 
-    group_by(string_start, string_pais_vec) %>% 
+    group_by(string_start, string_pais) %>% 
     summarise(CAR = sum(Estimate)) %>% # El nombre Estimate sale del nombre que le colocamos anteriormente
     group_by(string_start) %>% 
     summarise(mean_CAR = mean(CAR)) %>% 
@@ -802,7 +800,6 @@ car_countries2 <- function(continent_coefficients, significance.level, pattern.s
   #Juntar las dos dataframes y rellenar con 0 los datos faltantes
   promedio_car_all <- left_join(dataframe_pagnorden, promedio_car, by = "string_start") # string_start sale de un nombre que le colocamos en la funcion
   promedio_car_all$mean_CAR <- ifelse(is.na(promedio_car_all$mean_CAR), 0, promedio_car_all$mean_CAR)
-  
   promedio_car_all$string_start <- factor(promedio_car_all$string_start, levels = promedio_car_all$string_start)
   
   plot_continent <- ggplot(data = promedio_car_all, aes(y = mean_CAR, x = string_start, fill = mean_CAR < 0)) +
@@ -867,19 +864,16 @@ average_countries2 <- function(continent_coefficients, significance.level, patte
   # cualquier valor de countries
   string_end   <- stringr::str_extract(row.names(dataframe_modelo), pattern.step)  #En caso de querer revisar coeficientes por step
   
-  ## Aparte, necesitamos hacer el CAR por cada pais del desastre por lo que el siguiente codigo obtiene todos los valores identicos entre 
-  #  dos strings. Sin embargo, para algunas filas va a encontrar dos coincidencias, la primera refiriendose al indice bursatil y la segunda 
-  #  al pais del desastre, por lo que necesitaremos por cada sublista guardar solamente el ultimo elemento.
-  string_pais     <- stringr::str_extract_all(row.names(dataframe_modelo), pattern.countries) 
-  string_pais_vec <- sapply(string_pais, function(x) x[[length(x)]])
+  ## Usamos la misma funcion para extraer el nombre del pais donde sucedio el desastre
+  string_pais <- stringr::str_extract(row.names(dataframe_modelo), pattern.countries)
   
-  dataframe_modelo <- cbind(dataframe_modelo,string_start,string_pais_vec,string_end)
+  dataframe_modelo <- cbind(dataframe_modelo,string_start,string_pais,string_end)
   
   ## Ellos mencionan que realizaran un promedio del CAR, por lo cual realizaremos el CAR de cada pais que tenemos datos
   #  para cada indice y realizaremos un promedio
   
   promedio_car <- dataframe_modelo %>% 
-    group_by(string_start, string_pais_vec) %>% 
+    group_by(string_start, string_pais) %>% 
     summarise(AVERAGE = mean(Estimate)) %>% # El nombre Estimate sale del nombre que le colocamos anteriormente
     group_by(string_start) %>% 
     summarise(mean_AVERAGE = mean(AVERAGE)) %>% 

@@ -8,28 +8,26 @@ steps <- c("t0","t1","t2","t3","t4")  #<<<--- vector con los días adelante del 
 
 ## El siguiente ciclo genera la densidad Kernel de los coeficientes para cada tipo de desastre 
 ## y para todos los t0, t1 ...
-
-
 for(step in steps){
-  for(model in fitted_models){
-    dens_name <- paste("dens",model,step,sep="_")
-    assign(dens_name,dens(model,step))
+  for(model_name in names(models_disasters_list)){
+    dens_name <- paste("dens",model_name,step,sep="_")
+    assign(dens_name,dens(models_disasters_list[[model_name]],step))
   }
 }
 
-##Por otro lado, necesitamos hacer la gráfica de los CAR, que es la suma de los retornos anormales.
-##Con el ciclo for estamos haciendo el mismo proceso para cada uno de los 5 modelos estimados.
-##Al final tendremos un vector para cada modelo que incluye los coeficientes relacionados para las 5 
-##dummies temporales para todos los paises. Lo anterior para posteriormente ser sumadas por cada país para 
-##generar el retorno anormal acumulado t_0+t_1+t_2+t_3+t_4
+# Por otro lado, necesitamos hacer la gráfica de los CAR, que es la suma de los retornos anormales.
+# Con el loop for estamos haciendo el mismo proceso para cada uno de los 5 modelos estimados.
+# Al final tendremos un vector para cada modelo que incluye los coeficientes relacionados para las 5 
+# dummies temporales para todos los paises. Lo anterior para posteriormente ser sumadas por cada país para 
+# generar el retorno anormal acumulado t_0+t_1+t_2+t_3+t_4
 
-for(model in fitted_models){
+for(model_name in names(models_disasters_list)){
   #Vamos a generar una lista para cada modelo
-  var_name <- paste0("coef_vec_",model)
+  var_name <- paste0("coef_vec_",model_name)
   coef_vec <- c()
   for(step in steps){
     #reunimos los coeficientes en coefs
-    coefs <- coef(get(model))
+    coefs <- coef(models_disasters_list[[model_name]])
     
     #seleccionamos solamente los coeficientes que acaben con step y lo añadimos a coef_vec
     interest_indices <- grep(step,names(coefs))
@@ -41,11 +39,11 @@ for(model in fitted_models){
 }
 
 # Generamos la densidad de los retornos anormales acumulados para cada tipo de desastre
-densidad_CAR_bio <- densidad_CAR(coef_vec_fitsur_Bio,countries)
-densidad_CAR_cli <- densidad_CAR(coef_vec_fitsur_Cli,countries)
-densidad_CAR_geo <- densidad_CAR(coef_vec_fitsur_Geo,countries)
-densidad_CAR_hyd <- densidad_CAR(coef_vec_fitsur_Hyd,countries)
-densidad_CAR_met <- densidad_CAR(coef_vec_fitsur_Met,countries)
+densidad_CAR_bio <- densidad_CAR(coef_vec_fitsur_Bio,indexes)
+densidad_CAR_cli <- densidad_CAR(coef_vec_fitsur_Cli,indexes)
+densidad_CAR_geo <- densidad_CAR(coef_vec_fitsur_Geo,indexes)
+densidad_CAR_hyd <- densidad_CAR(coef_vec_fitsur_Hyd,indexes)
+densidad_CAR_met <- densidad_CAR(coef_vec_fitsur_Met,indexes)
 
 ### =============================== Graficas de retornos anormales ==================================
 
@@ -105,33 +103,33 @@ densidad_retornos <- apply(Retornos, MARGIN = 2, FUN = density)
 
 # Para America seria:
 main_America      <- "Densidad retornos America" #<<<--- título para la gráfica
-countries_America <- c("Brazil","Chile","USA1","USA2","Canada","Mexico")  #<<<--- vector de paises que pertencen al continente
+countries_America <- c("Bovespa","S.PCLXIPSA","NASDAQComposite","Nasdaq100","S.PTSXComposite","S.PBMVIPC")  #<<<--- vector de indices que pertencen al continente
 labels_America    <- c("Bovespa","S&P CLX IPSA","NASDAQ Composite","Nasdaq 100","S&P TSX Composite",
                        "S&P BMV IPC") #<<<--- leyendas, indices de cada pais del continente
 grafico_retornos(densidad_retornos,countries_America,main_America,labels_America,colores)
 
 # Para Europa del Este:
 main_Europa_Este      <- "Densidad retornos Europa del Este" #<<<--- título para la gráfica
-countries_Europa_Este <- c("Russia","Denmark","Turkey","Norway","Poland","Finland","Sweden") #<<<--- vector de paises que pertencen al continente
+countries_Europa_Este <- c("MOEXRussia","OMXCopenhagen20","BIST100","OSEBenchmark","WIG20","OMXHelsinki25","OMXStockholm30") #<<<--- vector de indices que pertencen al continente
 labels_Europa_Este    <- c("Moex Russia","OMX Copenhagen 20","BIST 100","OSE Benchmark","WIG20",
                            "OMX Helsinki 25","OMX Stockholm 30") #<<<--- leyendas, indices de cada pais del continente
 grafico_retornos(densidad_retornos,countries_Europa_Este,main_Europa_Este,labels_Europa_Este,colores)
 
 # Para Europa del Oeste
 main_Europa_Oeste      <- "Densidad retornos Europa del Oeste"  #<<<--- título para la gráfica
-countries_Europa_Oeste <- c("UnitedKingdom","Switzerland","Germany","Spain","Netherlands","Belgium","France") #<<<--- vector de paises que pertencen al continente
+countries_Europa_Oeste <- c("FTSE100","SMI","DAX","IBEX35","AEX","BEL20","CAC40") #<<<--- vector de indices que pertencen al continente
 labels_Europa_Oeste    <- c("FTSE 100","SMI","DAX","IBEX 35","AEX","BEL 20","CAC 40") #<<<--- leyendas, indices de cada pais del continente
 grafico_retornos(densidad_retornos,countries_Europa_Oeste,main_Europa_Oeste,labels_Europa_Oeste,colores)
 
 #Para Asia
 main_Asia      <- "Densidad retornos Asia" #<<<--- título para la gráfica
-countries_Asia <- c("Thailand","SouthKorea","India","Indonesia","HongKong") #<<<--- vector de paises que pertencen al continente
+countries_Asia <- c("SETIndex","KOSPI","Nifty50","JakartaStockExchange","HangSeng") #<<<--- vector de paises que pertencen al continente
 labels_Asia    <- c("SET Index","KOSPI","Nifty 50","Jakarta Stock Exchange","Hang Seng") #<<<--- leyendas, indices de cada pais del continente
 grafico_retornos(densidad_retornos,countries_Asia,main_Asia,labels_Asia,colores)
 
 #Para Africa y Oceania
 main_Africa_Oceania      <- "Densidad retornos Africa y Oceania" #<<<--- título para la gráfica
-countries_Africa_Oceania <- c("SouthAfrica","Australia")  #<<<--- vector de paises que pertencen al continente
+countries_Africa_Oceania <- c("SouthAfricaTop40","S.PASX200")  #<<<--- vector de paises que pertencen al continente
 labels_Africa_Oceania    <- c("South Africa Top 40","S&P ASX 200") #<<<--- leyendas, indices de cada pais del continente
 grafico_retornos(densidad_retornos,countries_Africa_Oceania,main_Africa_Oceania,labels_Africa_Oceania,colores)
 
@@ -139,16 +137,17 @@ grafico_retornos(densidad_retornos,countries_Africa_Oceania,main_Africa_Oceania,
 
 # Para el grafico, Pagnottoni tiene un orden específico, por lo cual toca especificarlo
 
-pagn_orden <- c("Thailand",	"Russia", "SouthKorea", "India", "Indonesia", "Brazil", "Chile", "HongKong", 
-                "USA1", "USA2", "Canada", "Mexico", "SouthAfrica", "Denmark", "Turkey", "Norway", 
-                "Poland", "Finland", "UnitedKingdom", "Australia", "Sweden", "Switzerland", "Germany", 
-                "Spain", "Netherlands", "Belgium", "France") #<<<--- países en el orden que aparece en la gráfica #3
+pagn_orden <- c("SETIndex", "MOEXRussia", "KOSPI", "Nifty50", "JakartaStockExchange", "Bovespa", 
+                "S.PCLXIPSA", "HangSeng", "NASDAQComposite", "Nasdaq100", "S.PTSXComposite", "S.PBMVIPC", 
+                "SouthAfricaTop40", "OMXCopenhagen20", "BIST100", "OSEBenchmark", "WIG20", "OMXHelsinki25", 
+                "FTSE100", "S.PASX200", "OMXStockholm30", "SMI", "DAX", 
+                "IBEX35", "AEX", "BEL20", "CAC40") #<<<--- indices en el orden que aparece en la gráfica #3
 
 labels_grafico <- c("SET Index", "MOEX Russia", "KOSPI", "Nifty 50", "Jakarta Stock Exchange", "Bovespa", 
                     "S&P CLX IPSA", "Hang Seng", "NASDAQ Composite", "Nasdaq 100", "S&P TSX Composite", "S&P BMV IPC", 
                     "South Africa Top 40", "OMX Copenhagen 20", "BIST 100", "OSE Benchmark", "WIG20", "OMX Helsinki 25", 
                     "FTSE 100", "S&P ASX 200", "OMX Stockholm 30", "SMI", "DAX", 
-                    "IBEX 35", "AEX", "BEL 20", "CAC 40") #<<<--- indices en el orden que aparece en la gráfica #3
+                    "IBEX 35", "AEX", "BEL 20", "CAC 40") #<<<--- indices en el orden que aparece en la gráfica #3 (leyenda)
 
 group         <- rep(labels_grafico,each=5) ## Variable que va a agrupar en grupos de a 5 los datos (porque cada 5 es un indice distinto)
 colores.ar = c("#1964C4", "#C9675A", "#D5B259","darkorchid4","#709E3D")
@@ -222,10 +221,10 @@ complete_plot <- grid.arrange(plot_Bio,plot_Cli,plot_Geo,plot_Hyd,plot_Met,nrow=
 
 #Primero necesitamos el valor de los estadísticos t
 
-for(model in fitted_models){
+for(model_name in names(models_disasters_list)){
   #Vamos a generar una lista para cada modelo
-  tests <- summary(get(model))$coefficients[, "t value"]
-  var_name <- paste0("t_test_",model)
+  tests <- summary(models_disasters_list[[model_name]])$coefficients[, "t value"]
+  var_name <- paste0("t_test_",model_name)
   t_test <- c()
   for(step in steps){
     #reunimos los coeficientes en coefs
@@ -307,7 +306,7 @@ complete_t_plot <- grid.arrange(plot_t_Bio,plot_t_Cli,plot_t_Hyd,plot_t_Geo,plot
 
 niv.significancia <- 0.05 #<<<--- nivel de significancia para los estimados de retornos anormales
 pattern_step      <- paste(steps, collapse = "|") # patron que indica los pasos
-pattern_indexes   <- paste(countries, collapse = "|") #patron que indica los paises de los indices
+pattern_indexes   <- paste(indexes, collapse = "|") #patron que indica los indices
 pattern_countries <- paste(paises, collapse = "|")    #patron que indica los paises del desastre
 
 # Graficas del CAR, pero fue cambiado, ya que ahora se utiliza la funcion car_countries2
@@ -320,15 +319,15 @@ if(0){
   
   #====
   america_plot <- car_countries(continent_model=fitted_models2_Americas, significance.level=niv.significancia, pattern.step=pattern_step, 
-                               pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
-                               labels=labels_grafico, color="blue", title.graph="America")
+                                pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
+                                labels=labels_grafico, color="blue", title.graph="America")
   america_plot
   #ggsave("Graficos_CAR/America_1.png",plot=america_plot,device="png")
   
   #====
   asia_plot <- car_countries(continent_model=fitted_models2_Asia, significance.level=niv.significancia, pattern.step=pattern_step, 
-                                pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
-                                labels=labels_grafico, color="tomato", title.graph="Asia")
+                             pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
+                             labels=labels_grafico, color="tomato", title.graph="Asia")
   asia_plot
   #ggsave("Graficos_CAR/Asia_1.png",plot=asia_plot,device="png")
   
@@ -341,186 +340,93 @@ if(0){
   
   #====
   oceania_plot <- car_countries(continent_model=fitted_models2_Oceania, significance.level=niv.significancia, pattern.step=pattern_step, 
-                             pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
-                             labels=labels_grafico, color="olivedrab3", title.graph="Oceania")
+                                pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
+                                labels=labels_grafico, color="olivedrab3", title.graph="Oceania")
   oceania_plot
   #ggsave("Graficos_CAR/Oceania_1.png",plot=oceania_plot,device="png")
 }
 
 
-europe_plot2 <- car_countries2(continent_coefficients=fitted_coefficients_Europe, significance.level=niv.significancia, pattern.step=pattern_step, 
-                             pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
-                             labels=labels_grafico, color="orange", title.graph="Europe")
+europe_plot2 <- car_countries2(continent_coefficients=coefficients_continents_list$fitted_coefficients_Europe, 
+                               significance.level=niv.significancia, pattern.step=pattern_step, 
+                               pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
+                               labels=labels_grafico, color="orange", title.graph="Europe")
 europe_plot2
 #ggsave(paste0(paste0("Graficos_CAR/Europe_",as.character(niv.significancia*100)),".png"),plot=europe_plot2,device="png")
 
 #====
-america_plot2 <- car_countries2(continent_coefficients=fitted_coefficients_Americas, significance.level=niv.significancia, pattern.step=pattern_step, 
-                              pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
-                              labels=labels_grafico, color="blue", title.graph="America")
+america_plot2 <- car_countries2(continent_coefficients=coefficients_continents_list$fitted_coefficients_Americas, 
+                                significance.level=niv.significancia, pattern.step=pattern_step, 
+                                pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
+                                labels=labels_grafico, color="blue", title.graph="America")
 america_plot2
 #ggsave(paste0(paste0("Graficos_CAR/America_",as.character(niv.significancia*100)),".png"),plot=america_plot2,device="png")
 
 #====
-asia_plot2 <- car_countries2(continent_coefficients=fitted_coefficients_Asia, significance.level=niv.significancia, pattern.step=pattern_step, 
-                           pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
-                           labels=labels_grafico, color="tomato", title.graph="Asia")
+asia_plot2 <- car_countries2(continent_coefficients=coefficients_continents_list$fitted_coefficients_Asia, 
+                             significance.level=niv.significancia, pattern.step=pattern_step, 
+                             pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
+                             labels=labels_grafico, color="tomato", title.graph="Asia")
 asia_plot2
 #ggsave(paste0(paste0("Graficos_CAR/Asia_",as.character(niv.significancia*100)),".png"),plot=asia_plot2,device="png")
 
 #====
-africa_plot2 <- car_countries2(continent_coefficients=fitted_coefficients_Africa, significance.level=niv.significancia, pattern.step=pattern_step, 
-                             pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
-                             labels=labels_grafico, color="magenta4", title.graph="Africa")
+africa_plot2 <- car_countries2(continent_coefficients=coefficients_continents_list$fitted_coefficients_Africa, 
+                               significance.level=niv.significancia, pattern.step=pattern_step, 
+                               pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
+                               labels=labels_grafico, color="magenta4", title.graph="Africa")
 africa_plot2
 #ggsave(paste0(paste0("Graficos_CAR/Africa_",as.character(niv.significancia*100)),".png"),plot=africa_plot2,device="png")
 
 #====
-oceania_plot2 <- car_countries2(continent_coefficients=fitted_coefficients_Oceania, significance.level=niv.significancia, pattern.step=pattern_step, 
-                              pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
-                              labels=labels_grafico, color="olivedrab3", title.graph="Oceania")
+oceania_plot2 <- car_countries2(continent_coefficients=coefficients_continents_list$fitted_coefficients_Oceania, 
+                                significance.level=niv.significancia, pattern.step=pattern_step, 
+                                pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
+                                labels=labels_grafico, color="olivedrab3", title.graph="Oceania")
 oceania_plot2
 #ggsave(paste0(paste0("Graficos_CAR/Oceania_",as.character(niv.significancia*100)),".png"),plot=oceania_plot2,device="png")
 
 ### Grafica con promedios en vez de CAR ======
 
-europe_plot_aver <- average_countries2(continent_coefficients=fitted_coefficients_Europe, significance.level=niv.significancia, pattern.step=pattern_step, 
-                               pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
-                               labels=labels_grafico, color="orange", title.graph="Europe")
+europe_plot_aver <- average_countries2(continent_coefficients=coefficients_continents_list$fitted_coefficients_Europe, 
+                                       significance.level=niv.significancia, pattern.step=pattern_step, 
+                                       pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
+                                       labels=labels_grafico, color="orange", title.graph="Europe")
 europe_plot_aver
 
 #====
-america_plot_aver <- average_countries2(continent_coefficients=fitted_coefficients_Americas, significance.level=niv.significancia, pattern.step=pattern_step, 
-                                pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
-                                labels=labels_grafico, color="blue", title.graph="America")
+america_plot_aver <- average_countries2(continent_coefficients=coefficients_continents_list$fitted_coefficients_Americas, 
+                                        significance.level=niv.significancia, pattern.step=pattern_step, 
+                                        pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
+                                        labels=labels_grafico, color="blue", title.graph="America")
 america_plot_aver
 
 #====
-asia_plot_aver <- average_countries2(continent_coefficients=fitted_coefficients_Asia, significance.level=niv.significancia, pattern.step=pattern_step, 
-                             pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
-                             labels=labels_grafico, color="tomato", title.graph="Asia")
+asia_plot_aver <- average_countries2(continent_coefficients=coefficients_continents_list$fitted_coefficients_Asia, 
+                                     significance.level=niv.significancia, pattern.step=pattern_step, 
+                                     pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
+                                     labels=labels_grafico, color="tomato", title.graph="Asia")
 asia_plot_aver
 
 #====
-africa_plot_aver <- average_countries2(continent_coefficients=fitted_coefficients_Africa, significance.level=niv.significancia, pattern.step=pattern_step, 
-                               pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
-                               labels=labels_grafico, color="magenta4", title.graph="Africa")
+africa_plot_aver <- average_countries2(continent_coefficients=coefficients_continents_list$fitted_coefficients_Africa, 
+                                       significance.level=niv.significancia, pattern.step=pattern_step, 
+                                       pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
+                                       labels=labels_grafico, color="magenta4", title.graph="Africa")
 africa_plot_aver
 
 #====
-oceania_plot_aver <- average_countries2(continent_coefficients=fitted_coefficients_Oceania, significance.level=niv.significancia, pattern.step=pattern_step, 
-                                pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
-                                labels=labels_grafico, color="olivedrab3", title.graph="Oceania")
+oceania_plot_aver <- average_countries2(continent_coefficients=coefficients_continents_list$fitted_coefficients_Oceania, 
+                                        significance.level=niv.significancia, pattern.step=pattern_step, 
+                                        pattern.indexes=pattern_indexes, pattern.countries=pattern_countries, order.graph=pagn_orden, 
+                                        labels=labels_grafico, color="olivedrab3", title.graph="Oceania")
 oceania_plot_aver
 
 
 #### Graficas 1, A.1, A.6 y A.7 (mapamundi) ============================
 
-# Primero debemos cargar la base de datos EMDAT.
-emdat_completa     <- openxlsx::read.xlsx(paste0(Dir,"EMDAT  COMPLETA.xlsx"),sheet = "emdat data") #<<<---cargar base de la web (aunque tiene algunos cambios como los dias y paises estudiados) 
-emdat_tbl_completa <- tibble::as_tibble(emdat_completa) # las columnas que nos interesan son <Country>, pais del desastre, <Continent>, continente del desastre, <Disaster.subgroup>, tipo de desastre
-                           # <Start.Year>, anho en que inicio el desastre, <Start.Month>, mes en que inicio el desastre, <Start.Day>, dia en que inicio el desastre
-                           # <End.Year>, anho en que temrino el desastre, <End.Month>, mes en que termino el desastre, <End.Day> dia en que termino el desastre
-
-#Selecciono solamente las variables que me interesan para poder manejar mejor la base, y renombro Country como region, para poder juntarla con una base 
-#de datos de coordenadas para poder graficar.
-emdat_interest_variables <- emdat_tbl_completa %>% 
-  dplyr::select(Disaster.Subgroup,region = Country,Continent,Start.Year,Start.Month,Start.Day,End.Year,End.Month,End.Day)
-
-#Filtro la base,eliminando las filas que contengan NA en el mes de inicio, ya que no se puede suponer el mes en que empezo el desastre.
-#Siendo la base final que vamos a manejar la llamaré emdat_final.
-emdat_final <- emdat_interest_variables %>% 
-  dplyr::filter(!is.na(Start.Month))
-
-# Cargo los datos del mapamundi
-world <- map_data("world")
-
-## En primer lugar, los datos en world ponen una dificultad: Hong Kong y Macao aparecen como regiones de China, no como "pais" propio,
-#  mientras que en la base de desastres los tenemos como "paises" propios. Es por tanto que tenemos que volverlos una region en la
-#  base world
-
-hong_kong = which(world$subregion=="Hong Kong")
-world[hong_kong,"region"] <- "Hong Kong"
-macao = which(world$subregion == "Macao")
-world[macao, "region"] <- "Macao"
-
-# Por otro lado, en la base de desastres consideraron a Antigua y Barbuda como un solo pais, mientras que en world los separan,
-# por lo cual tenemos que unificar esas dos regiones en la base world.
-
-antigua = which(world$region=="Antigua")
-barbuda = which(world$region=="Barbuda")
-world[c(antigua,barbuda),"region"] <- "Antigua and Barbuda"
-
-# Lo mismo con Trinidad y Tobago
-trinidad = which(world$region=="Trinidad")
-tobago = which(world$region=="Tobago")
-world[c(trinidad,tobago),"region"] <- "Trinidad and Tobago"
-
-# Con las islas virgenes tenemos dos nombres distintos en emdata_final mientras que en world tenemos solamente uno, por lo 
-# que tambien se coloca el mismo nombre para ambos en emdata_final
-virgin_british = which(emdat_final$region=="Virgin Island (British)" )
-virgin_us      = which(emdat_final$region=="Virgin Island (U.S.)"  )
-emdat_final[c(virgin_british,virgin_us),"region"] <- "Virgin Islands"
-
-# Por otro lado, en la base de datos world_data no existe Tokelau, territorio dependiente de Nueva Zelanda, por lo cual
-# se le cambiara el nombre a nueva zelanda en la base emdat_final
-
-tokelau = which(emdat_final$region == "Tokelau")
-emdat_final[tokelau,"region"] <- "New Zealand"
-
-# Tuvalu no existe en world_data, por lo que es mejor quitarla.
-tuvalu = which(emdat_final$region == "Tuvalu")
-emdat_final <- emdat_final %>% 
-  slice(-tuvalu)
-
-## Por ultimo las regiones que mas ponen problema son Serbia y Montenegro, ya que en la matriz emdat_final tenemos que hay datos para
-#  Montenegro, Serbia y aparte Serbia Montenegro, mientras que para world solamente hay datos para Serbia y Montenegro.
-#  El mejor procedimiento seria agregar en ambas matrices Serbia y Montenegro como Serbia Montenegro
-serbia     = which(emdat_final$region=="Serbia" )
-montenegro = which(emdat_final$region=="Montenegro"  )
-emdat_final[c(serbia,montenegro),"region"] <- "Serbia Montenegro"
-
-serbia2     = which(world$region == "Serbia")
-montenegro2 = which(world$region == "Montenegro")
-world[c(serbia2,montenegro2),"region"] <- "Serbia Montenegro"
-
-## Sin embargo, toca verificar si hay diferencias en los paises, que estan en la columna region para ambas bases
-diff <- sort(setdiff(emdat_final$region, world$region))
-
-## Toca cambiar los nombres de emdat_final para que cuadren con los de world.
-
-diff.world <- c("Bahamas","Bolivia", "Cape Verde", "Canary Islands","Cayman Islands", "Comoros", 
-                "Democratic Republic of the Congo","Republic of Congo", "Cook Islands", "Ivory Coast", "Czech Republic",
-                "Dominican Republic","Swaziland", "Gambia", "Iran", "North Korea" ,"South Korea", "Laos", "North Macedonia",
-                "Marshall Islands", "Micronesia", "Moldova","Netherlands", "Niger" , "Northern Mariana Islands" ,"Palestine",
-                "Philippines","Reunion","Russia" ,"Saint Barthelemy","Saint Helena", "Saint Kitts","Saint Martin" ,"Saint Vincent",
-                "Sint Maarten","Sudan","Syria", "Taiwan","Tanzania", "Turks and Caicos Islands","United Arab Emirates",
-                "UK","USA","Venezuela","Vietnam")
-
-for (i in 0:length(diff)){
-  element <- diff[i]
-  indexes <- which(emdat_final$region == element)
-  emdat_final[indexes,"region"] <- diff.world[i]
-}
-
-# Para el primer grafico es necesario agrupar solamente por pais para contar cuantos desastres hubo
-
-emdat_country <- emdat_final %>% 
-  dplyr::group_by(region) %>% 
-  tally()
-
-# Junto las dos bases de datos, world y emdat_final
-merged_data <- inner_join(world, emdat_country ,by = "region", all.x = TRUE)
-
-deciles <- quantile(unique(merged_data$n), probs = seq(0, 1, by = 0.1), include.lowest = TRUE)
-
-min_value <- min(merged_data$n)
-deciles_adj <- c(deciles[1]-0.0001, deciles[-1]) ## Problema al generar deciles, poniendo NA al valor minimo
-merged_data$decile <- cut(merged_data$n, breaks = deciles_adj, labels = FALSE)
-
-merged_data_full <- merged_data %>% 
-  distinct(region, .keep_all = TRUE)
-  
+my_colors <- c("#24203B", "#0028C1", "#C4E5F2", "#4891A8", "#63CB92",
+               "#F7D73B", "#D0706C", "#8D5355", "#DB48A3", "#BC92F2")
 
 plain <- theme(
   axis.text = element_blank(),
@@ -533,11 +439,6 @@ plain <- theme(
   plot.title = element_text(hjust = 0.5)
 )
 
-merged_data$decile <- factor(merged_data$decile) ## Dejar claro que es variable discreta, no continua
-
-my_colors <- c("#24203B", "#0028C1", "#C4E5F2", "#4891A8", "#63CB92",
-               "#F7D73B", "#D0706C", "#8D5355", "#DB48A3", "#BC92F2")
-
 disasters <- ggplot(data = merged_data, mapping = aes(x = long, y = lat, group = group)) + 
   coord_fixed(1.3) +
   geom_polygon(aes(fill = decile)) +
@@ -547,5 +448,5 @@ disasters <- ggplot(data = merged_data, mapping = aes(x = long, y = lat, group =
 
 disasters + 
   geom_path(data = world, aes(x = long, y = lat, group = group), 
-            color = "black", size = 0.5)
+            color = "black", linewidth = 0.5)
 
