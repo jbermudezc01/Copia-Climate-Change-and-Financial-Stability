@@ -719,9 +719,11 @@ if(0){
 # Guardar datos para graficacion ------------------------------------------
 
 #--- Guardado de los modelos por tipo de desastre , mas la base de retornos---#
-saved.day = "2023-03-31" #<<<--- dia en que se utilizo por ultima vez save() en formato yyyy-mm-dd
+saved.day = "2023-04-02" #<<<--- dia en que se utilizo por ultima vez save() en formato yyyy-mm-dd
 #save(coefficients_disasters_list,resid_disasters_list,fitted_models, Retornos, paises,coefficients_countries_list,
-#     coefficients_continents_list,resid_countries_list, file=paste0(paste0('Resultados_Desastres_',today()),'.RData'))
+#     coefficients_continents_list,file=paste0(paste0('Resultados_Desastres_',today()),'.RData'))
+#save(resid_countries_list, file=paste0(paste0('Residuos_Paises_',today()),'.RData'))
 #save(merged_data, world, file=paste0(paste0('Datos_Mapamundi_',today()),'.RData'))
 load(paste0(paste0('Resultados_Desastres_',saved.day),'.RData'))
 load(paste0(paste0('Datos_Mapamundi_',saved.day),'.RData'))
+#load(paste0(paste0('Residuos_Paises_',saved.day),'.RData'))  ## Solo puedo correrlo JP, ya que ahi tengo los residuos que pesan demasiado para mandarlos por github
