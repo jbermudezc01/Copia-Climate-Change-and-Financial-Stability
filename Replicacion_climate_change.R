@@ -35,7 +35,7 @@ library(dynlm)
 library(systemfit)
 library(ks)
 library(gridExtra)
-library(xlsx)
+#library(xlsx)
 library(stringr)
 library(maps)
 library(mapproj)
@@ -66,7 +66,7 @@ Tipos.Desastres  <- c("Biological","Climatological","Geophysical","Hydrological"
 no.rezagos.de.desatres <- 4  #<<<--- Numero de rezagos de los desastres <w> (i.e. t0, t1, ..., tw)
 
 # Establecemos el directorio de los datos
-Dir      = paste0(getwd(),'/Bases/') #Directorio de datos, se supone que el subdirectorio <Bases> existe
+Dir  = paste0(getwd(),'/Bases/') #Directorio de datos, se supone que el subdirectorio <Bases> existe
 
 # Genera una lista de los codigos bursatiles en formato xts.
 # La longitud de la lista es igual al numero de archivos con nombre stocks_<country> que existe en <Dir>.
@@ -430,7 +430,10 @@ for(indice in indexes){
 
 # if(0) dado que se utilizo el comando save para guardar los modelos. Los elementos guardados seran models_disasters_list y 
 # resid_disasters_list, que incluyen por un lado los modelos estimados y por el otro los residuales.
-if(0){
+# ----COLOCAR <if(1)> SI SE DESEA ESTIMAR EL MODELO ----#
+load.SUR  = 1            #<<<<-- 1 si se carga el SUR inicial, 0 si se corre y salva el SUR inicial 
+saved.day = "2023-04-02" #<<<--- fecha del save() en formato yyyy-mm-dd
+if(!load.SUR){
   eqsystem              = list()
   fitted_models         = c()
   #models_disasters_list = list()
@@ -449,7 +452,15 @@ if(0){
     resid_disasters_list[[name]]          <- resid(get(name))
     #models_disasters_list[[name]] <- get(name)
   } 
-}
+  # Guardar datos --------------------------------------------------------------#
+  #--- Guardado de los modelos por tipo de desastre , mas la base de retornos---#
+  saved.day = today() #<<<--- dia del <save>,  en formato yyyy-mm-dd
+  # 1. En el objeto Resultados_Desastres_today() se guardan elementos claves para poder graficar, incluyendo
+  # los resultados de las regresion SUR
+  save(coefficients_disasters_list, resid_disasters_list, fitted_models, Retornos,
+       file=paste0(paste0('Resultados_Desastres_',saved.day),'.RData')) 
+} else load(paste0(paste0('Resultados_Desastres_',saved.day),'.RData')) #del save 1.
+
 
 # Segunda regresion, por paises en vez de por tipo de desastre ------------
 
@@ -490,7 +501,10 @@ for (pais in 1:length(paises)){
 
 ## REGRESION POR PAISES. Los coeficientes, errores estandar, t_Values, p_values y residuales de la estimacion fueron guardados usando el comando
 #  save() con el fin de no tener que correr siempre esta estimacion, por lo cual se usa el if(0).
-if(0){
+# ----COLOCAR <if(1)> SI SE DESEA ESTIMAR EL MODELO por paises ----#
+load.SURpaises = 1        #<<<--- 1 si se carga el SUR paises, 0 si se corre y salva el SUR paises 
+saved.day = '2023-04-02'  #<<<--- dia del <save>, formato yyyy-mm-dd
+if(!load.SURpaises){
   ## Regresion con las dummies por pais. Es importante resaltar que en este caso <paises> indica el pais en el que sucedio el desastre, 
   #  mientras que <countries> indica el pais donde esta el indice (Ejemplo de <countries>: 'Brazil' que corresponde a 'Bovespa') 
   
@@ -515,17 +529,31 @@ if(0){
     #models_countries_list[[name2]] <- get(name2)
     coefficients_countries_list[[name2]]   <- summary(get(name2))$coefficients
     resid_countries_list[[name2]]          <- resid(get(name2))
-  } 
+  }
+  # Guardar datos --------------------------------------------------------------#
+  saved.day = today()  #<<<--- dia del <save>, formato yyyy-mm-dd
+  # 1. En el objeto Resultados_Desastres_today() se guardan elementos claves para poder graficar, incluyendo
+  # los resultados de las dos regresiones SUR
+  save( coefficients_countries_list,file=paste0(paste0('Resultados_Desastres_Paises_',saved.day),'.RData')) 
+  # 2. En el objeto Residuos_paises_today() se guardan los residuos de la segunda regresion (por pais), los cuales son muy 
+  # pesados y no se pueden cargar
+  save(resid_countries_list, file=paste0(paste0('Residuos_Paises_',saved.day),'.RData'))
+} else{
+ #load(paste0(paste0('Resultados_Desastres_Paises_',saved.day),'.RData')) #del save 1. #Descomentar!!!
+ load(paste0(paste0('Resultados_Desastres_',saved.day),'.RData')) #del save 1. #OLD borrar!!!
+ #load(paste0(paste0('Residuos_Paises_',saved.day),'.RData'))  ## del save 2. Solo puede correrlo JP, ya que los residuos estsn en su PC y  pesan demasiado para mandarlos por github
 }
 
 # Manejo de los datos para graficar ---------------------------------------
 
-### Para poder generar las graficas 4 y A.8 de Pagnottoni es necesario saber a que continente pertenece cada pais, por lo cual hice el siguiente codigo
-# Primero se carga la base de datos original, y se transforma en un objeto <tbl>, usando la libreria <dplyr>
+### Para generar las graficas 4 y A.8 de Pagnottoni es necesario saber a que continente pertenece cada pais
 
+# Lectura de la base de datos EMDAT. En excel, 1) se filtraron los 104 paises usados en el paper 
+#  y 2) se dejaron los desastres entre el 8-feb-2001 y 31-dic-2019 (fechas usadas en el paper).
 # Cada fila de la base de datos hace referencia a un desastre natural, y sus columnas dan informacion acerca del desastre. Las columnas que nos interesan
 # son <Country>, que indica el pais donde sucedio el desastre y <Continent> continente donde sucedio el desastre, 
-emdat     <- openxlsx::read.xlsx(paste0(Dir,"BASE_EMDAT.xlsx"),sheet = "Table1") #<<<---cargar base 
+emdat     <- openxlsx::read.xlsx(paste0(Dir,"BASE_EMDAT.xlsx"),sheet = "Table1") #<<<---cargar base emdat
+# Se transforma en un objeto <tbl>, usando la libreria <dplyr>
 emdat_tbl <- tibble::as_tibble(emdat) 
 
 # Para poder generar el vector por cada continente que incluya los paises de dicho continente selecciono de la base de datos solamente las columnas 
@@ -600,70 +628,65 @@ if(0){
   }
 }
 
-## Por ultimo , para realizar las graficas 1, A.1, A.6 y A.7 de Pagnottoni tambien es necesario realizar limpieza de bases de datos ##
+## ---- Graficas 1, A.1, A.6 y A.7 de Pagnottoni(2022) --- ##
 
-# Primero debemos cargar la base de datos EMDAT, los cambios principales que se le hizo despues de descargarla de la web fue filtrar los 104 paises que 
-# se necesitan segun el paper y retirar los desastres que no hacen parte de los dias analizados por los autores.
+# Lectura de la base de datos EMDAT,  en excel, se dejaron los desastres entre el 8-feb-2001 y 31-dic-2019 (fechas usadas en el paper).
 emdat_completa     <- openxlsx::read.xlsx(paste0(Dir,"EMDAT  COMPLETA.xlsx"),sheet = "emdat data") #<<<--- base de datos 
+# Se transforma en <tibble> para poder manejar con las funciones de <dplyr> 
 emdat_tbl_completa <- tibble::as_tibble(emdat_completa) 
 # las columnas que nos interesan son <Country>, pais del desastre, <Continent>, continente del desastre, <Disaster.subgroup>, tipo de desastre
 # <Start.Year>, anho en que inicio el desastre, <Start.Month>, mes en que inicio el desastre, <Start.Day>, dia en que inicio el desastre
-# <End.Year>, anho en que temrino el desastre, <End.Month>, mes en que termino el desastre, <End.Day> dia en que termino el desastre
+# <End.Year>, anho en que termino el desastre, <End.Month>, mes en que termino el desastre, <End.Day> dia en que termino el desastre
 
-#Selecciono solamente las variables que me interesan para poder manejar mejor la base, y renombro <Country> como region, para poder juntarla con una base 
-#de datos de coordenadas para poder graficar.
+# Se  seleccionan  las variables que interesan y se renombra <Country> como region, para adjuntarla con otra base 
+# de coordenadas para graficar.
 emdat_interest_variables <- emdat_tbl_completa %>% 
-  dplyr::select(Disaster.Subgroup,region = Country,Continent,Start.Year,Start.Month,Start.Day,End.Year,End.Month,End.Day)
+  dplyr::select(Disaster.Subgroup, region=Country, Continent, Start.Year, Start.Month, Start.Day, End.Year, End.Month, End.Day)
 
-#Filtro la base,eliminando las filas que contengan NA en el mes de inicio, ya que no se puede suponer el mes en que empezo el desastre.
-#Siendo la base final que vamos a manejar la llamaré emdat_final.
+#Se eliminan las filas (desastres) que contengan <NA> en el mes de inicio, ya que no se puede suponer el mes en que empezo el desastre.
 emdat_final <- emdat_interest_variables %>% 
   dplyr::filter(!is.na(Start.Month))
 
-# Cargo los datos del mapamundi
+# Cargo los datos del mapamundi del paquete <ggplot2>
 world <- map_data("world")
 
-## En primer lugar, los datos en <world> ponen una dificultad: Hong Kong y Macao aparecen como regiones de China, no como "pais" propio,
-#  mientras que en la base de desastres los tenemos como "paises" propios. Es por tanto que tenemos que volverlos una region en la
-#  base <world>
-
-hong_kong = which(world$subregion=="Hong Kong")
+# Los datos en <world> tienen un inconveniente: Hong Kong y Macao aparecen como regiones de China, no como "pais" propio.
+# Es por tanto que tenemos que volverlos una region en la base <world>
+hong_kong = which(world$subregion=="Hong Kong") # <x$subregion> equivale a una region de un pais de <x> y <x$region> a un pais de <x>
 world[hong_kong,"region"] <- "Hong Kong"
 macao = which(world$subregion == "Macao")
 world[macao, "region"] <- "Macao"
 
-# Por otro lado, en la base de desastres consideraron a Antigua y Barbuda como un solo pais, mientras que en <world> los separan,
+# En la base de desastres consideraron a Antigua y Barbuda como un solo pais, mientras que en <world> los separan,
 # por lo cual tenemos que unificar esas dos regiones en la base <world>.
-
 antigua = which(world$region=="Antigua")
 barbuda = which(world$region=="Barbuda")
 world[c(antigua,barbuda),"region"] <- "Antigua and Barbuda"
 
 # Lo mismo con Trinidad y Tobago
 trinidad = which(world$region=="Trinidad")
-tobago = which(world$region=="Tobago")
+tobago   = which(world$region=="Tobago")
 world[c(trinidad,tobago),"region"] <- "Trinidad and Tobago"
 
-# Con las islas virgenes tenemos dos nombres distintos en <emdata_final> mientras que en <world> tenemos solamente uno, por lo 
-# que tambien se coloca el mismo nombre para ambos en <emdata_final>
+# Con las islas virgenes tenemos dos nombres distintos en <emdata_final> mientras que en <world> solo uno, por lo 
+# que se coloca el mismo nombre para ambos en <emdata_final>
 virgin_british = which(emdat_final$region=="Virgin Island (British)" )
 virgin_us      = which(emdat_final$region=="Virgin Island (U.S.)"  )
 emdat_final[c(virgin_british,virgin_us),"region"] <- "Virgin Islands"
 
-# Por otro lado, en la base de datos <world> no existe Tokelau, territorio dependiente de Nueva Zelanda, por lo cual
+# En la base de datos <world> no existe Tokelau, territorio dependiente de Nueva Zelanda, por lo cual
 # se le cambiara el nombre a nueva zelanda en la base <emdat_final>
-
 tokelau = which(emdat_final$region == "Tokelau")
 emdat_final[tokelau,"region"] <- "New Zealand"
 
-# Tuvalu no existe en <world>, por lo que es mejor quitarla.
+# Tuvalu no existe en <world>, por lo que se quita.
 tuvalu = which(emdat_final$region == "Tuvalu")
 emdat_final <- emdat_final %>% 
   slice(-tuvalu)
 
-## Por ultimo las regiones que mas ponen problema son Serbia y Montenegro, ya que en la matriz <emdat_final> tenemos que hay datos para
-#  Montenegro, Serbia y aparte Serbia Montenegro, mientras que para <world> solamente hay datos para Serbia y Montenegro.
-#  El mejor procedimiento seria agregar en ambas matrices Serbia y Montenegro como Serbia Montenegro
+## Por ultimo, En la base <emdat_final> hay datos para Montenegro, Serbia y aparte Serbia Montenegro, 
+#  mientras que para <world> solamente hay datos para Serbia y Montenegro.
+#  Por lo tanto, se agregan las regiones Serbia y Montenegro como Serbia Montenegro
 serbia     = which(emdat_final$region=="Serbia" )
 montenegro = which(emdat_final$region=="Montenegro"  )
 emdat_final[c(serbia,montenegro),"region"] <- "Serbia Montenegro"
@@ -672,11 +695,10 @@ serbia2     = which(world$region == "Serbia")
 montenegro2 = which(world$region == "Montenegro")
 world[c(serbia2,montenegro2),"region"] <- "Serbia Montenegro"
 
-## Sin embargo, toca verificar si hay diferencias en los paises, que estan en la columna region para ambas bases
+## Se verifica si hay diferencias en los paises que estan en la columna region para ambas bases
 diff <- sort(setdiff(emdat_final$region, world$region))
 
-## Toca cambiar los nombres de <emdat_final> para que cuadren con los de world.
-
+## Se cambian los nombres de <emdat_final> para que coincidan con los de <world>.
 diff.world <- c("Bahamas","Bolivia", "Cape Verde", "Canary Islands","Cayman Islands", "Comoros", 
                 "Democratic Republic of the Congo","Republic of Congo", "Cook Islands", "Ivory Coast", "Czech Republic",
                 "Dominican Republic","Swaziland", "Gambia", "Iran", "North Korea" ,"South Korea", "Laos", "North Macedonia",
@@ -685,32 +707,27 @@ diff.world <- c("Bahamas","Bolivia", "Cape Verde", "Canary Islands","Cayman Isla
                 "Sint Maarten","Sudan","Syria", "Taiwan","Tanzania", "Turks and Caicos Islands","United Arab Emirates",
                 "UK","USA","Venezuela","Vietnam")
 
-for (i in 0:length(diff)){
-  element <- diff[i]
-  indexes2 <- which(emdat_final$region == element)
+for (i in 1:length(diff)){
+  indexes2 <- which(emdat_final$region == diff[i])
   emdat_final[indexes2,"region"] <- diff.world[i]
 }
 
-# Para el primer grafico es necesario agrupar solamente por pais para contar cuantos desastres hubo
-
+# En el primer grafico (Fig.1) los desastres se agrupan por pais para contar (<tally()>) cuantos hubo (<emdat_country$n>)
 emdat_country <- emdat_final %>% 
   dplyr::group_by(region) %>% 
   tally()
 
-# Junto las dos bases de datos, <world> y <emdat_final>
-merged_data <- inner_join(world, emdat_country ,by = "region", all.x = TRUE)
-deciles <- quantile(unique(merged_data$n), probs = seq(0, 1, by = 0.1), include.lowest = TRUE)
-deciles2 <- quantile(emdat_country$n, probs = seq(0, 1, by = 0.1), include.lowest = TRUE) 
+# Se juntan las dos bases, <world> y <emdat_country> por pais, i.e. <region>
+merged_data <- inner_join(world, emdat_country, by="region", all.x=TRUE)
+deciles     <- quantile(unique(merged_data$n), probs=seq(0, 1, by = 0.1), include.lowest=TRUE)
+deciles2    <- quantile(emdat_country$n, probs=seq(0,1, by=0.1), include.lowest=TRUE) 
 ## No estoy seguro de si ponerlo con valores unicos, ya que si no le quito los valores duplicados el mapa se ve muy diferente a aquel
 #  de Pagnottoni.
 
-
-## No me dejaba utilizar el elemento deciles, generaba NA para ciertos valores, por lo cual el siguiente codigo lograba generar bien los deciles
-#  pero no estoy seguro de si este bien desarrollado, lo que hace es restarle al valor minimo de deciles 0.0001 , asi la funcion cut si funcionaba
-#  bien. 
-min_value <- min(merged_data$n)
-deciles_adj <- c(deciles[1]-0.0001, deciles[-1]) ## Problema al generar deciles, poniendo NA al valor minimo
-merged_data$decile <- cut(merged_data$n, breaks = deciles_adj, labels = FALSE)
+## Se usa <deciles_adj> en lugar de <deciles> ya que <deciles> generaba NA para el valor minimo decil.
+#  En este caso, se resta al valor minimo de <deciles> 0.0001 y asi la funcion <cut> funciona bien.
+deciles_adj        <- c(deciles[1]-0.0001, deciles[-1]) 
+merged_data$decile <- cut(merged_data$n, breaks=deciles_adj, labels=FALSE) # A cada <region> le asigan un numero (decil) entre 1 y 10
 # si se realiza cut(merged_data$n, breaks= deciles, labels = FALSE) no sirve
 merged_data$decile <- factor(merged_data$decile) ## Dejar claro que es variable discreta, no continua
 
@@ -750,14 +767,20 @@ if(0){
   deciles <- quantile(unique(merged_data$n), probs = seq(0, 1, by = 0.1), include.lowest = TRUE)  
 }
 
-# Guardar datos para graficacion ------------------------------------------
-
+if(0){
+# Guardar datos --------------------------------------------------------------#
 #--- Guardado de los modelos por tipo de desastre , mas la base de retornos---#
 saved.day = "2023-04-02" #<<<--- dia en que se utilizo por ultima vez save() en formato yyyy-mm-dd
+# 1. En el objeto Resultados_Desastres_today() se guardan elementos claves para poder graficar, incluyendo
+# los resultados de las dos regresiones SUR
+
 #save(coefficients_disasters_list,resid_disasters_list,fitted_models, Retornos, paises,coefficients_countries_list,
-#     coefficients_continents_list,file=paste0(paste0('Resultados_Desastres_',today()),'.RData'))
+#     coefficients_continents_list,file=paste0(paste0('Resultados_Desastres_',today()),'.RData')) 
+
+# 2. En el objeto Residuos_paises_today() se guardan los residuos de la segunda regresion (por pais), los cuales son muy 
+# pesados y no se pueden cargar
 #save(resid_countries_list, file=paste0(paste0('Residuos_Paises_',today()),'.RData'))
-#save(merged_data, world, file=paste0(paste0('Datos_Mapamundi_',today()),'.RData'))
-load(paste0(paste0('Resultados_Desastres_',saved.day),'.RData'))
-load(paste0(paste0('Datos_Mapamundi_',saved.day),'.RData'))
-#load(paste0(paste0('Residuos_Paises_',saved.day),'.RData'))  ## Solo puedo correrlo JP, ya que ahi tengo los residuos que pesan demasiado para mandarlos por github
+
+load(paste0(paste0('Resultados_Desastres_',saved.day),'.RData')) #del save 1.
+#load(paste0(paste0('Residuos_Paises_',saved.day),'.RData'))  ## del save 2. Solo puede correrlo JP, ya que los residuos estsn en su PC y  pesan demasiado para mandarlos por github
+}

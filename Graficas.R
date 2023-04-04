@@ -155,55 +155,34 @@ colores.ar = c("#1964C4", "#C9675A", "#D5B259","darkorchid4","#709E3D")
 
 ## Para biological
 ar_data_Bio       <- coef_vec_fitsur_Bio[order_coef(names(coef_vec_fitsur_Bio),pagn_orden)] ##ordenar
-
-ar_data_frame_Bio <- data.frame(values = ar_data_Bio, 
-                                group=group,
-                                subgroup =steps)
+ar_data_frame_Bio <- data.frame(values = ar_data_Bio,  group=group, subgroup =steps)
 ar_data_frame_Bio$group <- factor(ar_data_frame_Bio$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica grupo
-
 plot_Bio <- grafico_estimates(ar_data_frame_Bio,"Abnormal return","Biological",colors = colores.ar)
 
 ## Para climatological
 ar_data_Cli       <- coef_vec_fitsur_Cli[order_coef(names(coef_vec_fitsur_Cli),pagn_orden)] ##ordenar
-
-ar_data_frame_Cli <- data.frame(values = ar_data_Cli, 
-                                group=group,
-                                subgroup =steps)
+ar_data_frame_Cli <- data.frame(values = ar_data_Cli, group=group, subgroup =steps)
 ar_data_frame_Cli$group <- factor(ar_data_frame_Cli$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica grupo
-
 plot_Cli <- grafico_estimates(ar_data_frame_Cli,"Abnormal return","Climatological",colors = colores.ar)
 
 ## Para geophysical
 
 ar_data_Geo       <- coef_vec_fitsur_Geo[order_coef(names(coef_vec_fitsur_Geo),pagn_orden)] ##ordenar
-
-ar_data_frame_Geo <- data.frame(values = ar_data_Geo, 
-                                group=group,
-                                subgroup =steps)
+ar_data_frame_Geo <- data.frame(values = ar_data_Geo, group=group, subgroup =steps)
 ar_data_frame_Geo$group <- factor(ar_data_frame_Geo$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica grupo
-
 plot_Geo <- grafico_estimates(ar_data_frame_Geo,"Abnormal return","Geophysical",colors = colores.ar)
 
 ## Para hydrological
 
 ar_data_Hyd       <- coef_vec_fitsur_Hyd[order_coef(names(coef_vec_fitsur_Hyd),pagn_orden)] ##ordenar
-
-ar_data_frame_Hyd <- data.frame(values = ar_data_Hyd, 
-                                group=group,
-                                subgroup =steps)
+ar_data_frame_Hyd <- data.frame(values = ar_data_Hyd, group=group, subgroup =steps)
 ar_data_frame_Hyd$group <- factor(ar_data_frame_Hyd$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica grupo
-
 plot_Hyd <- grafico_estimates(ar_data_frame_Hyd,"Abnormal return","Hydrological",colors = colores.ar)
 
 ## Para meteorological
-
 ar_data_Met       <- coef_vec_fitsur_Met[order_coef(names(coef_vec_fitsur_Met),pagn_orden)] ##ordenar
-
-ar_data_frame_Met <- data.frame(values = ar_data_Met, 
-                                group=group,
-                                subgroup =steps)
+ar_data_frame_Met <- data.frame(values = ar_data_Met,  group=group, subgroup =steps)
 ar_data_frame_Met$group <- factor(ar_data_frame_Met$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica grupo
-
 plot_Met <- ggplot(ar_data_frame_Met, aes(x=group,y=values,fill=subgroup))+
   geom_bar(stat="identity", position="dodge", width=0.7) +
   scale_fill_manual(values=c("#1964C4", "#C9675A","#D5B259","#7C63CF","#709E3D")) +
@@ -241,22 +220,16 @@ for(model_name in names(coefficients_disasters_list)){
 #Para biological
 
 t_data_Bio       <- t_test_fitsur_Bio[order_coef(names(t_test_fitsur_Bio),pagn_orden)] ##ordenar
-t_data_frame_Bio <- data.frame(values = t_data_Bio, 
-                               group=group,
-                               subgroup =steps)
+t_data_frame_Bio <- data.frame(values = t_data_Bio,  group=group, subgroup =steps)
 t_data_frame_Bio$group <- factor(t_data_frame_Bio$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica grupo
-
 plot_t_Bio <- grafico_estimates(t_data_frame_Bio, "t_test", "Biological",colors = colores.ar)
 
 
 #Para climatological
 
 t_data_Cli       <- t_test_fitsur_Cli[order_coef(names(t_test_fitsur_Cli),pagn_orden)] ##ordenar
-t_data_frame_Cli <- data.frame(values = t_data_Cli, 
-                               group=group,
-                               subgroup =steps)
+t_data_frame_Cli <- data.frame(values = t_data_Cli, group=group,subgroup =steps)
 t_data_frame_Cli$group <- factor(t_data_frame_Cli$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica grupo
-
 plot_t_Cli <- grafico_estimates(t_data_frame_Cli, "t_test", "Climatological",colors = colores.ar)
 
 ## Para geophysical
