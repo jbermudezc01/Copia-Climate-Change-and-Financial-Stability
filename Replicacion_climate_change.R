@@ -70,6 +70,15 @@ Dir      = paste0(getwd(),'/Bases/') #Directorio de datos, se supone que el subd
 
 # Genera una lista de los codigos bursatiles en formato xts.
 # La longitud de la lista es igual al numero de archivos con nombre stocks_<country> que existe en <Dir>.
+
+# Para cada pais que se encuentra en <countries>, vamos a tener una base de datos del indice bursatil que le corresponde. Cada una tiene 7 columnas:
+# la primera, <Date>, corresponde a los dias en los cuales tenemos datos para el indice; la segunda, <Price>, corresponde a los precios de cierre 
+# para cada dia; la tercera, <Open>, corresponde a los precios de apertura para cada dia; la cuarta, <High>, corresponde al mayor precio registrado
+# en el dia; la quinta, <Low>, corresponde al menor precio registrado en el dia; la sexta, <Vol.>, corresponde al volumen de acciones que se tranzaron;
+# la septima, <Change%>, corresponde al cambio porcentual en el precio de cierre. 
+# Dado que de las bases de datos nos interesan sobre todo <Date> y <Price>, al final generaremos una base que contenga todos los precios de cierre de
+# todos los paises que esta en <countries>. Cabe recalcar que en el vector <indexes> tenemos los nombres de los indices bursatiles en el orden 
+# correspondiente a los paises en <countries>.
 xts_list     <- list() 
 for (country in countries) {
   # Genera el nombre del archivo csv, siguiendo el Directorio especificado, añadiendole /Stocks_ country.csv
@@ -185,6 +194,13 @@ print(Stats, digits=3)
 
 ## Datos para GDP trimestral ===
 if(1){
+  # La base de datos que se lee a continuacion tiene las siguientes columnas:
+  #        <Time>      : indice trimestral del 2001 al 2019
+  #        <countries> : El nombre de las demas columnas es el mismo que los paises que estan en <countries>
+  # Por otro lado, a cada fila le corresponde una observacion trimestral del producto interno bruto.
+  # Por tanto, si nos encontramos en la fila 2001Q1 y la columna "Australia", seria el PIB de Australia en el primer trimestre del 
+  # 2001.
+  
   # Leer la base de datos, establecer el formato fecha y generar la base de datos en xts y la lista a ser desagregada
   # De este modo se genera una lista <quarterly_series>, de longitud igual al numero de <indices>.
   # Cada elemento de <quarterly_series> es un vector numerico con la misma longitud de los datos en los archivos excel
@@ -249,6 +265,12 @@ if(1){
 
 ### DESAGREGACION TEMPORAL FDI - Datos ===
 if(1){
+  # La base de datos que se lee a continuacion tiene las siguientes columnas:
+  #       <Year>      : Año del cual tenemos datos
+  #       <countries> : El nombre de las demas columnas es el mismo que los paises que estan en <countries>
+  # A cada fila le corresponde una observacion anual  del indice de desarrollo financiero.
+  # Por tanto, si nos encontramos en la fila 2001 y la columna "Australia", seria el FDI de Australia en el 2001.
+  
   #Ahora para hacer la desagregacion temporal del FDI necesitaremos los mismos cinco argumentos: una lista de las 
   # series a desagregar, un vector constante, una matriz de agregación y una matriz de varianzas covarianzas-
   # el alpha puede seguir siendo el mismo, ya que para el metodo fast debe ser 0.99999.
@@ -296,6 +318,12 @@ Crecimiento_FDI <- fdi_growth_base[paste0(dia.inicial,"/"),]
 # Dummies corregidas ------------------------------------------------------
 
 # Corremos la función <create_dummies> sobre el archivo que contiene las fechas de las dummies
+# El archivo excel al cual se hace referencia enseguida tiene 5 hojas: una por cada tipo de desastre (Biological, Climatological, Geophysical, Hydrological y 
+# meteorological). En cada una de las hojas tenemos cuatro columnas:
+#                  <t0>       : corresponde al dia en el que sucedio un desastre
+#                  <na.start> : dummy que toma el valor de 1 si se supuso que el dia del evento fue el primer dia del mes y 0 en otro caso
+#                  <end>      : corresponde al ultimo dia del desastre
+#                  <na.end>   : dummy que toma el valor de 1 si se supuso que el ultimo dia del evento fue el ultimo dia del mes y 0 en otro caso
 dummies <- create_dummies(excel_file=paste0(Dir,"emdata_dummies_arregladas.xlsx"), 
                           Retornos, no.rezagos=no.rezagos.de.desatres, first.calendar.days.tobe.evaluated = 10 ) 
 
@@ -426,6 +454,12 @@ if(0){
 # Segunda regresion, por paises en vez de por tipo de desastre ------------
 
 ## Regresion con dummies de paises ===
+
+# El archivo excel que se esta cargando a continuacion tiene 104 hojas, donde cada una hace referencia a un pais analizado por Pagnottoni.
+# Cada hoja tiene 3 columnas que nos interesan:
+#         <Country>  : el nombre del pais
+#         <na_start> : dummy que toma el valor de 1 si se supuso que el dia del evento era el primero del mes y 0 en otro caso
+#         <t0>       : dia del desastre
 
 excel_countries   <- paste0(Dir,"emdata_dummies_countries.xlsx")     #<<<--- base de datos con las dummies de cada pais donde ocurrio un desastre
 # La base de datos <excel_countries> tiene 2 columnas que interesan, <Country>, que indica el pais, y <t0> que indica el dia de los desastres en ese pais
