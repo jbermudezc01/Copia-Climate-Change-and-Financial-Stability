@@ -717,7 +717,7 @@ emdat_country <- emdat_final %>%
   tally()
 
 # Se juntan las dos bases, <world> y <emdat_country> por pais, i.e. <region>
-merged_data <- inner_join(world, emdat_country)
+merged_data <- inner_join(world, emdat_country) #<inner_join> es intereseccion y <outer_join> es union
 deciles     <- quantile(unique(merged_data$n), probs=seq(0, 1, by = 0.1))
 deciles2    <- quantile(emdat_country$n, probs=seq(0,1, by=0.1)) 
 ## No estoy seguro de si ponerlo con valores unicos, ya que si no le quito los valores duplicados el mapa se ve muy diferente a aquel
