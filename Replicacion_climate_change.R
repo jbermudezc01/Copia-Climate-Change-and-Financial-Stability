@@ -432,7 +432,7 @@ for(indice in indexes){
 # resid_disasters_list, que incluyen por un lado los modelos estimados y por el otro los residuales.
 # ----COLOCAR <if(1)> SI SE DESEA ESTIMAR EL MODELO ----#
 load.SUR  = 1            #<<<<-- 1 si se carga el SUR inicial, 0 si se corre y salva el SUR inicial 
-saved.day = "2023-04-02" #<<<--- fecha del save() en formato yyyy-mm-dd
+saved.day = "2023-04-05" #<<<--- fecha del save() en formato yyyy-mm-dd
 if(!load.SUR){
   eqsystem              = list()
   fitted_models         = c()
@@ -503,7 +503,7 @@ for (pais in 1:length(paises)){
 #  save() con el fin de no tener que correr siempre esta estimacion, por lo cual se usa el if(0).
 # ----COLOCAR <if(1)> SI SE DESEA ESTIMAR EL MODELO por paises ----#
 load.SURpaises = 1        #<<<--- 1 si se carga el SUR paises, 0 si se corre y salva el SUR paises 
-saved.day = '2023-04-02'  #<<<--- dia del <save>, formato yyyy-mm-dd
+saved.day = '2023-04-05'  #<<<--- dia del <save>, formato yyyy-mm-dd
 if(!load.SURpaises){
   ## Regresion con las dummies por pais. Es importante resaltar que en este caso <paises> indica el pais en el que sucedio el desastre, 
   #  mientras que <countries> indica el pais donde esta el indice (Ejemplo de <countries>: 'Brazil' que corresponde a 'Bovespa') 
@@ -539,8 +539,7 @@ if(!load.SURpaises){
   # pesados y no se pueden cargar
   save(resid_countries_list, file=paste0(paste0('Residuos_Paises_',saved.day),'.RData'))
 } else{
- #load(paste0(paste0('Resultados_Desastres_Paises_',saved.day),'.RData')) #del save 1. #Descomentar!!!
- load(paste0(paste0('Resultados_Desastres_',saved.day),'.RData')) #del save 1. #OLD borrar!!!
+ load(paste0(paste0('Resultados_Desastres_Paises_',saved.day),'.RData')) #del save 1. #Descomentar!!!
  #load(paste0(paste0('Residuos_Paises_',saved.day),'.RData'))  ## del save 2. Solo puede correrlo JP, ya que los residuos estsn en su PC y  pesan demasiado para mandarlos por github
 }
 
@@ -718,17 +717,14 @@ emdat_country <- emdat_final %>%
   tally()
 
 # Se juntan las dos bases, <world> y <emdat_country> por pais, i.e. <region>
-merged_data <- inner_join(world, emdat_country, by="region", all.x=TRUE)
-deciles     <- quantile(unique(merged_data$n), probs=seq(0, 1, by = 0.1), include.lowest=TRUE)
-deciles2    <- quantile(emdat_country$n, probs=seq(0,1, by=0.1), include.lowest=TRUE) 
+merged_data <- inner_join(world, emdat_country)
+deciles     <- quantile(unique(merged_data$n), probs=seq(0, 1, by = 0.1))
+deciles2    <- quantile(emdat_country$n, probs=seq(0,1, by=0.1)) 
 ## No estoy seguro de si ponerlo con valores unicos, ya que si no le quito los valores duplicados el mapa se ve muy diferente a aquel
 #  de Pagnottoni.
 
-## Se usa <deciles_adj> en lugar de <deciles> ya que <deciles> generaba NA para el valor minimo decil.
-#  En este caso, se resta al valor minimo de <deciles> 0.0001 y asi la funcion <cut> funciona bien.
-deciles_adj        <- c(deciles[1]-0.0001, deciles[-1]) 
-merged_data$decile <- cut(merged_data$n, breaks=deciles_adj, labels=FALSE) # A cada <region> le asigan un numero (decil) entre 1 y 10
-# si se realiza cut(merged_data$n, breaks= deciles, labels = FALSE) no sirve
+# La funcion cut clasifica cada elemento de <merged_data$n> segun el decil al cual corresponda
+merged_data$decile <- cut(merged_data$n, breaks=deciles, labels=FALSE,include.lowest=TRUE) # A cada <region> le asigan un numero (decil) entre 1 y 10
 merged_data$decile <- factor(merged_data$decile) ## Dejar claro que es variable discreta, no continua
 
 

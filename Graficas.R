@@ -103,35 +103,35 @@ densidad_retornos <- apply(Retornos, MARGIN = 2, FUN = density)
 
 # Para America seria:
 main_America      <- "Densidad retornos America" #<<<--- título para la gráfica
-countries_America <- c("Bovespa","S.PCLXIPSA","NASDAQComposite","Nasdaq100","S.PTSXComposite","S.PBMVIPC")  #<<<--- vector de indices que pertencen al continente
+indexes_America <- c("Bovespa","S.PCLXIPSA","NASDAQComposite","Nasdaq100","S.PTSXComposite","S.PBMVIPC")  #<<<--- vector de indices que pertencen al continente
 labels_America    <- c("Bovespa","S&P CLX IPSA","NASDAQ Composite","Nasdaq 100","S&P TSX Composite",
                        "S&P BMV IPC") #<<<--- leyendas, indices de cada pais del continente
-grafico_retornos(densidad_retornos,countries_America,main_America,labels_America,colores)
+grafico_retornos(densidad_retornos,indexes_America,main_America,labels_America,colores)
 
 # Para Europa del Este:
 main_Europa_Este      <- "Densidad retornos Europa del Este" #<<<--- título para la gráfica
-countries_Europa_Este <- c("MOEXRussia","OMXCopenhagen20","BIST100","OSEBenchmark","WIG20","OMXHelsinki25","OMXStockholm30") #<<<--- vector de indices que pertencen al continente
+indexes_Europa_Este <- c("MOEXRussia","OMXCopenhagen20","BIST100","OSEBenchmark","WIG20","OMXHelsinki25","OMXStockholm30") #<<<--- vector de indices que pertencen al continente
 labels_Europa_Este    <- c("Moex Russia","OMX Copenhagen 20","BIST 100","OSE Benchmark","WIG20",
                            "OMX Helsinki 25","OMX Stockholm 30") #<<<--- leyendas, indices de cada pais del continente
-grafico_retornos(densidad_retornos,countries_Europa_Este,main_Europa_Este,labels_Europa_Este,colores)
+grafico_retornos(densidad_retornos,indexes_Europa_Este,main_Europa_Este,labels_Europa_Este,colores)
 
 # Para Europa del Oeste
 main_Europa_Oeste      <- "Densidad retornos Europa del Oeste"  #<<<--- título para la gráfica
-countries_Europa_Oeste <- c("FTSE100","SMI","DAX","IBEX35","AEX","BEL20","CAC40") #<<<--- vector de indices que pertencen al continente
+indexes_Europa_Oeste <- c("FTSE100","SMI","DAX","IBEX35","AEX","BEL20","CAC40") #<<<--- vector de indices que pertencen al continente
 labels_Europa_Oeste    <- c("FTSE 100","SMI","DAX","IBEX 35","AEX","BEL 20","CAC 40") #<<<--- leyendas, indices de cada pais del continente
-grafico_retornos(densidad_retornos,countries_Europa_Oeste,main_Europa_Oeste,labels_Europa_Oeste,colores)
+grafico_retornos(densidad_retornos,indexes_Europa_Oeste,main_Europa_Oeste,labels_Europa_Oeste,colores)
 
 #Para Asia
 main_Asia      <- "Densidad retornos Asia" #<<<--- título para la gráfica
-countries_Asia <- c("SETIndex","KOSPI","Nifty50","JakartaStockExchange","HangSeng") #<<<--- vector de paises que pertencen al continente
+indexes_Asia <- c("SETIndex","KOSPI","Nifty50","JakartaStockExchange","HangSeng") #<<<--- vector de paises que pertencen al continente
 labels_Asia    <- c("SET Index","KOSPI","Nifty 50","Jakarta Stock Exchange","Hang Seng") #<<<--- leyendas, indices de cada pais del continente
-grafico_retornos(densidad_retornos,countries_Asia,main_Asia,labels_Asia,colores)
+grafico_retornos(densidad_retornos,indexes_Asia,main_Asia,labels_Asia,colores)
 
 #Para Africa y Oceania
 main_Africa_Oceania      <- "Densidad retornos Africa y Oceania" #<<<--- título para la gráfica
-countries_Africa_Oceania <- c("SouthAfricaTop40","S.PASX200")  #<<<--- vector de paises que pertencen al continente
+indexes_Africa_Oceania <- c("SouthAfricaTop40","S.PASX200")  #<<<--- vector de paises que pertencen al continente
 labels_Africa_Oceania    <- c("South Africa Top 40","S&P ASX 200") #<<<--- leyendas, indices de cada pais del continente
-grafico_retornos(densidad_retornos,countries_Africa_Oceania,main_Africa_Oceania,labels_Africa_Oceania,colores)
+grafico_retornos(densidad_retornos,indexes_Africa_Oceania,main_Africa_Oceania,labels_Africa_Oceania,colores)
 
 ### ============================ Grafico 3 Pagnottoni. AR estimates ============================================================
 
@@ -235,9 +235,7 @@ plot_t_Cli <- grafico_estimates(t_data_frame_Cli, "t_test", "Climatological",col
 ## Para geophysical
 
 t_data_Geo       <- t_test_fitsur_Geo[order_coef(names(t_test_fitsur_Geo),pagn_orden)] ##ordenar
-t_data_frame_Geo <- data.frame(values = t_data_Geo, 
-                               group=group,
-                               subgroup =steps)
+t_data_frame_Geo <- data.frame(values = t_data_Geo, group=group, subgroup =steps)
 t_data_frame_Geo$group <- factor(t_data_frame_Geo$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica grupo
 
 plot_t_Geo <- grafico_estimates(t_data_frame_Geo, "t_test", "Geophysical",colors = colores.ar)
@@ -246,9 +244,7 @@ plot_t_Geo <- grafico_estimates(t_data_frame_Geo, "t_test", "Geophysical",colors
 ## Para hydrological
 
 t_data_Hyd       <- t_test_fitsur_Hyd[order_coef(names(t_test_fitsur_Hyd),pagn_orden)] ##ordenar
-t_data_frame_Hyd <- data.frame(values = t_data_Hyd, 
-                               group=group,
-                               subgroup =steps)
+t_data_frame_Hyd <- data.frame(values = t_data_Hyd, group=group, subgroup =steps)
 t_data_frame_Hyd$group <- factor(t_data_frame_Hyd$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica grupo
 
 plot_t_Hyd <- grafico_estimates(t_data_frame_Hyd, "t_test", "Hydrological",colors = colores.ar)
@@ -257,9 +253,7 @@ plot_t_Hyd <- grafico_estimates(t_data_frame_Hyd, "t_test", "Hydrological",color
 ## Para meteorological
 
 t_data_Met       <- t_test_fitsur_Met[order_coef(names(t_test_fitsur_Met),pagn_orden)] ##ordenar
-t_data_frame_Met <- data.frame(values = t_data_Met, 
-                               group=group,
-                               subgroup =steps)
+t_data_frame_Met <- data.frame(values = t_data_Met, group=group, subgroup =steps)
 t_data_frame_Met$group <- factor(t_data_frame_Met$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica grupo
 
 plot_t_Met <- ggplot(t_data_frame_Met, aes(x=group,y=values,fill=subgroup))+
