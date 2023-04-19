@@ -43,6 +43,7 @@ library(ggthemes)
 library(tmap)
 library(sf)
 library(ggsci)
+library(classInt)
 
 # Cargar funciones --------------------------------------------------------
 
@@ -83,7 +84,7 @@ xts_list     <- list()
 for (country in countries) {
   # Genera el nombre del archivo csv, siguiendo el Directorio especificado, añadiendole /Stocks_ country.csv
   csv_file <- paste0(Dir,"Stocks_", country, ".csv")
-  # Genera un archivo csv para el país country
+  # Genera un archivo csv para el país <country>
   csv      <- read.csv(csv_file, header = TRUE, sep = ";", quote = "\"", col.names = c("Date","Price", "Open", 
                                                                                        "High","Low","Vol.","Change%"))
   colnames <- names(csv)
@@ -96,21 +97,21 @@ for (country in countries) {
   
   csv$Date <- as.Date(csv$Date, "%m/%d/%Y")
   
-  # Generar la lista de los xts, solamente de la columna "Price", teniendo en cuenta los índices incluidos en "Date"
+  # Generar la lista de los xts, solamente de la columna <Price>, teniendo en cuenta los índices incluidos en <Date>
   xts_list[[country]] <- xts(csv$Price, csv$Date)
 }
 
 # Generar una base de datos que junte todos los indices bursatiles en formato xts.
 # Las matriz <base_test> tiene las siguientes dimensiones:
-#     columnas: numero de <indices> analizados
-#     filas   : total de dias en el que hay al menos un dato para cualquier <indice>
+#     columnas: numero de <indexes> analizados
+#     filas   : total de dias en el que hay al menos un dato para cualquier indice
 base_test <- do.call(merge,xts_list)
-# Cambiar nombres de las columnas por los nombres de los indices
+# Cambiar nombres de las columnas por los nombres de los <indexes>
 colnames(base_test) <- indexes
 
 # Generar un vector de fechas en los que solo se tiene valores para n < <min.dias.stock> mercados.
 
-min.dias.stock <- ceiling((length(indexes)/2)) #<<<--- minimo numero de <indices> en donde debe haber datos
+min.dias.stock <- ceiling((length(indexes)/2)) #<<<--- minimo numero de <indexes> en donde debe haber datos
 navalues = c()
 for (i in 1:nrow(base_test)) {
   row <- base_test[i, ]
@@ -141,19 +142,19 @@ colnames(base) <- colnames(base_test)
 base_precios <- base[complete.cases(base),]
 
 # Genera la base de retornos. Se coloca [2:nrow(base_precios)] porque de no hacerlo toda la primera fila serian valores
-# NA, por lo que se perdio un dato. El operador diff se realizo para toda la base de precios,pero el[2:nrow(base_precios)]
+# NA, por lo que se perdio un dato. El operador diff se realizo para toda la <base_precios>,pero el <[2:nrow(base_precios)]>
 # lo que hace es solamente quitar la primera fila de NA.
 # La dimension de <base_retornos> es la siguiente:
 #       columnas: las mismas que <base_test> y las demás bases anteriores
-#       filas   : una fila menos que <base-precios>
+#       filas   : una fila menos que <base_precios>
 base_retornos <- 100*diff(log(base_precios))[2:nrow(base_precios),]
 
 # Otra variable importante es la media de los promedios moviles, por lo cual se genera el promedio movil de cada
-# retorno de orden 22, ya que hay aproximadamente 22 dias para cada mes, usando la funcion moving_average.
+# retorno de orden 22, ya que hay aproximadamente 22 dias para cada mes, usando la funcion <moving_average>.
 
 orden <- 22 #<<<---  Orden del promedio movil del indice global de largo plazo de los indices accionarios 
 # mov_average_base <- moving_average(base_retornos,orden)
-# La siguiente funcion apply genera una base de datos (<mov_average_base>). Las dimensiones de la matriz son:
+# La siguiente funcion <apply> genera una base de datos (<mov_average_base>). Las dimensiones de la matriz son:
 #       columnas: las mismas que las demas bases anteriores
 #       filas   : aquellas de <base_retornos> menos <orden>-1
 mov_average_base <- apply(base_retornos, MARGIN=2, FUN=rollmean, k=orden, align="right")
@@ -165,8 +166,7 @@ colnames(mean_mov_average) = c("Mean_Returns_Moving_Averages") # Nombre de la va
 
 # Hay que tener en cuenta que la muestra que se utiliza en el paper no es la misma que la que se tiene en las bases,
 # por lo que se reduce la base para los datos del febrero 08 2001 a diciembre 30 2019.
-# La funcion muestra_paper va a seleccionar desde un cierto dia, el cual elegimos 08 febrero 2001
-# siguiendo el paper.
+# La funcion <muestra_paper> va a seleccionar desde un cierto dia, el cual elegimos 08 febrero 2001 siguiendo el paper.
 dia.inicial <- "2001-02-08"   #<<<--- Dia inicial de la muestra
 
 # Se obliga que la muestra comience en <dia.inicial>
@@ -176,7 +176,7 @@ Media_Promedio_movil = mean_mov_average[paste0(dia.inicial,"/")]
 
 # Tabla 1 Pagnottoni: Estadistica descriptiva -----------------------------
 
-## Generar (skewness, kurtosis, mean, max, min, sd) de los retornos de los <indices> acc. 
+## Generar (skewness, kurtosis, mean, max, min, sd) de los retornos de los <indexes> acc. 
 skewness <- moments::skewness(Retornos)
 kurtosis <- moments::kurtosis(Retornos)
 mean     <- apply(Retornos, MARGIN=2, FUN=mean)
@@ -184,7 +184,7 @@ max      <- apply(Retornos, MARGIN=2, FUN=max)
 min      <- apply(Retornos, MARGIN=2, FUN=min)
 sd       <- apply(Retornos, MARGIN=2, FUN=sd)
 
-# La matriz <Stats> tiene por numero de columnas a aquellas medidas de estadística descriptiva, y las filas son igual al numero de <indices>
+# La matriz <Stats> tiene por numero de columnas a aquellas medidas de estadística descriptiva, y las filas son igual al numero de <indexes>
 Stats = cbind(min,max,mean,sd,skewness,kurtosis )
 print(Stats, digits=3)
 
@@ -198,11 +198,11 @@ if(1){
   #        <Time>      : indice trimestral del 2001 al 2019
   #        <countries> : El nombre de las demas columnas es el mismo que los paises que estan en <countries>
   # Por otro lado, a cada fila le corresponde una observacion trimestral del producto interno bruto.
-  # Por tanto, si nos encontramos en la fila 2001Q1 y la columna "Australia", seria el PIB de Australia en el primer trimestre del 
+  # Por tanto, si nos encontramos en la fila 2001Q1 y la columna <Australia>, seria el PIB de <Australia> en el primer trimestre del 
   # 2001.
   
   # Leer la base de datos, establecer el formato fecha y generar la base de datos en xts y la lista a ser desagregada
-  # De este modo se genera una lista <quarterly_series>, de longitud igual al numero de <indices>.
+  # De este modo se genera una lista <quarterly_series>, de longitud igual al numero de <indexes>.
   # Cada elemento de <quarterly_series> es un vector numerico con la misma longitud de los datos en los archivos excel
   gdp_countries      <- read_xlsx(paste0(Dir,"GDP_countries_corregida.xlsx"), sheet="GDP") #<<<--- Base de datos con GDPs
   dates.low.freq     <- as.Date(as.yearqtr(gdp_countries$Time),frac=1) #date format, se supone que existe una col llamada <Time>
@@ -250,8 +250,8 @@ if(1){
       if(j != i) matriz_var_cov_0[i, j] = alpha_fast^(abs(j-i))
   } ##Crear la matriz de var-cov
   
-  # Se ejecuta la funcion de chow_lin, que da como resultado una base de datos de las series desagregadas.
-  # La base <gdp_growth_base> tiene las siguientes dimensiones: columnas - el numero de <indices>, filas - el mismo de <base_retornos> 
+  # Se ejecuta la funcion de <chow_lin>, que da como resultado una base de datos de las series desagregadas.
+  # La base <gdp_growth_base> tiene las siguientes dimensiones: columnas - el numero de <indexes>, filas - el mismo de <base_retornos> 
   daily_series    = chow_lin(time_Series_list=quarterly_series, c=qtr_agr, w=vec_cte, var_covar=matriz_var_cov_0,base_indice = base_precios)
   gdp_growth_base = apply(daily_series, MARGIN=2, function(x) diff(log(x))) #diff(log(series))
   gdp_growth_base = as.xts(gdp_growth_base, order.by=index(base_precios[-1,]))
@@ -269,12 +269,12 @@ if(1){
   #       <Year>      : Año del cual tenemos datos
   #       <countries> : El nombre de las demas columnas es el mismo que los paises que estan en <countries>
   # A cada fila le corresponde una observacion anual  del indice de desarrollo financiero.
-  # Por tanto, si nos encontramos en la fila 2001 y la columna "Australia", seria el FDI de Australia en el 2001.
+  # Por tanto, si nos encontramos en la fila 2001 y la columna <Australia>, seria el FDI de <Australia> en el 2001.
   
   #Ahora para hacer la desagregacion temporal del FDI necesitaremos los mismos cinco argumentos: una lista de las 
   # series a desagregar, un vector constante, una matriz de agregación y una matriz de varianzas covarianzas-
   # el alpha puede seguir siendo el mismo, ya que para el metodo fast debe ser 0.99999.
-  # De este modo se genera una lista <fdi_series>, de longitud igual al numero de <indices>.
+  # De este modo se genera una lista <fdi_series>, de longitud igual al numero de <indexes>.
   # Cada elemento de <fdi_series> es un vector numerico con la misma longitud de los datos en los archivos excel
   fdi_countries    = read_xlsx(paste0(Dir,"FDI_anual.xlsx"), sheet="FDI") #<<--- Base datos de los FDI
   fdi_countries_ts = as.ts(fdi_countries[,-1],start=2001,frequency=1)     #<<--- Fecha y freq inicial de los datos 
@@ -282,10 +282,10 @@ if(1){
   
   ##Matriz de agregacion anual FDI 
   fdi_rows <- nrow(fdi_countries_ts)
-  ##El numero de columnas es igual al de gdp porque se quiere desagregar en esa cantidad de dias (ncols)
+  ##El numero de columnas es igual al de <qtr_agr> porque se quiere desagregar en esa cantidad de dias (<ncols>)
   fdi_agregacion_matriz  <- matrix(0, nrow = fdi_rows, ncol = ncols)
   
-  #Se genera la matriz de agregacion, colocando uno a los dias que pertenezcan al año correspondiente.
+  #Se genera la matriz de agregacion, colocando uno a los dias que pertenezcan al anho correspondiente.
   #Por ejemplo en la primera fila tendran uno aquellos dias que pertenezcan al 2001 (primer anho)
   i1 = 0
   for(i in as.numeric(unique(substr(dates.high.freq,1,4)))){
@@ -299,7 +299,7 @@ if(1){
   }
   
   # <vec_cte> corresponde a la serie indicadora, al igual que la matriz de var-cov permanecen iguales a las usadas en los GDPs
-  # La base <fdi_growth_base> tiene las siguientes dimensiones: columnas - el numero de <indices>, filas - el mismo de <base_retornos> 
+  # La base <fdi_growth_base> tiene las siguientes dimensiones: columnas - el numero de <indexes>, filas - el mismo de <base_retornos> 
   fdi_daily_series = chow_lin(fdi_series, fdi_agregacion_matriz, vec_cte, matriz_var_cov_0,base_indice = base_precios)
   fdi_growth_base  = apply(fdi_daily_series, MARGIN=2, function(x) diff(log(x))) #diff(log(series))
   fdi_growth_base  = as.xts(fdi_growth_base, order.by=index(base_precios[-1,]))
@@ -376,7 +376,7 @@ if(0){
   Date <- as.character(index(Retornos))
   # Cambiar a dataframe
   base_df <- as.data.frame(base_datos)
-  #Agregar el indice, no se habia agregado antes porque la funcion merge ponia problema dada la clase de los objetos
+  #Agregar el indice, no se habia agregado antes porque la funcion <merge> ponia problema dada la clase de los objetos
   base_final <- cbind(Date,base_df)
   #Para crear un archivo excel con la base de datos
   write.xlsx(base_final,"Base_datos_final.xlsx",row.names= FALSE)
@@ -411,7 +411,7 @@ if(0){
 # rezagos. Modelamos cada retorno siguiendo un modelo AR(p), siendo p = 0 a 20, y elegimos el modelo segun el 
 # criterio de Akaike
 
-## Loop para obtener las matrices de rezagos para cada indice
+## Loop para obtener las matrices de rezagos para cada <indice>
 for(indice in indexes){
   var_name <- paste0("lags_",indice)
   Lags     <- lag_function(base_retornos,indice,AR.m=20, MA.m=0, d=0, bool=TRUE, metodo="CSS",dia.inicial)
@@ -424,12 +424,12 @@ for(indice in indexes){
 # Tambien a lo largo de los 5 tipos de desastres
 
 # El siguiente for genera una estimacion para cada uno de los 5 tipos de desastres, los cuales tomaran
-# los nombres de fitdes_bio, fitdes_cli, fitdes_hyd, fitdes_geo, fitdes_met.
-# Por otro lado, en la lista fitted_models generamos el nombre de losmodelos estimados, que necesitaremos 
+# los nombres de <fitdes_bio>, <fitdes_cli>, <fitdes_hyd>, <fitdes_geo>, <fitdes_met>.
+# Por otro lado, en la lista <fitted_models> generamos el nombre de los modelos estimados, que necesitaremos 
 # mas adelante.
 
-# if(0) dado que se utilizo el comando save para guardar los modelos. Los elementos guardados seran models_disasters_list y 
-# resid_disasters_list, que incluyen por un lado los modelos estimados y por el otro los residuales.
+# if(0) dado que se utilizo el comando <save> para guardar los modelos. Los elementos guardados seran <models_disasters_list> y 
+# <resid_disasters_list>, que incluyen por un lado los modelos estimados y por el otro los residuales.
 # ----COLOCAR <if(1)> SI SE DESEA ESTIMAR EL MODELO ----#
 load.SUR  = 1            #<<<<-- 1 si se carga el SUR inicial, 0 si se corre y salva el SUR inicial 
 saved.day = "2023-04-05" #<<<--- fecha del save() en formato yyyy-mm-dd
@@ -455,7 +455,7 @@ if(!load.SUR){
   # Guardar datos --------------------------------------------------------------#
   #--- Guardado de los modelos por tipo de desastre , mas la base de retornos---#
   saved.day = today() #<<<--- dia del <save>,  en formato yyyy-mm-dd
-  # 1. En el objeto Resultados_Desastres_today() se guardan elementos claves para poder graficar, incluyendo
+  # 1. En el objeto <Resultados_Desastres_today()> se guardan elementos claves para poder graficar, incluyendo
   # los resultados de las regresion SUR
   save(coefficients_disasters_list, resid_disasters_list, fitted_models, Retornos,
        file=paste0(paste0('Resultados_Desastres_',saved.day),'.RData')) 
@@ -465,7 +465,6 @@ if(!load.SUR){
 # Segunda regresion, por paises en vez de por tipo de desastre ------------
 
 ## Regresion con dummies de paises ===
-
 # El archivo excel que se esta cargando a continuacion tiene 104 hojas, donde cada una hace referencia a un pais analizado por Pagnottoni.
 # Cada hoja tiene 3 columnas que nos interesan:
 #         <Country>  : el nombre del pais
@@ -474,7 +473,7 @@ if(!load.SUR){
 
 excel_countries   <- paste0(Dir,"emdata_dummies_countries.xlsx")     #<<<--- base de datos con las dummies de cada pais donde ocurrio un desastre
 # La base de datos <excel_countries> tiene 2 columnas que interesan, <Country>, que indica el pais, y <t0> que indica el dia de los desastres en ese pais
-# Sin embargo, con la funcion create_dummies se genera un array de dimensiones 104, 4828, 6; 104 hace referencia al numero de hojas del archivo
+# Sin embargo, con la funcion <create_dummies> se genera un array de dimensiones 104, 4828, 6; 104 hace referencia al numero de hojas del archivo
 # excel (cada hoja representa un pais), 4828 es el mismo numero de filas que <Retornos> y 6 hace referencia a las 6 dummies (t0,...,t4,D)
 dummies_countries <- create_dummies(excel_file=excel_countries,Retornos, no.rezagos=4,
                                     first.calendar.days.tobe.evaluated = 10)  ## Genera un array de dimensiones 104, 4828, 6
@@ -539,24 +538,24 @@ if(!load.SURpaises){
   # pesados y no se pueden cargar
   save(resid_countries_list, file=paste0(paste0('Residuos_Paises_',saved.day),'.RData'))
 } else{
- load(paste0(paste0('Resultados_Desastres_Paises_',saved.day),'.RData')) #del save 1. #Descomentar!!!
+ load(paste0(paste0('Resultados_Desastres_Paises_',saved.day),'.RData')) #del save 1. 
  #load(paste0(paste0('Residuos_Paises_',saved.day),'.RData'))  ## del save 2. Solo puede correrlo JP, ya que los residuos estsn en su PC y  pesan demasiado para mandarlos por github
 }
 
 # Manejo de los datos para graficar ---------------------------------------
 
-### Para generar las graficas 4 y A.8 de Pagnottoni es necesario saber a que continente pertenece cada pais
+### Para generar las graficas 4 y A.8 de Pagnottoni es necesario saber a que continente pertenece cada pais.
 
 # Lectura de la base de datos EMDAT. En excel, 1) se filtraron los 104 paises usados en el paper 
 #  y 2) se dejaron los desastres entre el 8-feb-2001 y 31-dic-2019 (fechas usadas en el paper).
 # Cada fila de la base de datos hace referencia a un desastre natural, y sus columnas dan informacion acerca del desastre. Las columnas que nos interesan
 # son <Country>, que indica el pais donde sucedio el desastre y <Continent> continente donde sucedio el desastre, 
-emdat     <- openxlsx::read.xlsx(paste0(Dir,"BASE_EMDAT.xlsx"),sheet = "Table1") #<<<---cargar base emdat
+emdat     <- openxlsx::read.xlsx(paste0(Dir,"BASE_EMDAT.xlsx"),sheet = "Table1") #<<<---cargar base <emdat>
 # Se transforma en un objeto <tbl>, usando la libreria <dplyr>
 emdat_tbl <- tibble::as_tibble(emdat) 
 
 # Para poder generar el vector por cada continente que incluya los paises de dicho continente selecciono de la base de datos solamente las columnas 
-# Country y Continent
+# <Country> y <Continent>
 emdat_country_continent <- emdat_tbl %>%
   dplyr::select(Country,Continent)
 
@@ -567,7 +566,7 @@ emdat_continents <- emdat_country_continent %>%
 # En el vector <continents> se tienen  los valores unicos para el continente: Asia, Europe, Americas, Oceania, Africa
 continents <- sort(unique(emdat_continents$Continent))
 
-# Generar un vector por cada continente que incluya los paises que lo conforman
+# Generar un vector por cada continente que incluya los <paises> que lo conforman
 for (continent in continents){
   paises_continent <- c()
   varname          <- paste0("countries_",continent)
@@ -605,7 +604,7 @@ max.length <- max(sapply(names(coefficients_countries_list),FUN = nchar))## Prob
 #   Y es una matriz de orden Nx4:
 #      N: No.coeff.stock1 + No.coeff.stock2 + ... + No.coeff.stockFINAL (Ecuaciones que hace parte de cada SUR)
 #      4: c(Estimate, Std. Error, t value, Pr(>|t|) ) 
-# Por ultimo, se genera una lista <coefficients_continents_list>, que guarda las listas de cada continente, para poder guardarlas usando save()
+# Por ultimo, se genera una lista <coefficients_continents_list>, que guarda las listas de cada continente.
 coefficients_continents_list <- list()
 for (continent in continents){
   varname                <- paste0("fitted_coefficients_",continent)
@@ -629,8 +628,8 @@ if(0){
 
 ## ---- Graficas 1, A.1, A.6 y A.7 de Pagnottoni(2022) --- ##
 
-# Lectura de la base de datos EMDAT,  en excel, se dejaron los desastres entre el 8-feb-2001 y 31-dic-2019 (fechas usadas en el paper).
-emdat_completa     <- openxlsx::read.xlsx(paste0(Dir,"EMDAT  COMPLETA.xlsx"),sheet = "emdat data") #<<<--- base de datos 
+# Lectura de la base de datos <EMDAT>,  en excel, se dejaron los desastres entre el 8-feb-2001 y 31-dic-2019 (fechas usadas en el paper).
+emdat_completa     <- openxlsx::read.xlsx(paste0(Dir,"EMDAT_Mapamundi.xlsx"),sheet = "Mapamundi") #<<<--- base de datos 
 # Se transforma en <tibble> para poder manejar con las funciones de <dplyr> 
 emdat_tbl_completa <- tibble::as_tibble(emdat_completa) 
 # las columnas que nos interesan son <Country>, pais del desastre, <Continent>, continente del desastre, <Disaster.subgroup>, tipo de desastre
@@ -716,52 +715,70 @@ emdat_country <- emdat_final %>%
   dplyr::group_by(region) %>% 
   tally()
 
+emdat_country$decil <- ntile(emdat_country$n,n=10)
+
 # Se juntan las dos bases, <world> y <emdat_country> por pais, i.e. <region>
 merged_data <- inner_join(world, emdat_country) #<inner_join> es intereseccion y <outer_join> es union
-deciles     <- quantile(unique(merged_data$n), probs=seq(0, 1, by = 0.1))
-deciles2    <- quantile(emdat_country$n, probs=seq(0,1, by=0.1)) 
-## No estoy seguro de si ponerlo con valores unicos, ya que si no le quito los valores duplicados el mapa se ve muy diferente a aquel
-#  de Pagnottoni.
+merged_data$decil <- factor(merged_data$decil) ## Dejar claro que es variable discreta, no continua
 
-# La funcion cut clasifica cada elemento de <merged_data$n> segun el decil al cual corresponda
-merged_data$decile <- cut(merged_data$n, breaks=deciles, labels=FALSE,include.lowest=TRUE) # A cada <region> le asigan un numero (decil) entre 1 y 10
-merged_data$decile <- factor(merged_data$decile) ## Dejar claro que es variable discreta, no continua
-
-
-# Falta terminar los demas mapamundi
+# El siguiente codigo era para generar los deciles usando la funcion <cut>, pero fue reemplazado con <ntile> (la que se usa arriba)
 if(0){
-  # Para realizar el resto de mapamundis primero es necesario ordenar la columna <Disaster.subgroup> alfabeticamente
-  emdat_final_sorted <- emdat_final %>% arrange(Disaster.Subgroup)
-  
-  # El siguiente codigo generara una lista de objetos tipo dataframe. group_split divide el dataframe <emdat_final_sorted> en dataframes
-  # dependiendo del valor de la columna <Disaster.subgroup>, por lo que la longitud de la lista sera igual a los elementos unicos en 
-  # <Disaster.subgroup>. Cada dataframe de la lista contiene todos los desastres que pertenezcan a un valor de <Disaster.Subgroup>.
-  subgroup_splits <- emdat_final_sorted %>% 
-    group_split(Disaster.Subgroup)
-  # Por otro lado, como anteriormente organizamos <emdat_final> alfabeticamente, los nombres de la lista <subgroup_splits> corresponde
-  # a <Tipos.Desastres>, que tambien esta organizado alfabeticamente.
-  names(subgroup_splits) <- Tipos.Desastres
-  
-  # Por otro lado, por cada elemento de <subgroup_splits>, vamos a generar un dataframe que de cuenta del numero de desastres ocurridos por
-  # <region>. <results> es una lista que guarda dichos dataframes. Por tanto, cada elemento de results contiene un dataframe que indica 
-  # cuantos desastres de cierto tipo de desastre ocurrieron en cada pais.
-  results <- lapply(subgroup_splits, function(df) {
-    df %>%
-      group_by(region) %>% 
-      tally()
-  })
-  
-  # Para cada elemento de la lista <results> tenemos que juntarla con los datos de <world> para poder graficarla
-  
-  merged_data_disasters <- lapply(results, function(x) {
-    inner_join(world, x ,by = "region", all.x = TRUE)
-  })
-  
-  obj_names <- paste0("merged_data", names(merged_data_disasters))
-  list2env(setNames(merged_data_disasters, obj_names), envir = .GlobalEnv)
-  
-  deciles <- quantile(unique(merged_data$n), probs = seq(0, 1, by = 0.1), include.lowest = TRUE)  
+  #Generacion de deciles para el mapa
+  deciles     <- quantile(emdat_country$n, probs=seq(0,1, by=0.1))
+  # La funcion <cut> clasifica cada elemento de <merged_data$n> segun el decil al cual corresponda
+  merged_data$decile <- cut(merged_data$n, breaks=deciles, labels=FALSE,include.lowest=TRUE) # A cada <region> le asigan un numero (decil) entre 1 y 10
+  merged_data$decile <- factor(merged_data$decile) ## Dejar claro que es variable discreta, no continua
 }
+  
+# Para realizar el resto de mapamundis primero es necesario ordenar la columna <Disaster.subgroup> alfabeticamente
+emdat_final_sorted <- emdat_final %>% arrange(Disaster.Subgroup)
+
+# El siguiente codigo generara una lista de objetos tipo dataframe. <group_split> divide el dataframe <emdat_final_sorted> en dataframes
+# dependiendo del valor de la columna <Disaster.subgroup>, por lo que la longitud de la lista sera igual a los elementos unicos en 
+# <Disaster.subgroup>. Cada dataframe de la lista contiene todos los desastres que pertenezcan a un valor de <Disaster.Subgroup>.
+subgroup_splits <- emdat_final_sorted %>% 
+  group_split(Disaster.Subgroup)
+# Por otro lado, como anteriormente organizamos <emdat_final> alfabeticamente, los nombres de la lista <subgroup_splits> corresponde
+# a <Tipos.Desastres>, que tambien esta organizado alfabeticamente.
+names(subgroup_splits) <- Tipos.Desastres
+
+# Por otro lado, por cada elemento de <subgroup_splits>, vamos a generar un dataframe que de cuenta del numero de desastres ocurridos por
+# <region>. <results> es una lista que guarda dichos dataframes. Por tanto, cada elemento de <results> contiene un dataframe que indica 
+# cuantos desastres de cierto tipo de desastre ocurrieron en cada pais.
+results <- lapply(subgroup_splits, function(df) {
+  df %>%
+    group_by(region) %>% 
+    tally()
+})
+
+# El siguiente codigo era para generar los deciles usando la funcion <quantile> y <cut>, pero fue reemplazada por la funcion <ntile>, ya que no genera
+# problemas cuando los deciles tienen valores repetidos
+if(0){
+  # Para cada elemento de la lista <results> se generan los deciles. La funcion <tally> utilizada anteriormente genera la columna <n>.
+  results_deciles <- lapply(results, function(df) {
+    quantile(df$n, probs = seq(0, 1, by = 0.1))
+  })
+  
+  # Agregar una columna <decile> a cada elemento de la lista <results>, ya que son dataframes.
+  results_final<- lapply(1:length(results), function(i) {
+    mutate(results[[i]], decile = cut(n, breaks=results_deciles[[i]], labels=FALSE,include.lowest=TRUE)) %>% 
+      mutate(decile = factor(decile))
+  })
+}
+
+results_final <- lapply(1:length(results), function(i) {
+  mutate(results[[i]], 
+         decile = ntile(n, 10)) %>% 
+    mutate(decile = factor(decile))
+})
+
+# Colocarle nombres a la lista <results_final>
+names(results_final) <- names(results)
+
+# Cada elemento de la lista <results> se junta con los datos de <world> para poder graficarla
+merged_data_disasters <- lapply(results_final, function(x) {
+  inner_join(world, x ,by = "region", all.x = TRUE)
+})
 
 if(0){
 # Guardar datos --------------------------------------------------------------#

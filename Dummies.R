@@ -58,8 +58,6 @@ emdat_final <- emdat_final %>%
 emdat_final <- emdat_final %>% 
   mutate(End.Date = as.Date(paste(End.Year,End.Month,End.Day2,sep="-")))
 
-#write_xlsx(emdat_final, "C:/Users/jpber/OneDrive/Documents/EMDAT.xlsx")
-
 emdat_selected <- emdat_final %>% 
   dplyr::select(Country, Continent, na_start, Start.Date) %>% 
   distinct()
@@ -75,8 +73,6 @@ emdat_selected$Country <- iconv(emdat_selected$Country, to = "ASCII//TRANSLIT") 
 
 countries_base <- unique(emdat_selected$Country)
 countries_base <- sort(countries_base)
-
-
 
 wb <- xlsx::createWorkbook()
 
