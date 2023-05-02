@@ -1,3 +1,4 @@
+
 # Datos -------------------------------------------------------------------
 # if(0) porque se usaran los datos del codigo Replicacion_climate_change
 if(0){  
@@ -115,6 +116,14 @@ if(0){
 #  <No Homeless>: numero de personas cuya casa fue destruida
 #  <Total Affected>: total de afectados
 #  <Damages>: total de daños totales en miles de dolares ajustados al 2021
+
+# Para base de retornos se debe correr del codigo Replicacion_climate_change.R de la linea 1 a 165
+
+# Lectura de EMDAT completa. 
+if(1){
+  # Lectura de la base de datos <EMDAT>,  en excel, se dejaron los desastres entre el 8-feb-2001 y 31-dic-2019 (fechas usadas en el paper).
+  emdat_completa     <- openxlsx::read.xlsx(paste0(Dir,"EMDAT_Mapamundi.xlsx"),sheet = "Mapamundi") #<<<--- base de datos 
+}
 
 emdat_base <- emdat_completa %>% 
   dplyr::select('Disaster.Subgroup','Disaster.Type','Disaster.Subtype','Country','Start.Year','Start.Month','Start.Day','End.Year','End.Month',
