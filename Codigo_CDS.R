@@ -1,24 +1,4 @@
-if(Sys.info()["sysname"]=='Windows') Sys.setlocale("LC_TIME","English")
-
-rm(list = ls())
-if (Sys.info()["sysname"]=='Windows')  setwd('C:/Users/jpber/OneDrive/Documents/Codigo_compartido_Melo/Natural_disasters_CDS')
-#if (Sys.info()["sysname"]!='Windows')  setwd('/Users/lumelo/archivos/Climate-Change-and-Financial-Stability/Github/Climate-Change-and-Financial-Stability')
-
-cat("\014")
-
-# Se establece el directorio para los datos
-Dir <- paste0(getwd(),'/BasesCDS/') # Se supone que el subdirectorio <Bases> existe.
-
-
-# Librerias ---------------------------------------------------------------
-library(tidyverse)
-library(readxl)
-library(stringr)
-library(ggplot2)
-library(xts)
-library(stats)
-
-  # Datos -------------------------------------------------------------------
+# Datos -------------------------------------------------------------------
 # if(0) porque se usaran los datos del codigo Replicacion_climate_change
 if(0){  
   paises <- c('Austria','Belgium','Croatia','CzechRepublic','France','Germany','Greece','Ireland','Italy','Netherlands','Norway','Poland',
