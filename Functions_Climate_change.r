@@ -899,3 +899,69 @@ average_countries2 <- function(continent_coefficients, significance.level, patte
     labs(y = paste0("Average ARs | p-value < ",percent(niv.significancia)),x="Index",title = title.graph)
   return(plot_continent)
 }
+
+#---------------------------------- 18. matching  ------------------------------------#
+# La siguiente función es para hacer matching entre el pais y el nombre del indice. 
+#---------------------------------------------------------------------------------------#
+# ----Argumentos de entrada ----#
+#-- pais: el nombre de un pais
+# ----Argumentos de salida  ----#
+#-- index: el nombre del indice que le corresponde
+#---------------------------------------------------------------------------------------#
+matching <- function(pais){
+  if(pais=="Australia"){
+    index ="S.PASX200"
+  }else if(pais=="Belgium"){
+    index ="BEL20"
+  }else if(pais=="Brazil"){
+    index ="Bovespa"
+  }else if(pais=="Canada"){
+    index ="S.PTSXComposite"
+  }else if(pais=="Chile"){
+    index ="S.PCLXIPSA"
+  }else if(pais=="Denmark"){
+    index ="OMXCopenhagen20"
+  }else if(pais=="Finland"){
+    index ="OMXHelsinki25"
+  }else if(pais=="France"){
+    index ="CAC40"
+  }else if(pais=="Germany"){
+    index ="DAX"
+  }else if(pais=="HongKong"){
+    index ="HangSeng"
+  }else if(pais=="India"){
+    index ="Nifty50"
+  }else if(pais=="Indonesia"){
+    index ="JakartaStockExchange"
+  }else if(pais=="Mexico"){
+    index ="S.PBMVIPC"
+  }else if(pais=="Netherlands"){
+    index ="AEX"
+  }else if(pais=="Norway"){
+    index ="OSEBenchmark"
+  }else if(pais=="Poland"){
+    index ="WIG20"
+  }else if(pais=="Russia"){
+    index ="MOEXRussia"
+  }else if(pais=="SouthAfrica"){
+    index ="SouthAfricaTop40"
+  }else if(pais=="SouthKorea"){
+    index ="KOSPI"
+  }else if(pais=="Spain"){
+    index ="IBEX35"
+  }else if(pais=="Sweden"){
+    index ="OMXStocholm30"
+  }else if(pais=="Switzerland"){
+    index ="SMI"
+  }else if(pais=="Thailand"){
+    index ="SETIndex"
+  }else if(pais=="Turkey"){
+    index ="BIST100"
+  }else if(pais=="UnitedKingdom"){
+    index ="FTSE100"
+  }else if(pais=="USA"){
+    index =c("NASDAQComposite","Nasdaq100")
+  }
+  return(index)
+}
+#---------------------------------------------------------------------------------------#
