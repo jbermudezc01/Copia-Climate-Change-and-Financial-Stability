@@ -105,9 +105,8 @@ estimation_end       <- 1   #<<<--- No. dias antes del evento para finalizar la 
 # despues del desastre para ser considerado como el inicio del evento
 days_to_be_evaluated <- 5   #<<<--- No. dias despues del evento a ser evaluados
 
-all_events_list      <- list() # lista que contendra todos los xts + errores estandar
-
 ## Falta volverlo una funcion que tome como argumentos un dataframe de eventos y una base de retornos, mas los argumentos de arriba
+all_events_list      <- list() # lista que contendra todos los xts + errores estandar
 for(i in 1:nrow(eventos)){
   # Primero se encuentra a que dato le corresponde el dia del evento, y el dia final de la ventana de evento es el dia del evento
   # mas <max_abnormal_returns>

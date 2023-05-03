@@ -965,3 +965,69 @@ matching <- function(pais){
   return(index)
 }
 #---------------------------------------------------------------------------------------#
+
+#---------------------------------- 18. event_study  ------------------------------------#
+# Toma una serie de eventos y base de retornos y realiza la metodologia event study siguiendo
+# el market model
+#---------------------------------------------------------------------------------------#
+# ----Argumentos de entrada ----#
+#-- base_eventos : base de datos que contiene los eventos a analizar
+#-- col_
+# ----Argumentos de salida  ----#
+#-- index: el nombre del indice que le corresponde
+#---------------------------------------------------------------------------------------#
+# Falta terminar
+if(0){
+  all_events_list      <- list() # lista que contendra todos los xts + errores estandar
+  for(i in 1:nrow(base_eventos)){
+    # Primero se encuentra a que dato le corresponde el dia del evento, y el dia final de la ventana de evento es el dia del evento
+    # mas <max_abnormal_returns>
+    event_list <- list() # lista donde se guarda por cada evento un dataframe de retornos observados, predichos (predicted) y anormales;
+    # junto a error estandar del error en la estimacion
+    pais <- as.character(base_eventos[i,'Country'])
+    index_names <- matching(pais) # Nombre de la variable del <pais> con la que se calculan retornos anormales 
+    suppressWarnings({
+      # Loop que genera la posicion de desastre respecto al indice de <base_retornos>. Si la fecha del evento no esta en  el indice de <base_retornos>, 
+      # se revisara hasta <days_to_be_evaluated> dias despues del desastre para ser considerado como el inicio del evento
+      for(j in 0:days_to_be_evaluated){
+        if((base_eventos[i,'Start.Date']+j) %in% index(base_retornos[,index_names])){ 
+          # Generacion de la posicion del dia de desastre en el indice de fechas de <base_retornos>
+          # (o j dias despues del desastre, si el dia del desastre no esta en el indice de retornos)
+          event_start_index <- which(index(base_retornos[,index_names])==base_eventos[i,'Start.Date']+j)
+          break
+        }
+      }
+      # Generacion de la fecha del ultimo dia de la ventana de evento
+      event_end_index   <- index(base_retornos[,index_names])[event_start_index + max_abnormal_returns]
+    })
+    
+    #--- HERE WE GO ----#
+    # Se selecciona la ventana de estimacion en <base_retornos> para el <index_names> 
+    # y para el promedio movil, <mean_mov_xts>, que es una var.exogena del modelo
+    estimation_xts         <- base_retornos[,index_names][(event_start_index-estimation_start):(event_start_index-estimation_end),]
+    estimation_start_index <- index(estimation_xts)[1]
+    estimation_end_index   <- index(estimation_xts)[length(index(estimation_xts))]
+    mean_mov_xts <- mean_mov_average[index(mean_mov_average)>=estimation_start_index & index(mean_mov_average) <= estimation_end_index]
+    data <- cbind(estimation_xts,mean_mov_xts)
+    
+    # Regresion por OLS
+    for(k in seq_along(index_names)){
+      name = index_names[k]
+      model          <- lm(data[,name] ~ data$Mean_Returns_Moving_Averages)
+      alpha          <- model$coefficients[["(Intercept)"]] 
+      beta           <- model$coefficients[["data$Mean_Returns_Moving_Averages"]]
+      standard_error <- sd(residuals(model))
+      
+      observed       <- base_retornos[,name][index(base_retornos[,name])>=estimation_start_index & index(base_retornos[,name])<=event_end_index]
+      predicted      <- alpha + beta*(mean_mov_average[index(mean_mov_average)>=estimation_start_index & index(mean_mov_average)<=event_end_index]) 
+      abnormal       <- observed - predicted
+      df             <- merge(observed,predicted,abnormal)
+      colnames(df)   <- c('Observed','Predicted','Abnormal')
+      event_list[["Dataframe"]]       <- df 
+      event_list[["Standard_Error"]]  <- standard_error 
+      all_events_list[[paste(i,k,sep="_")]] <- event_list
+    }
+  }
+}
+#---------------------------------------------------------------------------------------#
+
