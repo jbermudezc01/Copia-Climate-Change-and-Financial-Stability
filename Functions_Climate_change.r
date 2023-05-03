@@ -950,7 +950,7 @@ matching <- function(pais){
   }else if(pais=="Spain"){
     index ="IBEX35"
   }else if(pais=="Sweden"){
-    index ="OMXStocholm30"
+    index ="OMXStockholm30"
   }else if(pais=="Switzerland"){
     index ="SMI"
   }else if(pais=="Thailand"){

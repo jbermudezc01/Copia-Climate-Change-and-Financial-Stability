@@ -1,6 +1,3 @@
-
-
-
 # La base de retornos, <base_retornos>, se carge al correr del codigo 
 # <Replicacion_climate_change.R> de la linea 1 a 165
 
@@ -20,9 +17,7 @@ if(1){
       Country == "Korea (the Republic of)" ~ "SouthKorea",
       TRUE ~ Country
     ))
-
-
-# Se seleccionan las columnas de interes
+ # Se seleccionan las columnas de interes
  if(0){
   #  <Disaster Subgroup>: uno de los cinco subgrupos de desastres: meteorologico, geofisico, hidrologico, climatologico, extraterrestrial
   #  <Disaster Type>: tipo de desastre
@@ -50,52 +45,56 @@ if(1){
 
  # Algunas de las fechas tienen NA en el dia, por lo cual se asume que es el primer dia del mes.
  # En estos casos, la variable dummy <na_start> es igual a 1, o.w. es 0.
- if(sum(is.na(emdat_base$`Start.Day`))!=0){
+ if(sum(is.na(emdat_base$Start.Day))!=0){
    warning("Hay dias faltantes en la base de datos! Se va a asumir que el dia de inicio del desastre es el primero del mes")
    emdat_base <- emdat_base %>%
-     mutate(na_start = ifelse(is.na(`Start.Day`),1,0))
+     mutate(na_start = ifelse(is.na(Start.Day),1,0))
    emdat_base <- emdat_base %>% 
-     mutate(`Start.Day`=replace_na(`Start.Day`,1)) # <replace_na> se utiliza para reemplazar los valores <NA> por <1>
+     mutate(Start.Day=replace_na(Start.Day,1)) # <replace_na> se utiliza para reemplazar los valores <NA> por <1>
  }
  # Generacion de la fecha completa del inicio de evento, <Start.Date>, 
  # a partir de <Start.Year>, <Start.Month> y <Start.Day>
  emdat_base <- emdat_base %>% 
-   unite(`Start.Date`, c(`Start.Year`, `Start.Month`, `Start.Day`), sep = "-",remove=FALSE) %>% 
-   mutate(`Start.Date` = as.Date(`Start.Date`))
+   unite(Start.Date, c(Start.Year, Start.Month, Start.Day), sep = "-",remove=FALSE) %>% 
+   mutate(Start.Date = as.Date(Start.Date))
 
- # Vector con los nombres de paises usados en la prueba Wilcoxon 
- paises.usados <- c("Australia","Belgium", "Brazil", "Canada", "Chile", "Denmark", "Finland",
+ # Vector con los nombres de paises usados en la prueba Wilcoxon
+ unico_pais <- NULL
+ if(is.null(unico_pais)){
+  paises.usados <- c("Australia","Belgium", "Brazil", "Canada", "Chile", "Denmark", "Finland",
                     "France", "Germany", "HongKong", "India", "Indonesia","Mexico","Netherlands","Norway","Poland","Russia",
                     "SouthAfrica","SouthKorea", "Spain", "Sweden","Switzerland","Thailand","Turkey", 
                     "UnitedKingdom","USA") #<<<--- Paises usados en Wilcoxon
+ }else{
+   paises.usados <- unico_pais
+ }
 
-# Se filtra la base solo por los paises de <paises.usados>
-emdat_base <- emdat_base %>% 
-  dplyr::filter(Country %in% paises.usados)
+ # Se filtra la base solo por los paises de <paises.usados>
+ emdat_base <- emdat_base %>% 
+   dplyr::filter(Country %in% paises.usados)
 
-# Dataframe eventos -------------------------------------------------------
+ # Dataframe eventos -------------------------------------------------------
 
-# Generacion de un dataframe solo con dos variables: <Country> y <`Start.Date`>
-eventos <- emdat_base %>% 
-  dplyr::select(Country,`Start.Date`)
+ # Generacion de un dataframe solo con dos variables: <Country> y <Start.Date>
+ eventos <- emdat_base %>% 
+   dplyr::select(Country,Start.Date)
 
-# Se eliminan los eventos que no cuentan con la ventana minima de estimacion
-estimation_start <- 150 #<<<--- No. de dias antes del evento para comenzar la estimacion
-# Fecha minima para que se pueda realizar la estimacion con <estimation_start> dias
-Fecha_minima_estimacion <- index(mean_mov_average)[estimation_start+1] 
-# Filtracion <eventos>. Solamente contener eventos despues de <Fecha_minima_estimacion>
-eventos <- eventos %>% 
-  dplyr::filter(Start.Date>=Fecha_minima_estimacion)
-# Se eliminan los eventos que no cuentan con la ventana minima de evento
-max_abnormal_returns <- 15  #<<<--- No. dias maximos despues del evento para calcular retorno anormal
-# Fecha minima para que se pueda realizar el calculo de retornos anormales para
-# <max_abnormal_returns> dias
-Fecha_minima_evento <- index(mean_mov_average)[length(index(mean_mov_average))-(max_abnormal_returns+1)]
-# Filtracion <eventos>. Solammente contener eventos anteriores a <Fecha_minima_evento>
-eventos <- eventos %>% 
-  dplyr::filter(Start.Date<=Fecha_minima_evento)
+ # Se eliminan los eventos que no cuentan con la ventana minima de estimacion
+ estimation_start <- 150 #<<<--- No. de dias antes del evento para comenzar la estimacion
+ # Fecha minima para que se pueda realizar la estimacion con <estimation_start> dias
+ Fecha_minima_estimacion <- index(mean_mov_average)[estimation_start+1] 
+ # Filtracion <eventos>. Solamente contener eventos despues de <Fecha_minima_estimacion>
+ eventos <- eventos %>% 
+   dplyr::filter(Start.Date>=Fecha_minima_estimacion)
+ # Se eliminan los eventos que no cuentan con la ventana minima de evento
+ max_abnormal_returns <- 15  #<<<--- No. dias maximos despues del evento para calcular retorno anormal
+ # Fecha minima para que se pueda realizar el calculo de retornos anormales para
+ # <max_abnormal_returns> dias
+ Fecha_minima_evento <- index(mean_mov_average)[length(index(mean_mov_average))-(max_abnormal_returns)]
+ # Filtracion <eventos>. Solammente contener eventos anteriores a <Fecha_minima_evento>
+ eventos <- eventos %>% 
+   dplyr::filter(Start.Date<=Fecha_minima_evento)
 }
-
 
 # Regresion estimation window ---------------------------------------------
 
@@ -108,17 +107,6 @@ days_to_be_evaluated <- 5   #<<<--- No. dias despues del evento a ser evaluados
 
 all_events_list      <- list() # lista que contendra todos los xts + errores estandar
 
-#Filtrado innecesario
-if(0){
- # Filtrado de la base de eventos para que solamente contenga un pais, si se deja NULL entonces se estan escogiendo
- # todos los paises
- pais_eventos <- NULL
- if(!is.null(pais_eventos)){
-   eventos <- eventos %>% 
-     dplyr::filter(Country == pais_eventos)
- }
-}
-
 ## Falta volverlo una funcion que tome como argumentos un dataframe de eventos y una base de retornos, mas los argumentos de arriba
 for(i in 1:nrow(eventos)){
   # Primero se encuentra a que dato le corresponde el dia del evento, y el dia final de la ventana de evento es el dia del evento
@@ -126,51 +114,54 @@ for(i in 1:nrow(eventos)){
   event_list <- list() # lista donde se guarda por cada evento un dataframe de retornos observados, predichos (predicted) y anormales;
                        # junto a error estandar del error en la estimacion
   pais <- as.character(eventos[i,'Country'])
-  index_name <- matching(pais) # Nombre de la variable del <pais> con la que se calculan retornos anormales 
+  index_names <- matching(pais) # Nombre de la variable del <pais> con la que se calculan retornos anormales 
   suppressWarnings({
     # Loop que genera la posicion de desastre respecto al indice de <base_retornos>. Si la fecha del evento no esta en  el indice de <base_retornos>, 
     # se revisara hasta <days_to_be_evaluated> dias despues del desastre para ser considerado como el inicio del evento
     for(j in 0:days_to_be_evaluated){
-      if((eventos[i,'Start.Date']+j) %in% index(base_retornos[,index_name])){ 
+      if((eventos[i,'Start.Date']+j) %in% index(base_retornos[,index_names])){ 
         # Generacion de la posicion del dia de desastre en el indice de fechas de <base_retornos>
         # (o j dias despues del desastre, si el dia del desastre no esta en el indice de retornos)
-        event_start_index <- which(index(base_retornos[,index_name])==eventos[i,'Start.Date']+j)
+        event_start_index <- which(index(base_retornos[,index_names])==eventos[i,'Start.Date']+j)
         break
       }
     }
     # Generacion de la fecha del ultimo dia de la ventana de evento
-    event_end_index   <- index(base_retornos[,index_name])[event_start_index + max_abnormal_returns]
+    event_end_index   <- index(base_retornos[,index_names])[event_start_index + max_abnormal_returns]
   })
   
   #--- HERE WE GO ----#
-  # Se selecciona la ventana de estimacion en <base_retornos> para el <index_name> 
+  # Se selecciona la ventana de estimacion en <base_retornos> para el <index_names> 
   # y para el promedio movil, <mean_mov_xts>, que es una var.exogena del modelo
-  estimation_xts         <- base_retornos[,index_name][(event_start_index-estimation_start):(event_start_index-estimation_end),]
+  estimation_xts         <- base_retornos[,index_names][(event_start_index-estimation_start):(event_start_index-estimation_end),]
   estimation_start_index <- index(estimation_xts)[1]
   estimation_end_index   <- index(estimation_xts)[length(index(estimation_xts))]
   mean_mov_xts <- mean_mov_average[index(mean_mov_average)>=estimation_start_index & index(mean_mov_average) <= estimation_end_index]
   data <- cbind(estimation_xts,mean_mov_xts)
   
   # Regresion por OLS
-  model          <- lm(data[,index_name] ~ data$Mean_Returns_Moving_Averages)
-  alpha          <- model$coefficients[["(Intercept)"]] 
-  beta           <- model$coefficients[["data$Mean_Returns_Moving_Averages"]]
-  standard_error <- sd(residuals(model))
-  
-  observed       <- base_retornos[,index_name][index(base_retornos[,index_name])>=estimation_start_index & index(base_retornos[,index_name])<=event_end_index]
-  predicted      <- alpha + beta*(mean_mov_average[index(mean_mov_average)>=estimation_start_index & index(mean_mov_average)<=event_end_index]) 
-  abnormal       <- observed - predicted
-  df             <- merge(observed,predicted,abnormal)
-  colnames(df)   <- c('Observed','Predicted','Abnormal')
-  event_list[["Dataframe"]]       <- df 
-  event_list[["Standard_Error"]]  <- standard_error 
-  all_events_list[[as.character(i)]] <- event_list
+  for(k in seq_along(index_names)){
+    name = index_names[k]
+    model          <- lm(data[,name] ~ data$Mean_Returns_Moving_Averages)
+    alpha          <- model$coefficients[["(Intercept)"]] 
+    beta           <- model$coefficients[["data$Mean_Returns_Moving_Averages"]]
+    standard_error <- sd(residuals(model))
+    
+    observed       <- base_retornos[,name][index(base_retornos[,name])>=estimation_start_index & index(base_retornos[,name])<=event_end_index]
+    predicted      <- alpha + beta*(mean_mov_average[index(mean_mov_average)>=estimation_start_index & index(mean_mov_average)<=event_end_index]) 
+    abnormal       <- observed - predicted
+    df             <- merge(observed,predicted,abnormal)
+    colnames(df)   <- c('Observed','Predicted','Abnormal')
+    event_list[["Dataframe"]]       <- df 
+    event_list[["Standard_Error"]]  <- standard_error 
+    all_events_list[[paste(i,k,sep="_")]] <- event_list
+  }
 }
 
 
 # Wilcoxon --------------------------------------------------------------
 
-length_car_window <- 1 #<<<--- cual es la ventana a la cual se quiere calcular el CAR (por ejemplo 5 significa [0,+5], donde 0 es el dia del evento)
+length_car_window <- 10 #<<<--- cual es la ventana a la cual se quiere calcular el CAR (por ejemplo 5 significa [0,+5], donde 0 es el dia del evento)
 # En cada dataframe de <all_events_list>, se tiene una columna <Abnormal>. A partir del elemento <estimation_start>+1 se tienen los retornos
 # anormales. El fin de la ventana de evento esta dada por <car_window>
 # El siguiente codigo esta con <if(1)> porque falta volverlo una funcion 
@@ -203,7 +194,7 @@ if(1){
   significance <- ""
   ## Revisa para cada nivel de significancia si el valor en statistics es lo suficientemente extremo para rechazar H_0
   # qsignrank da la funcion cuantil.
-  N <- nrow(eventos)
+  N <- length(all_events_list)
   significance[positive_rank_sum >= stats::qsignrank(1 - 0.1, n = N) | 
                  positive_rank_sum <= N * (N + 1)/2 - stats::qsignrank(1 - 0.1/2, 
                                                                        n = N)] <- "*"
@@ -214,4 +205,6 @@ if(1){
                  positive_rank_sum <= N * (N + 1)/2 - stats::qsignrank(1 - 0.01/2, 
                                                                        n = N)] <- "***"
   resultado <- data.frame("Wilcoxon_statistic" = positive_rank_sum,"Significancia" = significance)
+  # Comparacion con t_test
+  t.test(all_car)
 }
