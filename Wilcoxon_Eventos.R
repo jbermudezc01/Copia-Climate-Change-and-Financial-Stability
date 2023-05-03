@@ -1,4 +1,4 @@
-# La base de retornos, <base_retornos>, se carge al correr del codigo 
+# La base de retornos, <base_retornos>, se carga al correr del codigo 
 # <Replicacion_climate_change.R> de la linea 1 a 165
 
 # Lectura de y filtros de la base de eventos <emdat_completa>. 
@@ -96,9 +96,9 @@ if(1){
    dplyr::filter(Start.Date<=Fecha_minima_evento)
 }
 
-# Regresion estimation window ---------------------------------------------
+# -------------------------- Regresion estimation window ---------------------------------------------
 
-# Por cada evento se hace una regresion OLS de [-<estimation_start>,-1] dias para obtener alfa, beta 
+# Loop 110: Por cada evento se hace una regresion OLS con la muestra [-<estimation_start>,-<estimation_end>] dias antes del evento para estimar alfa, beta 
 
 estimation_end       <- 1   #<<<--- No. dias antes del evento para finalizar la estimacion
 # Si la fecha del evento no esta en <base_retornos>, se revisara hasta <days_to_be_evaluated> dias
@@ -113,7 +113,7 @@ for(i in 1:nrow(eventos)){
   event_list <- list() # lista donde se guarda por cada evento un dataframe de retornos observados, predichos (predicted) y anormales;
                        # junto a error estandar del error en la estimacion
   pais <- as.character(eventos[i,'Country'])
-  index_names <- matching(pais) # Nombre de la variable del <pais> con la que se calculan retornos anormales 
+  index_names <- matching(pais) # Nombre de la variable del <pais> con la que se calculan retornos anormales (ej: stock-index del pais)
   suppressWarnings({
     # Loop que genera la posicion de desastre respecto al indice de <base_retornos>. Si la fecha del evento no esta en  el indice de <base_retornos>, 
     # se revisara hasta <days_to_be_evaluated> dias despues del desastre para ser considerado como el inicio del evento
@@ -126,50 +126,50 @@ for(i in 1:nrow(eventos)){
       }
     }
     # Generacion de la fecha del ultimo dia de la ventana de evento
-    event_end_index   <- index(base_retornos[,index_names])[event_start_index + max_abnormal_returns]
+    event_end_date   <- index(base_retornos[,index_names])[event_start_index + max_abnormal_returns]
   })
   
-  #--- HERE WE GO ----#
-  # Se selecciona la ventana de estimacion en <base_retornos> para el <index_names> 
+  # Creacion  de la base de datos de la ventana de estimacion en <base_retornos> para el <index_names> 
   # y para el promedio movil, <mean_mov_xts>, que es una var.exogena del modelo
-  estimation_xts         <- base_retornos[,index_names][(event_start_index-estimation_start):(event_start_index-estimation_end),]
-  estimation_start_index <- index(estimation_xts)[1]
-  estimation_end_index   <- index(estimation_xts)[length(index(estimation_xts))]
-  mean_mov_xts <- mean_mov_average[index(mean_mov_average)>=estimation_start_index & index(mean_mov_average) <= estimation_end_index]
-  data <- cbind(estimation_xts,mean_mov_xts)
+  estimation_series     <- base_retornos[,index_names][(event_start_index-estimation_start):(event_start_index-estimation_end),] #Falta!!!
+  estimation_start_date <- index(estimation_series)[1] #Falta!!!
+  estimation_end_date   <- index(estimation_series)[length(index(estimation_series))] #Falta!!!
+  mean_mov_xts          <- mean_mov_average[index(mean_mov_average)>=estimation_start_date & index(mean_mov_average) <= estimation_end_date]
+  estimation_data       <- cbind(estimation_series, mean_mov_xts)
   
-  # Regresion por OLS
-  for(k in seq_along(index_names)){
-    name = index_names[k]
-    model          <- lm(data[,name] ~ data$Mean_Returns_Moving_Averages)
+  # Regresion OLS
+  # Loop para los casos en que haya mas de un indice por pais, se realiza regresion OLS para estimar alpha y beta
+  # Nota: En general solo hay un indice por pais, pero en USA hay dos.
+  for(name in index_names){
+    model          <- lm(estimation_data[,name] ~ estimation_data$Mean_Returns_Moving_Averages)
     alpha          <- model$coefficients[["(Intercept)"]] 
-    beta           <- model$coefficients[["data$Mean_Returns_Moving_Averages"]]
+    beta           <- model$coefficients[["estimation_data$Mean_Returns_Moving_Averages"]]
     standard_error <- sd(residuals(model))
     
-    observed       <- base_retornos[,name][index(base_retornos[,name])>=estimation_start_index & index(base_retornos[,name])<=event_end_index]
-    predicted      <- alpha + beta*(mean_mov_average[index(mean_mov_average)>=estimation_start_index & index(mean_mov_average)<=event_end_index]) 
+    observed       <- base_retornos[,name][index(base_retornos[,name])>=estimation_start_date & index(base_retornos[,name])<=event_end_date]
+    predicted      <- alpha + beta*(mean_mov_average[index(mean_mov_average)>=estimation_start_date & index(mean_mov_average)<=event_end_date]) 
     abnormal       <- observed - predicted
     df             <- merge(observed,predicted,abnormal)
     colnames(df)   <- c('Observed','Predicted','Abnormal')
     event_list[["Dataframe"]]       <- df 
     event_list[["Standard_Error"]]  <- standard_error 
-    all_events_list[[paste(i,k,sep="_")]] <- event_list
+    all_events_list[[paste(i,name,sep="_")]] <- event_list
   }
 }
 
 
 # Wilcoxon --------------------------------------------------------------
 
-length_car_window <- 10 #<<<--- cual es la ventana a la cual se quiere calcular el CAR (por ejemplo 5 significa [0,+5], donde 0 es el dia del evento)
-# En cada dataframe de <all_events_list>, se tiene una columna <Abnormal>. A partir del elemento <estimation_start>+1 se tienen los retornos
-# anormales. El fin de la ventana de evento esta dada por <car_window>
+length_car_window <- 10 #<<<--- Ventana para calcular el CAR (por ejemplo 5 significa [0,+5], donde 0 es el dia del evento)
+# Para el calculo del CAR se toma la serie <Abnormal> a partir de la obs <estimation_start> + 1 hasta <estimation_start>+1+<lenght_car_window>
 # El siguiente codigo esta con <if(1)> porque falta volverlo una funcion 
 if(1){
-  car_window_begin <- estimation_start + 1 
-  # Se crea un vector para guardar los CAR
+  # Se crea el vector <all_car> para guardar los CAR
+  # Nota: La longitud de este vector es igual al numero de eventos si solo hay un indice porpais.
+  #       Si hay mas de un indice por pais, la longitud de <all_car> aumenta consecuentemente
   all_car <- c()
   for(element in all_events_list){
-    car <- sum(element$Dataframe$Abnormal[car_window_begin:(car_window_begin+length_car_window)])
+    car     <- sum(element$Dataframe$Abnormal[(estimation_start+1) : (estimation_start+1+length_car_window)])
     all_car <- c(all_car,car)
   }
   # La media del vector es el CAAR
@@ -178,27 +178,27 @@ if(1){
   # Se genera un dataframe para poder realizar el ordenamiento de los car
   df_car <- data.frame("car"=all_car,"magnitude"=abs(all_car),"sign"=sign(all_car))
   df_car <- df_car %>% 
-    mutate(magnitude=ifelse(magnitude==0,NA,magnitude)) ## Se coloca NA si la magnitud es 0
+    mutate(magnitude=ifelse(magnitude==0,NA,magnitude)) ## Se coloca NA si la magnitud es 0, ya que no se deben considerar
   df_car <- df_car %>% 
     mutate(rank = rank(magnitude))
   
-  # Se suman los rangos de car positivos
+  # Suma de los rangos de car positivos: <positive_rank_sum>
   rank_sum <- df_car %>% 
     dplyr::group_by(sign) %>%
     dplyr::summarize(sum = sum(rank)) %>%
     dplyr::arrange(sum)
   positive_rank_sum <- rank_sum$sum[rank_sum$sign=="1"]
   
-  # Revisar significancia del estadistico
+  # Calculo de la significancia del estadistico de Wilcoxon
   significance <- ""
-  ## Revisa para cada nivel de significancia si el valor en statistics es lo suficientemente extremo para rechazar H_0
-  # qsignrank da la funcion cuantil.
+  ## Calculo para cada nivel de significancia si el valor en statistics es lo suficientemente extremo para rechazar H_0
+  # qsignrank da la funcion cuantil.  ARREGLAR !!!!
   N <- length(all_events_list)
   significance[positive_rank_sum >= stats::qsignrank(1 - 0.1, n = N) | 
-                 positive_rank_sum <= N * (N + 1)/2 - stats::qsignrank(1 - 0.1/2, 
+               positive_rank_sum <= N * (N + 1)/2 - stats::qsignrank(1 - 0.1/2, 
                                                                        n = N)] <- "*"
   significance[positive_rank_sum >= stats::qsignrank(1 - 0.05, n = N) | 
-                 positive_rank_sum <= N * (N + 1)/2 - stats::qsignrank(1 - 0.05/2, 
+               positive_rank_sum <= N * (N + 1)/2 - stats::qsignrank(1 - 0.05/2, 
                                                                        n = N)] <- "**"
   significance[positive_rank_sum >= stats::qsignrank(1 - 0.01, n = N) | 
                  positive_rank_sum <= N * (N + 1)/2 - stats::qsignrank(1 - 0.01/2, 
