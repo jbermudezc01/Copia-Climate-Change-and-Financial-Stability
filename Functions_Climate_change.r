@@ -809,7 +809,7 @@ car_countries2 <- function(continent_coefficients, significance.level, pattern.s
     theme_light() + 
     theme(plot.title = element_text(hjust = 0.5)) + 
     guides(fill = "none") +
-    labs(y = paste0("Average CAR | p-value < ",percent(niv.significancia)),x="Index",title = title.graph)
+    labs(y = paste0("Average CAR | p-value < ",percent(significance.level)),x="Index",title = title.graph)
   return(plot_continent)
 }
 
@@ -896,12 +896,12 @@ average_countries2 <- function(continent_coefficients, significance.level, patte
     theme_light() + 
     theme(plot.title = element_text(hjust = 0.5)) + 
     guides(fill = "none") +
-    labs(y = paste0("Average ARs | p-value < ",percent(niv.significancia)),x="Index",title = title.graph)
+    labs(y = paste0("Average ARs | p-value < ",percent(significance.level)),x="Index",title = title.graph)
   return(plot_continent)
 }
 
 #---------------------------------- 18. matching  ------------------------------------#
-# La siguiente función es para hacer matching entre el pais y el nombre del indice. 
+# Hacer matching entre el pais y el nombre del indice. 
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
 #-- pais: el nombre de un pais
@@ -961,73 +961,388 @@ matching <- function(pais){
     index ="FTSE100"
   }else if(pais=="USA"){
     index =c("NASDAQComposite","Nasdaq100")
+  }else{
+    index = NULL
   }
   return(index)
 }
 #---------------------------------------------------------------------------------------#
 
-#---------------------------------- 18. event_study  ------------------------------------#
-# Toma una serie de eventos y base de retornos y realiza la metodologia event study siguiendo
-# el market model
+#---------------------------------- 19. drop.events  ------------------------------------#
+# Filtrar una base de eventos para tener una ventana minima de estimacion y una ventana 
+# minima de evento al momento de estimar por OLS. 
 #---------------------------------------------------------------------------------------#
 # ----Argumentos de entrada ----#
-#-- base_eventos : base de datos que contiene los eventos a analizar
-#-- col_
+#-- data.events        : dataframe de eventos, que debe incluir alguna columna en formato fecha para funcionar
+#-- market.returns     : indice de mercado
+#-- estimation.start   : dias previos al evento para el inicio de la ventana de estimacion
+#-- max.ar             : dias maximos despues del evento para calcular retornos anormales
 # ----Argumentos de salida  ----#
-#-- index: el nombre del indice que le corresponde
+#-- data.droped.events : dataframe de eventos filtrados. Ya no estan los eventos que no cuentan con una ventana
+#--                       minima de estimacion ni con una ventana minima de evento
 #---------------------------------------------------------------------------------------#
-# Falta terminar
-if(0){
-  all_events_list      <- list() # lista que contendra todos los xts + errores estandar
-  for(i in 1:nrow(base_eventos)){
-    # Primero se encuentra a que dato le corresponde el dia del evento, y el dia final de la ventana de evento es el dia del evento
-    # mas <max_abnormal_returns>
-    event_list <- list() # lista donde se guarda por cada evento un dataframe de retornos observados, predichos (predicted) y anormales;
-    # junto a error estandar del error en la estimacion
-    pais <- as.character(base_eventos[i,'Country'])
-    index_names <- matching(pais) # Nombre de la variable del <pais> con la que se calculan retornos anormales 
-    suppressWarnings({
-      # Loop que genera la posicion de desastre respecto al indice de <base_retornos>. Si la fecha del evento no esta en  el indice de <base_retornos>, 
-      # se revisara hasta <days_to_be_evaluated> dias despues del desastre para ser considerado como el inicio del evento
-      for(j in 0:days_to_be_evaluated){
-        if((base_eventos[i,'Start.Date']+j) %in% index(base_retornos[,index_names])){ 
-          # Generacion de la posicion del dia de desastre en el indice de fechas de <base_retornos>
-          # (o j dias despues del desastre, si el dia del desastre no esta en el indice de retornos)
-          event_start_index <- which(index(base_retornos[,index_names])==base_eventos[i,'Start.Date']+j)
-          break
-        }
-      }
-      # Generacion de la fecha del ultimo dia de la ventana de evento
-      event_end_index   <- index(base_retornos[,index_names])[event_start_index + max_abnormal_returns]
-    })
-    
-    #--- HERE WE GO ----#
-    # Se selecciona la ventana de estimacion en <base_retornos> para el <index_names> 
-    # y para el promedio movil, <mean_mov_xts>, que es una var.exogena del modelo
-    estimation_xts         <- base_retornos[,index_names][(event_start_index-estimation_start):(event_start_index-estimation_end),]
-    estimation_start_index <- index(estimation_xts)[1]
-    estimation_end_index   <- index(estimation_xts)[length(index(estimation_xts))]
-    mean_mov_xts <- mean_mov_average[index(mean_mov_average)>=estimation_start_index & index(mean_mov_average) <= estimation_end_index]
-    data <- cbind(estimation_xts,mean_mov_xts)
-    
-    # Regresion por OLS
-    for(k in seq_along(index_names)){
-      name = index_names[k]
-      model          <- lm(data[,name] ~ data$Mean_Returns_Moving_Averages)
-      alpha          <- model$coefficients[["(Intercept)"]] 
-      beta           <- model$coefficients[["data$Mean_Returns_Moving_Averages"]]
-      standard_error <- sd(residuals(model))
-      
-      observed       <- base_retornos[,name][index(base_retornos[,name])>=estimation_start_index & index(base_retornos[,name])<=event_end_index]
-      predicted      <- alpha + beta*(mean_mov_average[index(mean_mov_average)>=estimation_start_index & index(mean_mov_average)<=event_end_index]) 
-      abnormal       <- observed - predicted
-      df             <- merge(observed,predicted,abnormal)
-      colnames(df)   <- c('Observed','Predicted','Abnormal')
-      event_list[["Dataframe"]]       <- df 
-      event_list[["Standard_Error"]]  <- standard_error 
-      all_events_list[[paste(i,k,sep="_")]] <- event_list
-    }
+
+drop.events <- function(data.events,market.returns,estimation.start,max.ar){
+  # Se detiene la funcion en caso de que ninguna columna de <data.events> sea de clase date
+  if(!any(sapply(data.events, inherits, "Date"))) {
+    stop("Al menos una de las columnas del dataframe debe tener clase Date")
   }
+  # Se detiene la funcion en caso de que ninguna columna de <data.events> sea de clase character
+  if(!any(sapply(data.events, inherits, "character"))) {
+    stop("Al menos una de las columnas del dataframe debe tener clase character")
+  }
+  # Nombre de la columna con clase <"Date"> se cambia a <Start.Date> para un uso correcto de la funcion
+  col_classes <- sapply(data.events, class)
+  names(data.events)[col_classes == "Date"] <- "Start.Date"
+  # Nombre de la columna con clase <"character"> se cambia a <Country> para un uso correcto de las demas funciones 
+  col_classes <- sapply(data.events, class)
+  names(data.events)[col_classes == "character"] <- "Country"
+  # Fecha minima para que la estimacion pueda empezar desde <estimation.start> dias previos al evento
+  Fecha_minima_estimacion <- index(market.returns)[estimation.start+1]
+  # Fecha minima para que se pueda realizar el calculo de retornos anormales para <max.ar>+1 dias
+  Fecha_minima_evento     <- index(market.returns)[length(index(market.returns))-(max.ar)]
+  # Filtracion <data.events>. Solamente contiene eventos entre <Fecha_minima_estimacion> y <Fecha_minima_evento>
+  data.events <- data.events %>% 
+    dplyr::filter(dplyr::between(Start.Date, Fecha_minima_estimacion, Fecha_minima_evento))
+  return(data.events)
 }
 #---------------------------------------------------------------------------------------#
 
+#------------------------------   19. estimation.event.study  --------------------------#
+# Realizar una estimacion por OLS siguiendo el modelo de mercado, obteniendo retornos anormales 
+# y error estandar de la estimacion.
+#---------------------------------------------------------------------------------------#
+# ----Argumentos de entrada ----#
+#-- data.events        : dataframe de eventos, que debe incluir alguna columna en formato fecha para funcionar
+#-- days.evaluated     : maximo numero de dias a evaluar en caso de que la fecha de un evento no este en el indice de las 
+#                        series a estimar
+#-- securities.returns : base de datos con variables independientes en la estimacion de modelo de mercado (Rit)
+#-- market.returns     : serie que corresponde al indice de mercado (Rmt)
+#-- max.ar             : dias maximos despues del evento para calcular retornos anormales
+#-- es.start           : dias previos al evento para comenzar la estimacion
+#-- es.end             : dias previos al evento para terminar la estimacion
+# ----Argumentos de salida  ----#
+#-- all.events.list    : lista que incluye para cada par evento-indice la siguiente informacion
+#--   <Dataframe>      : base de datos con retornos observados, estimados y anormales para la ventana 
+#--                      de estimacion y para la ventana de evento
+#--   <Standard_Error> : error estandar de la estimacion por OLS
+#---------------------------------------------------------------------------------------#
+
+estimation.event.study <- function(data.events, days.evaluated, securities.returns, market.returns, max.ar, es.start, es.end){
+  all_events_list      <- list() # lista que contendra todas las series de retornos + errores estandar
+  # Loop: Por cada evento se hace una regresion OLS con la muestra [-<es.start>,-<es.end>] dias antes del evento para estimar alfa, beta 
+  for(i in 1:nrow(data.events)){
+    # Primero se encuentra a que dato le corresponde el dia del evento, y el dia final de la ventana de evento es el dia del evento
+    # mas <max.ar>
+    event_list  <- list() # lista donde se guarda por cada evento un dataframe de retornos observados, estimados y anormales;
+    # junto a error estandar del error en la estimacion
+    pais        <- as.character(data.events[i,'Country']) # Establece el pais donde sucedio el evento
+    index_names <- matching(pais) # Nombre de la variable del <pais> con la que se calculan retornos anormales (ej: stock-index del pais)
+    # Detener la funcion si no se tiene indice para el pais especificado
+    if(is.null(index_names)) stop(paste0("No hay indice para el pais: ", pais))
+    suppressWarnings({
+      # Loop que genera la posicion de desastre respecto al indice de <securities.returns>. Si la fecha del evento no esta en el indice de 
+      # <securities_returns>,se revisara hasta <days.evaluated> dias despues del desastre para ser considerado como el inicio del evento
+      for(j in 0:days.evaluated){
+        if((data.events[i,'Start.Date']+j) %in% index(securities.returns[,index_names])){ 
+          # Generacion del dia del desastre (o j dias despues del desastre, si el dia del desastre no esta en el indice de 
+          # <securities.returns>)
+          event_start_date  <- data.events[i,'Start.Date']+j
+          # Generacion de la posicion del dia de desastre en el indice de fechas de <securities.returns>
+          # (o j dias despues del desastre, si el dia del desastre no esta en el indice de <securities.returns>)
+          event_start_index <- which(index(securities.returns[,index_names])==event_start_date)
+          break
+        }
+      }
+    })
+    
+    # Regresion por OLS del modelo de mercado
+    # Loop para los casos en que haya mas de un indice por pais, se realiza regresion OLS para estimar alpha y beta
+    # Nota: En general solo hay un indice por pais, pero en USA hay dos.
+    for(name in index_names){
+      # Creacion  de la base de datos de la ventana de estimacion en <securities.returns> para <name> 
+      # y para el indice de mercado, <market.returns>, que es una var.exogena del modelo
+      # <est.dependent.var> se refiere a la variable dependiente en la estimacion.
+      # <est.independent.var> se refiere a la variable independiente en la estimacion
+      # La posicion del primer dia de la ventana de estimacion respecto al indice de <securities.returns> o <market.returns>
+      # es (<event_start_index> - <es.start>) mientras que la posicion de ultimo dia de la ventana de estimacion es 
+      # (<event_start_index> - <es.end>)
+      est.dependent.var   <- securities.returns[,name][(event_start_index-es.start):(event_start_index-es.end),]
+      est.independent.var <- market.returns[(event_start_index-es.start):(event_start_index-es.end)]
+      
+      # Detener la funcion si los indices de <est.dependent.var> y de <est.independent.var> no son los mismos
+      if(!identical(index(est.dependent.var),index(est.independent.var))) stop("Las series tienen indices diferentes")
+      
+      # Usar <as.numeric> para evitar problemas con la estimacion <lm()>
+      # Estimar el modelo por OLS
+      model          <- lm(as.numeric(est.dependent.var) ~ as.numeric(est.independent.var))
+      # Calcular los parametros de interes
+      alpha          <- model$coefficients[["(Intercept)"]] 
+      beta           <- model$coefficients[["as.numeric(est.independent.var)"]]
+      standard_error <- sd(residuals(model))
+      
+      # Creacion series <observed>, <predicted> y <abnormal> solamente para la ventana de estimacion y la ventana de evento
+      # Se usa el indice de <est.dependent.var> para obtener las fechas pertenecientes a la ventana de estimacion.
+      # <window.event.dates> son las fechas que pertenecen a la ventana de evento
+      window_event_dates <- index(securities.returns[,name][(event_start_index):(event_start_index+max.ar)])
+      # Se selecciona de <securities.returns> solamente las observaciones que esten en la ventana de estimacion o la de evento
+      observed           <- securities.returns[,name][c(index(est.dependent.var),window_event_dates)]
+      # Se selecciona de <market.returns> solamente las observaciones que esten en la ventana de estimacion o la de evento
+      predicted          <- alpha + beta*(market.returns[index(observed)]) 
+      # Se restan los retornos estimados de los observados
+      abnormal           <- observed - predicted
+      # Se juntan las tres series en un solo dataframe
+      df             <- merge(observed,predicted,abnormal)
+      # Cambio de nombre de columnas
+      colnames(df)   <- c('Observed','Predicted','Abnormal')
+      # Agregar el dataframe a la lista <event_list>
+      event_list[["Dataframe"]]       <- df 
+      # Agregar el error estandar a la lista <event_list>
+      event_list[["Standard_Error"]]  <- standard_error
+      # Agregar la lista <event_list> a la lista <all_events_list>, por lo que seria una lista de listas
+      all_events_list[[paste(i,name,sep="_")]] <- event_list
+    }
+  } 
+  return(all_events_list)
+}
+
+#---------------------------------------------------------------------------------------#
+
+#------------------------------   20. wilcoxon.jp.test  ----- --------------------------#
+# Realizar una prueba de rank-signed Wilcoxon teniendo en cuenta una lista generada por la funcion
+# <estimation.event.study>
+#---------------------------------------------------------------------------------------#
+# ----Argumentos de entrada ----#
+#-- data.list        : lista generada por la funcion <estimation.event.study>, que incluye para 
+#--                    cada par evento-indice un dataframe con retornos anormales
+#-- es.window.length : tamaño ventana de estimacion
+#-- ev.window.length : tamaño ventana de evento
+# ----Argumentos de salida  ----#
+#-- result           : dataframe con el estadistico de Wilcoxon y su significancia (* para 10%, ** para 5% y *** para 1%)
+#---------------------------------------------------------------------------------------#
+
+wilcoxon.jp.test <- function(data.list,es.window.length,ev.window.length){
+  # Para el calculo del CAR se toma la serie <Abnormal> a partir de la obs <es.window.length> + 1 hasta 
+  # <es.window.length> + <ev.window.length>
+  # Se crea el vector <all_car> para guardar los CAR
+  # Nota: La longitud de este vector es igual al numero de eventos si solo hay un indice por pais.
+  #       Si hay mas de un indice por pais, la longitud de <all_car> aumenta consecuentemente
+  all_car <- c()
+  for(element in data.list){
+    car     <- sum(element$Dataframe$Abnormal[(es.window.length+1):(es.window.length+ev.window.length)])
+    all_car <- c(all_car,car)
+  }
+  
+  # Se genera un dataframe para poder realizar el ordenamiento de los car
+  df_car <- data.frame("car"=all_car,"magnitude"=abs(all_car),"sign"=sign(all_car))
+  df_car <- df_car %>% 
+    mutate(magnitude=ifelse(magnitude==0,NA,magnitude)) ## Se coloca NA si la magnitud es 0, ya que no se deben considerar
+  # Funcion <rank> para ordenar las magnitudes de los car
+  df_car <- df_car %>% 
+    mutate(rank = rank(magnitude))
+  
+  # Suma de los rangos de car positivos: <positive_rank_sum>
+  rank_sum <- df_car %>% 
+    dplyr::group_by(sign) %>%
+    dplyr::summarize(sum = sum(rank))
+  positive_rank_sum <- rank_sum$sum[rank_sum$sign=="1"]
+  
+  # Calculo de la significancia del estadistico de Wilcoxon
+  # La funcion para hallar los cuantiles de la distribucion del estadistico de Wilcoxon es <stats::qsignrank()>. 
+  # A partir de 1000 observaciones, la funcion no se comporta adecuadamente, pero debido a que es muestra grande, la distribucion
+  # converge a una normal con media N(N+1)/4 y varianza N(N+1)(2N+1)/24 por lo que usamos <stats::qnorm()>>
+  significance <- ""
+  ## Calculo para cada nivel de significancia si el valor de <positive_rank_sum> es lo suficientemente extremo para rechazar H_0
+  #  La prueba se hace a dos colas, por lo que la primera condicion para cada prueba de significancia compara <positive_rank_sum> con el 
+  #  valor critico de la cola derecha.
+  #  La segunda condicion es la comparacion de <positive_rank_sum> con el valor critico de la cola izquierda.
+  N <- length(data.list)
+  
+  # Uso de <qsignrank> o <qnorm> dependiendo del tamaño de la muestra
+  if(N<=1000){
+    # Si se evalua la significancia al 10%, con un test a dos colas, debemos buscar los percentiles 5 y 95, y comparar con estadistico
+    significance[positive_rank_sum >= stats::qsignrank(1 - 0.1/2,n=N)|
+                   positive_rank_sum <= stats::qsignrank(0.1/2, n=N)] <- "*"
+    # Para evaluar al 5%:
+    significance[positive_rank_sum >= stats::qsignrank(1 - 0.05/2, n=N)|
+                   positive_rank_sum <= stats::qsignrank(0.05/2, n=N)] <- "**"
+    # Al 1%:
+    significance[positive_rank_sum >= stats::qsignrank(1 - 0.01/2, n=N)|
+                   positive_rank_sum <= stats::qsignrank(0.01/2, n=N)] <- "***"
+    resultado <- data.frame("Wilcoxon_statistic" = positive_rank_sum,"Significancia" = significance)
+  }else{
+    mu = N*(N+1)/4
+    sigma = sqrt(N*(N+1)*(2*N+1)/24)
+    # Si se evalua la significancia al 10%, con un test a dos colas, debemos buscar los percentiles 5 y 95, y comparar con estadistico
+    significance[positive_rank_sum >= stats::qnorm(1 - 0.1/2,mean = mu,sd = sigma)|
+                   positive_rank_sum <= stats::qnorm(0.1/2, mean = mu,sd = sigma)] <- "*"
+    # Para evaluar al 5%:
+    significance[positive_rank_sum >= stats::qnorm(1 - 0.05/2, mean = mu,sd = sigma)|
+                   positive_rank_sum <= stats::qnorm(0.05/2, mean = mu,sd = sigma)] <- "**"
+    # Al 1%:
+    significance[positive_rank_sum >= stats::qnorm(1 - 0.01/2, mean = mu,sd = sigma)|
+                   positive_rank_sum <= stats::qnorm(0.01/2, mean = mu,sd = sigma)] <- "***"
+    resultado <- data.frame("Wilcoxon_statistic" = positive_rank_sum,"Significancia" = significance,"P-value"=p_value)
+  }
+  # Por ultimo, usando la funcion <wilcox.test> obtenemos el pvalor
+  p_value <- wilcox.test(all_car)$p.value
+  resultado <- cbind(resultado, "p_value" = p_value)
+  return(resultado)
+}
+
+#---------------------------------------------------------------------------------------#
+
+#------------------------------   21. bootstrap_CT  ----- --------------------------#
+# Realizar una prueba usando bootstrap siguiendo el procedimiento de Corrado & Truong (2008)
+# El estadistico usado es el de Patell
+#---------------------------------------------------------------------------------------#
+# ----Argumentos de entrada ----#
+#-- data.list        : lista generada por la funcion <estimation.event.study>, que incluye para 
+#--                    cada par evento-indice un dataframe con retornos anormales
+#-- market.returns   : serie que corresponde al indice de mercado (Rmt)
+#-- es.window.length : tamaño ventana de estimacion
+#-- ev.window.length : tamaño ventana de evento
+#-- no.simul         : numero de simulaciones para el bootstrap
+# ----Argumentos de salida  ----#
+#-- result           : dataframe con el estadistico de Patell y su significancia (* para 10%, ** para 5% y *** para 1%)
+#---------------------------------------------------------------------------------------#
+
+bootstrap_CT <- function(data.list,market.returns,es.window.length,ev.window.length,no.simul){ 
+ standardized_cars <- c()
+  for(element in data.list){
+    # Calculo de las fechas de ventana de estimacion y de evento para el evento relacionado con <element>
+    # Como el objeto <data.list> viene de la funcion <estimation.event.study>, tiene el objeto $Dataframe$Abnormal
+    # Aparte, en <element$Dataframe$Abnormal> tenemos observaciones solamente para la ventana de estimacion y la ventana de evento
+    # por lo cual, los indices de la ventana de estimacion son (1:<es.window.length>) y los de ventana evento son
+    # (<es.window.length>+1):(<es.window.length>+<ev.window.length>)
+    estimation_dates <- index(element$Dataframe$Abnormal)[1:es.window.length]
+    event_dates      <- index(element$Dataframe$Abnormal)[(es.window.length+1):(es.window.length+ev.window.length)]
+    
+    # Calculo promedio retornos anormales a lo largo de la ventana de evento
+    averaged_car <- (1/ev.window.length)*sum(element$Dataframe$Abnormal[event_dates])
+    # El error estandar para C&T(2008) incluye el promedio del retorno de mercado durante la ventana de estimacion y la ventana de evento
+    # De la serie de retorno de mercado <market.returns> escogemos aquellas obs. que estan dentro de la ventana de estimacion y ventana de evento
+    market_estimation <- market.returns[estimation_dates]
+    market_event      <- market.returns[event_dates]
+    # Error estandar siguiendo C&T (2008)
+    prediction_error  <- (element$Standard_Error/sqrt(ev.window.length))*(sqrt((1) + (ev.window.length/es.window.length) + 
+                         (((ev.window.length*((mean(market_event)-mean(market_estimation))^2))/(sum((market_estimation-mean(market_estimation))^2))))))
+    
+    # Generar el car promedio estandarizado al dividir entre el error estandar estimado
+    standardized_car  <- averaged_car/prediction_error
+    standardized_cars <- c(standardized_cars, standardized_car)
+  }
+  
+  # Estadistico de Patell que esta en C&T(2008), <Tp>
+  N  <- length(data.list)
+  Tp <- (sqrt(ev.window.length)/sqrt(N))*sum(standardized_cars)
+  
+  # Muestreo aleatorio con reemplazo sobre <standardized_cars> y calculo de estadistico
+  
+  boot_n <- no.simul  #<<<--- Numero de iteraciones para calcular el estadistico 
+  boot_statistics <- c() # Vector para guardar los estadisticos calculados por bootstrap
+  for(i in 1:boot_n){
+    # Tomar muestra de <N> valores con reemplazo de los car estandarizados
+    sample_standardized <- sample(standardized_cars,N, replace= TRUE)
+    # <boot_Tp> hace referencia al estadistico de la muestra <sample_standardized>
+    boot_Tp             <- (sqrt(ev.window.length)/sqrt(N))*sum(sample_standardized)
+    boot_statistics     <- c(boot_statistics, boot_Tp)
+  }
+  
+  # Percentil de <Tp> en la poblacion de estadisticos <boot_Tp>
+  
+  # Hallar los valores criticos de la distribucion usando <quantile> para significancia 10%
+  significancia <- ""
+  # Comprobar significancia al 10% con dos colas. La primera condicion es verificar si <Tp> es menor que el valor critico de
+  # la distribucion hallada por bootstrap. La segunda condicion es <Tp> mayor que el valor critico de la distribucion bootstrap.
+  significancia[Tp <= quantile(boot_statistics, 0.1/2) | Tp >= quantile(boot_statistics, 1- 0.1/2)] <- "*"
+  # Significancia al 5%
+  significancia[Tp <= quantile(boot_statistics, 0.05/2) | Tp >= quantile(boot_statistics, 1- 0.05/2)] <- "**"
+  # Significancia al 1%
+  significancia[Tp <= quantile(boot_statistics, 0.01/2) | Tp >= quantile(boot_statistics, 1- 0.01/2)] <- "**"
+  # Dataframe que reune el estadistico junto a la significancia
+  resultado_boot <- data.frame("Estadistico Patell" = Tp, "Significancia"= significancia)
+  return(resultado_boot)
+}
+
+#---------------------------------------------------------------------------------------#
+
+#------------------------------   21. Corrado_Zivney   ----- --------------------------#
+# Realizar el test no parametrico de Corrado y Zivney (1992) siguiendo la formulacion de
+# Pynnonen (2022) para CAAR
+#---------------------------------------------------------------------------------------#
+# ----Argumentos de entrada ----#
+#-- data.list        : lista generada por la funcion <estimation.event.study>, que incluye para 
+#--                    cada par evento-indice un dataframe con retornos anormales
+#-- es.window.length : tamaño ventana de estimacion
+#-- ev.window.length : tamaño ventana de evento
+#-- no.simul         : numero de simulaciones para el bootstrap
+# ----Argumentos de salida  ----#
+#-- result           : dataframe con el estadistico de Patell y su significancia (* para 10%, ** para 5% y *** para 1%)
+#---------------------------------------------------------------------------------------#
+
+corrado_zivney <- function(data.list,es.window.length,ev.window.length){
+  # Establecer variables para guardar los rangos de retornos anormales
+  full_rank  <- NULL
+  event_rank <- NULL
+  for(element in data.list){
+    # Generar el ranking de los retornos anormales para toda los retornos anormales de la ventana de estimacion y evento
+    # Acceder a los datos del objeto zoo con la funcion <coredata>. Ranking sin importar el signo
+    element_full_rank  <- rank(zoo::coredata(element$Dataframe$Abnormal[1:(es.window.length+ev.window.length)]), 
+                               na.last="keep", ties.method = "average")
+    
+    # Guardar el ranking exclusivamente para los retornos anormales de la ventana de evento 
+    # (<es.window.length> + 1 a <es.window.length> + <ev.window.length>)
+    element_event_rank <- element_full_rank[(es.window.length+1):(es.window.length+ev.window.length)] 
+    
+    # Generar matrices de rankings de los retornos anormales para todos los objetos en <data.list>
+    if(is.null(full_rank)){
+      full_rank <- element_full_rank
+    }else{
+      full_rank <- cbind(full_rank, element_full_rank)
+    }
+    if(is.null(event_rank)){
+      event_rank <- element_event_rank
+    }else{
+      event_rank <- cbind(event_rank,element_event_rank)
+    }
+  }
+  
+  # Para cada columna de full_rank tenemos que restarle el valor esperado de K_{it}, siguiendo la ecuacion 44 de Pynnonen (2022), teniendo en cuenta que 
+  # E[K_{it}] = (T_i'+1)/2 de acuerdo a Campbell y Wasley (1993), donde T_1' es el numero de retornos para la firma i en toda la muestra 
+  full_rank_reduced <- apply(full_rank, 2, function(x) x - ((nrow(full_rank) + 1) / 2))
+  
+  # Generar k promedio, siguiendo la ecuacion 44 de Pynnonen (2022)
+  neventos <- ncol(full_rank_reduced)
+  average_rank <- apply(full_rank_reduced, 1, function(x) sum(x, na.rm = TRUE)/neventos)
+  
+  # Rangos promedio para la ventana de evento para usar la ecuacion 43 de Pynnonen (2022)
+  average_event_rank <- average_rank[(es.window.length+1):(es.window.length+ev.window.length)]
+  
+  # El numerador del estadistico z_{cw} es entonces
+  num_stat <- sum(average_event_rank)
+  
+  # Desviacion estandar de la ecuacion 45 de Pynnonen (2022). 
+  sk <- sqrt((1/(es.window.length+ev.window.length))*sum(average_rank^2))
+  
+  # Denominador del estadistico z_{cw}
+  den_stat <- sk*sqrt(ev.window.length)
+  
+  # El estadistico es
+  stat <- num_stat/den_stat
+  
+  # Comparar con los valores criticos al 10%, 5% y 1% de normal estandar
+  
+  significancia <- ""
+  significancia[stat <= qnorm(0.1/2) | stat >= qnorm(1- 0.1/2)] <- "*"
+  # Significancia al 5%
+  significancia[stat <= qnorm(0.05/2) | stat >= qnorm(1- 0.05/2)] <- "**"
+  # Significancia al 1%
+  significancia[stat <= qnorm(0.01/2) | stat >= qnorm(1- 0.01/2)] <- "**"
+  
+  result <- cbind(round(stat,4),significancia)
+  colnames(result) <- c("Statistic","Significance")
+  return(result)
+}
+
+#---------------------------------------------------------------------------------------#
