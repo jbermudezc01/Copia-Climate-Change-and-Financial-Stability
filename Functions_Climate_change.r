@@ -1182,7 +1182,7 @@ wilcoxon.jp.test <- function(data.list,es.window.length,ev.window.length){
     # Al 1%:
     significance[positive_rank_sum >= stats::qnorm(1 - 0.01/2, mean = mu,sd = sigma)|
                    positive_rank_sum <= stats::qnorm(0.01/2, mean = mu,sd = sigma)] <- "***"
-    resultado <- data.frame("Wilcoxon_statistic" = positive_rank_sum,"Significancia" = significance,"P-value"=p_value)
+    resultado <- data.frame("Wilcoxon_statistic" = positive_rank_sum,"Significancia" = significance)
   }
   # Por ultimo, usando la funcion <wilcox.test> obtenemos el pvalor
   p_value <- wilcox.test(all_car)$p.value
