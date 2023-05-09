@@ -975,11 +975,11 @@ matching <- function(pais){
 # ----Argumentos de entrada ----#
 #-- data.events        : dataframe de eventos, que debe incluir alguna columna en formato fecha para funcionar
 #-- market.returns     : indice de mercado
-#-- estimation.start   : dias previos al evento para el inicio de la ventana de estimacion
-#-- max.ar             : dias maximos despues del evento para calcular retornos anormales
+#-- estimation.start   : numero de dias previos al evento para el inicio de la ventana de estimacion
+#-- max.ar             : numero de dias maximos despues del evento para calcular retornos anormales
 # ----Argumentos de salida  ----#
-#-- data.droped.events : dataframe de eventos filtrados. Ya no estan los eventos que no cuentan con una ventana
-#--                       minima de estimacion ni con una ventana minima de evento
+#-- data.droped.events : dataframe de eventos filtrados. En este df ya no estan los eventos que no cuentan con una 
+#                        ventana minima de estimacion ni con una ventana minima de evento
 #---------------------------------------------------------------------------------------#
 
 drop.events <- function(data.events,market.returns,estimation.start,max.ar){
@@ -1016,19 +1016,19 @@ drop.events <- function(data.events,market.returns,estimation.start,max.ar){
 #-- data.events        : dataframe de eventos, que debe incluir alguna columna en formato fecha para funcionar
 #-- days.evaluated     : maximo numero de dias a evaluar en caso de que la fecha de un evento no este en el indice de las 
 #                        series a estimar
-#-- securities.returns : base de datos con variables independientes en la estimacion de modelo de mercado (Rit)
-#-- market.returns     : serie que corresponde al indice de mercado (Rmt)
-#-- max.ar             : dias maximos despues del evento para calcular retornos anormales
-#-- es.start           : dias previos al evento para comenzar la estimacion
-#-- es.end             : dias previos al evento para terminar la estimacion
+#-- asset.returns      : base de datos con variables independientes en la estimacion de modelo de mercado (R_it)
+#-- market.returns     : serie que corresponde al indice de mercado (R_mt)
+#-- max.ar             : numero de dias maximos despues del evento para calcular retornos anormales
+#-- es.start           : numero de dias previos al evento para comenzar la estimacion
+#-- es.end             : numero de dias previos al evento para terminar la estimacion
 # ----Argumentos de salida  ----#
-#-- all.events.list    : lista que incluye para cada par evento-indice la siguiente informacion
+#-- all.events.list    : lista que incluye para cada par evento-indice la siguiente informacion:
 #--   <Dataframe>      : base de datos con retornos observados, estimados y anormales para la ventana 
-#--                      de estimacion y para la ventana de evento
-#--   <Standard_Error> : error estandar de la estimacion por OLS
+#--                      de estimacion y para la ventana de evaluacion del evento
+#--   <Standard_Error> : error estandar de los residuales de la estimacion por OLS
 #---------------------------------------------------------------------------------------#
 
-estimation.event.study <- function(data.events, days.evaluated, securities.returns, market.returns, max.ar, es.start, es.end){
+estimation.event.study <- function(data.events, days.evaluated, asset.returns, market.returns, max.ar, es.start, es.end){
   all_events_list      <- list() # lista que contendra todas las series de retornos + errores estandar
   # Loop: Por cada evento se hace una regresion OLS con la muestra [-<es.start>,-<es.end>] dias antes del evento para estimar alfa, beta 
   for(i in 1:nrow(data.events)){
@@ -1041,16 +1041,16 @@ estimation.event.study <- function(data.events, days.evaluated, securities.retur
     # Detener la funcion si no se tiene indice para el pais especificado
     if(is.null(index_names)) stop(paste0("No hay indice para el pais: ", pais))
     suppressWarnings({
-      # Loop que genera la posicion de desastre respecto al indice de <securities.returns>. Si la fecha del evento no esta en el indice de 
-      # <securities_returns>,se revisara hasta <days.evaluated> dias despues del desastre para ser considerado como el inicio del evento
+      # Loop que genera la posicion de desastre respecto al indice de <asset.returns>. Si la fecha del evento no esta en el indice de 
+      # <asset.returns>,se revisara hasta <days.evaluated> dias despues del desastre para ser considerado como el inicio del evento
       for(j in 0:days.evaluated){
-        if((data.events[i,'Start.Date']+j) %in% index(securities.returns[,index_names])){ 
+        if((data.events[i,'Start.Date']+j) %in% index(asset.returns[,index_names])){ 
           # Generacion del dia del desastre (o j dias despues del desastre, si el dia del desastre no esta en el indice de 
-          # <securities.returns>)
+          # <asset.returns>)
           event_start_date  <- data.events[i,'Start.Date']+j
-          # Generacion de la posicion del dia de desastre en el indice de fechas de <securities.returns>
-          # (o j dias despues del desastre, si el dia del desastre no esta en el indice de <securities.returns>)
-          event_start_index <- which(index(securities.returns[,index_names])==event_start_date)
+          # Generacion de la posicion del dia de desastre en el indice de fechas de <asset.returns>
+          # (o j dias despues del desastre, si el dia del desastre no esta en el indice de <asset.returns>)
+          event_start_index <- which(index(asset.returns[,index_names])==event_start_date)
           break
         }
       }
@@ -1060,18 +1060,18 @@ estimation.event.study <- function(data.events, days.evaluated, securities.retur
     # Loop para los casos en que haya mas de un indice por pais, se realiza regresion OLS para estimar alpha y beta
     # Nota: En general solo hay un indice por pais, pero en USA hay dos.
     for(name in index_names){
-      # Creacion  de la base de datos de la ventana de estimacion en <securities.returns> para <name> 
+      # Creacion  de la base de datos de la ventana de estimacion en <asset.returns> para <name> 
       # y para el indice de mercado, <market.returns>, que es una var.exogena del modelo
       # <est.dependent.var> se refiere a la variable dependiente en la estimacion.
       # <est.independent.var> se refiere a la variable independiente en la estimacion
-      # La posicion del primer dia de la ventana de estimacion respecto al indice de <securities.returns> o <market.returns>
+      # La posicion del primer dia de la ventana de estimacion respecto al indice de <asset.returns> o <market.returns>
       # es (<event_start_index> - <es.start>) mientras que la posicion de ultimo dia de la ventana de estimacion es 
       # (<event_start_index> - <es.end>)
-      est.dependent.var   <- securities.returns[,name][(event_start_index-es.start):(event_start_index-es.end),]
+      est.dependent.var   <- asset.returns[,name][(event_start_index-es.start):(event_start_index-es.end),]
       est.independent.var <- market.returns[(event_start_index-es.start):(event_start_index-es.end)]
       
-      # Detener la funcion si los indices de <est.dependent.var> y de <est.independent.var> no son los mismos
-      if(!identical(index(est.dependent.var),index(est.independent.var))) stop("Las series tienen indices diferentes")
+      # Detener la funcion si los indices de fechas de <est.dependent.var> y de <est.independent.var> no son los mismos
+      if(!identical(index(est.dependent.var),index(est.independent.var))) stop("Las series tienen indices de fechas diferentes")
       
       # Usar <as.numeric> para evitar problemas con la estimacion <lm()>
       # Estimar el modelo por OLS
@@ -1084,9 +1084,9 @@ estimation.event.study <- function(data.events, days.evaluated, securities.retur
       # Creacion series <observed>, <predicted> y <abnormal> solamente para la ventana de estimacion y la ventana de evento
       # Se usa el indice de <est.dependent.var> para obtener las fechas pertenecientes a la ventana de estimacion.
       # <window.event.dates> son las fechas que pertenecen a la ventana de evento
-      window_event_dates <- index(securities.returns[,name][(event_start_index):(event_start_index+max.ar)])
-      # Se selecciona de <securities.returns> solamente las observaciones que esten en la ventana de estimacion o la de evento
-      observed           <- securities.returns[,name][c(index(est.dependent.var),window_event_dates)]
+      window_event_dates <- index(asset.returns[,name][(event_start_index):(event_start_index+max.ar)])
+      # Se selecciona de <asset.returns> solamente las observaciones que esten en la ventana de estimacion o la de evento
+      observed           <- asset.returns[,name][c(index(est.dependent.var),window_event_dates)]
       # Se selecciona de <market.returns> solamente las observaciones que esten en la ventana de estimacion o la de evento
       predicted          <- alpha + beta*(market.returns[index(observed)]) 
       # Se restan los retornos estimados de los observados

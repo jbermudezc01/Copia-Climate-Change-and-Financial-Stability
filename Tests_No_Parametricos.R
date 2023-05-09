@@ -119,7 +119,7 @@ eventos <- drop.events(data.events = eventos,market.returns = mean_mov_average,e
 # <estimation.event.study> realiza la estimacion por OLS para cada evento en <data.events>. Retorna una lista para cada evento que incluye:
 #     Dataframe      : retornos observados, estimados y anormales para la ventana de estimacion y ventana de evento. 
 #     Standard_error : error estandar de los errores de la estimacion por OLS
-# <all_events_list> sera la base para las pruebas de Wilcoxon y bootstrap
+# El objeto de salida de esta funcion sera la base para las pruebas de Wilcoxon y bootstrap
 
 all_events_list <- estimation.event.study(data.events = eventos,days.evaluated = days_to_be_evaluated,securities.returns = base_retornos,
                                           market.returns = mean_mov_average,max.ar = max_abnormal_returns,es.start = estimation_start,
@@ -127,9 +127,10 @@ all_events_list <- estimation.event.study(data.events = eventos,days.evaluated =
 
 # Wilcoxon --------------------------------------------------------------
 
-# Usamos la funcion <wilcoxon.jp.test> para realizar la prueba de Wilcoxon. Obtenemos el estadistico junto a su significancia
-# <Significancia> = * indica que el estadistico es significativo al 10%, ** al 5% y *** al 1%.
-# <Significancia> =   indica que el estadistico no es significativo a ningun nivel convencional
+# Usamos la funcion <wilcoxon.jp.test> para realizar la prueba de Wilcoxon asociada a los <CAR> 
+# de los eventos. Obtenemos el estadistico junto a su significancia
+# <Significancia> = "*" indica que el estadistico es significativo al 10%, "**" al 5% y "***" al 1%.
+# <Significancia> = " "  indica que el estadistico no es significativo a ningun nivel convencional
 # Aparte, se usa la funcion <stats::wilcox.test> para obtener el p-valor
 # La prueba que realiza wilcoxon.jp.test es a dos colas
 wilcoxon.resultado <- wilcoxon.jp.test(data.list = all_events_list,es.window.length = length_estimation_window,
