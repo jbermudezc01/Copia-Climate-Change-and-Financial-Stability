@@ -684,7 +684,7 @@ if(0){
     ## Ahora para poder promediar los retornos anormales es necesario poder extraer el pais del indice y el step, usando la funcion
     ## str_extract, que extrae el primer valor identico entre dos strings. Esto permite extraer el indice, que en cada fila aparece 
     ## de primer lugar
-    string_start <- stringr::str_extract(row.names(dataframe_modelo), pattern.indexes) # collapse = "|" indica que puede ser 
+    string_start <- stringr::str_extract(row.names(dataframe_modelo), pattern.indexes)  
     # cualquier valor de countries
     string_end   <- stringr::str_extract(row.names(dataframe_modelo), pattern.step)  #En caso de querer revisar coeficientes por step
     
@@ -773,7 +773,7 @@ car_countries2 <- function(continent_coefficients, significance.level, pattern.s
   ## Ahora para poder promediar los retornos anormales es necesario poder extraer el pais del indice y el step, usando la funcion
   ## str_extract, que extrae el primer valor identico entre dos strings. Esto permite extraer el indice, que en cada fila aparece 
   ## de primer lugar
-  string_start <- stringr::str_extract(row.names(dataframe_modelo), pattern.indexes) # collapse = "|" indica que puede ser 
+  string_start <- stringr::str_extract(row.names(dataframe_modelo), pattern.indexes) 
   # cualquier valor de countries
   string_end   <- stringr::str_extract(row.names(dataframe_modelo), pattern.step)  #En caso de querer revisar coeficientes por step
   
@@ -804,7 +804,7 @@ car_countries2 <- function(continent_coefficients, significance.level, pattern.s
   plot_continent <- ggplot(data = promedio_car_all, aes(y = mean_CAR, x = string_start, fill = mean_CAR < 0)) +
     geom_col() +
     scale_fill_manual(values = c(color, color)) +
-    coord_flip()+
+    coord_flip()+ 
     scale_x_discrete(labels = labels)+
     theme_light() + 
     theme(plot.title = element_text(hjust = 0.5)) + 
@@ -859,7 +859,7 @@ average_countries2 <- function(continent_coefficients, significance.level, patte
   ## Ahora para poder promediar los retornos anormales es necesario poder extraer el pais del indice y el step, usando la funcion
   ## str_extract, que extrae el primer valor identico entre dos strings. Esto permite extraer el indice, que en cada fila aparece 
   ## de primer lugar
-  string_start <- stringr::str_extract(row.names(dataframe_modelo), pattern.indexes) # collapse = "|" indica que puede ser 
+  string_start <- stringr::str_extract(row.names(dataframe_modelo), pattern.indexes) 
   # cualquier valor de countries
   string_end   <- stringr::str_extract(row.names(dataframe_modelo), pattern.step)  #En caso de querer revisar coeficientes por step
   
@@ -1343,6 +1343,121 @@ corrado_zivney <- function(data.list,es.window.length,ev.window.length){
   result <- cbind(round(stat,4),significancia)
   colnames(result) <- c("Statistic","Significance")
   return(result)
+}
+
+#---------------------------------------------------------------------------------------#
+
+#------------------------------   21. wilcoxon_Pagnottoni   ----- --------------------------#
+# Realizar el test no parametrico de Wilcoxon para los CAR de cada SUR estimado
+#---------------------------------------------------------------------------------------#
+# ----Argumentos de entrada ----#
+#-- coefficients.list: lista que contiene los coeficientes estimados para los SUR
+#-- name.variable    : nombre de una columna de <dataframe_wilcoxon>, que es el resultado de la funcion
+#-- pattern.step     : vector de caracteres que indican los coeficientes relacionados con retornos anormales
+#-- pattern.indexes  : vector caracter que indica el nombre de los indices de interes
+#-- pattern.variable : vector caracter que indica el nivel de agregacion de los CAR, puede ser por tipo de 
+#--                    desastre o por pais donde ocurrio el desastre
+# ----Argumentos de salida  ----#
+#-- dataframe_wilcoxon : dataframe que va a incluir el pais o tipo de desastre, su retorno anormal acumulado
+#                        promedio (CAAR), su estadistico de Wilcoxon, su p_valor y su significancia
+#---------------------------------------------------------------------------------------#
+
+wilcoxon_Pagnottoni <- function(coefficients.list,name.variable,pattern.step,pattern.indexes,pattern.variable){
+  # Dataframe que va a guardar el tipo de desastre/pais, el CAAR, el estadistico de wilcoxon, el p value y la significancia
+  dataframe_wilcoxon <- data.frame() 
+  
+  # Filtrar por aquellos que acaben en cualquier valor de <pattern.step>.
+  for (element in coefficients.list){
+    ## Genera un dataframe con el estimado, error estandar, t_value, p_value, que salen de la estimacion element
+    dataframe_coef <- as.data.frame(element) 
+    ## Le cambiamos nombres al dataframe para mejor manejo, pero reflejan lo mismo
+    colnames(dataframe_coef) <- c("Estimate","SD_error","t_value","p_value")
+    ## Extraemos las filas que nos interesan, es decir aquellas de las dummies, que acaban en t0, t1, t2, t3 o t4, es decir <pattern.step>
+    dataframe_coef_filtrado  <- dataframe_coef %>% 
+      dplyr::filter(str_ends(row.names(.),pattern = paste(pattern.step,collapse="|")))
+    
+    ## Ahora para poder agregar los retornos anormales es necesario poder extraer el nombre del indice, usando la funcion
+    ## <str_extract>, que extrae el primer valor identico entre dos strings. Esto permite extraer el indice, que en cada fila aparece 
+    ## de primer lugar
+    string_start <- stringr::str_extract(row.names(dataframe_coef_filtrado), pattern = paste(pattern.indexes,collapse="|")) 
+    
+    # Agrega la columna con el nombre de los indices al dataframe <dataframe_coef_filtrado>
+    dataframe_coef_filtrado <- cbind(dataframe_coef_filtrado,string_start)
+    
+    # Agrega los retornos anormales por el indice al cual pertenecen
+    CAR_df <- dataframe_coef_filtrado %>% 
+      group_by(string_start) %>% 
+      summarise(CAR = sum(Estimate)) # <Estimate> es el valor del retorno anormal estimado
+    
+    # Calcular el <CAAR>
+    CAAR <- mean(CAR_df$CAR)
+    
+    # Usar la funcion <stringr::str_extract_all> para determinar cual es el tipo de desastre 
+    matches       <- stringr::str_extract_all(row.names(dataframe_coef_filtrado),paste(pattern.variable,collapse = "|"))
+    type_disaster <- unique(unlist(matches))
+    # Detener la funcion si hay mas de un tipo de desastre o mas de un pais
+    if(length(type_disaster)!=1) stop("La agregacion de retornos anormales solo se puede hacer para un pais/un tipo de desastre")
+    
+    # Se procede a realizar el test de Wilcoxon
+    # Se genera un dataframe para poder realizar el ordenamiento de los car
+    df_car <- data.frame("car"=CAR_df$CAR,"magnitude"=abs(CAR_df$CAR),"sign"=sign(CAR_df$CAR))
+    df_car <- df_car %>% 
+      mutate(magnitude=ifelse(magnitude==0,NA,magnitude)) ## Se coloca NA si la magnitud es 0, ya que no se deben considerar
+    # Funcion <rank> para ordenar las magnitudes de los car
+    df_car <- df_car %>% 
+      mutate(rank = rank(magnitude))
+    
+    # Suma de los rangos de car positivos: <positive_rank_sum>
+    rank_sum <- df_car %>% 
+      dplyr::group_by(sign) %>%
+      dplyr::summarize(sum = sum(rank))
+    positive_rank_sum <- rank_sum$sum[rank_sum$sign=="1"]
+    
+    # Colocarle la sumatoria de rango 0 si no hubo ningun CAR positivo
+    if(length(positive_rank_sum)==0) positive_rank_sum <- 0
+    
+    # Calculo de la significancia del estadistico de Wilcoxon
+    # La funcion para hallar los cuantiles de la distribucion del estadistico de Wilcoxon es <stats::qsignrank()>. 
+    # A partir de 1000 observaciones, la funcion no se comporta adecuadamente, pero debido a que es muestra grande, la distribucion
+    # converge a una normal con media N(N+1)/4 y varianza N(N+1)(2N+1)/24 por lo que usamos <stats::qnorm()>>
+    significance <- ""
+    ## Calculo para cada nivel de significancia si el valor de <positive_rank_sum> es lo suficientemente extremo para rechazar H_0
+    #  La prueba se hace a dos colas, por lo que la primera condicion para cada prueba de significancia compara <positive_rank_sum> con el 
+    #  valor critico de la cola derecha.
+    #  La segunda condicion es la comparacion de <positive_rank_sum> con el valor critico de la cola izquierda.
+    N <- nrow(df_car)
+    
+    # Uso de <qsignrank> o <qnorm> dependiendo del tamaño de la muestra
+    if(N<=1000){
+      # Si se evalua la significancia al 10%, con un test a dos colas, debemos buscar los percentiles 5 y 95, y comparar con estadistico
+      significance[positive_rank_sum >= stats::qsignrank(1 - 0.1/2,n=N)|
+                     positive_rank_sum <= stats::qsignrank(0.1/2, n=N)] <- "*"
+      # Para evaluar al 5%:
+      significance[positive_rank_sum >= stats::qsignrank(1 - 0.05/2, n=N)|
+                     positive_rank_sum <= stats::qsignrank(0.05/2, n=N)] <- "**"
+      # Al 1%:
+      significance[positive_rank_sum >= stats::qsignrank(1 - 0.01/2, n=N)|
+                     positive_rank_sum <= stats::qsignrank(0.01/2, n=N)] <- "***"
+    }else{
+      mu = N*(N+1)/4
+      sigma = sqrt(N*(N+1)*(2*N+1)/24)
+      # Si se evalua la significancia al 10%, con un test a dos colas, debemos buscar los percentiles 5 y 95, y comparar con estadistico
+      significance[positive_rank_sum >= stats::qnorm(1 - 0.1/2,mean = mu,sd = sigma)|
+                     positive_rank_sum <= stats::qnorm(0.1/2, mean = mu,sd = sigma)] <- "*"
+      # Para evaluar al 5%:
+      significance[positive_rank_sum >= stats::qnorm(1 - 0.05/2, mean = mu,sd = sigma)|
+                     positive_rank_sum <= stats::qnorm(0.05/2, mean = mu,sd = sigma)] <- "**"
+      # Al 1%:
+      significance[positive_rank_sum >= stats::qnorm(1 - 0.01/2, mean = mu,sd = sigma)|
+                     positive_rank_sum <= stats::qnorm(0.01/2, mean = mu,sd = sigma)] <- "***"
+    }
+    # Por ultimo, usando la funcion <wilcox.test> obtenemos el pvalor
+    p_value <- wilcox.test(CAR_df$CAR)$p.value
+    # Agregamos las variables a <dataframe_wilcoxon>
+    dataframe_wilcoxon <- rbind(dataframe_wilcoxon,c(type_disaster,round(CAAR,4),positive_rank_sum,round(p_value,4),significance))
+  }
+  colnames(dataframe_wilcoxon) <- c(name.variable, "CAAR","Wilcoxon_statistic","p_value","Significance")
+  return(dataframe_wilcoxon)
 }
 
 #---------------------------------------------------------------------------------------#

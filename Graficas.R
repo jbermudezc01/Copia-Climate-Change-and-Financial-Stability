@@ -272,7 +272,7 @@ complete_t_plot <- grid.arrange(plot_t_Bio,plot_t_Cli,plot_t_Hyd,plot_t_Geo,plot
 #####=========================================== FIGURA 4 Y A.8 Pagnottoni  ==============================================###
 
 niv.significancia <- 0.05 #<<<--- nivel de significancia para los estimados de retornos anormales
-pattern_step      <- paste(steps, collapse = "|") # patron que indica los pasos
+pattern_step      <- paste(steps, collapse = "|") # patron que indica los pasos. # collapse = "|" indica que puede ser cualquier valor de <steps>
 pattern_indexes   <- paste(indexes, collapse = "|") #patron que indica los indices
 pattern_countries <- paste(paises, collapse = "|")    #patron que indica los paises del desastre
 

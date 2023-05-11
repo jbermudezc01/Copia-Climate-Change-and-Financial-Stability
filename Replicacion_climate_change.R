@@ -777,23 +777,20 @@ names(results_final) <- names(results)
 
 # Cada elemento de la lista <results> se junta con los datos de <world> para poder graficarla
 merged_data_disasters <- lapply(results_final, function(x) {
-  inner_join(world, x ,by = "region", all.x = TRUE)
+  inner_join(world, x ,by = "region")
 })
 
-if(0){
-# Guardar datos --------------------------------------------------------------#
-#--- Guardado de los modelos por tipo de desastre , mas la base de retornos---#
-saved.day = "2023-04-02" #<<<--- dia en que se utilizo por ultima vez save() en formato yyyy-mm-dd
-# 1. En el objeto Resultados_Desastres_today() se guardan elementos claves para poder graficar, incluyendo
-# los resultados de las dos regresiones SUR
+# Test de Wilcoxon --------------------------------------------------------
 
-#save(coefficients_disasters_list,resid_disasters_list,fitted_models, Retornos, paises,coefficients_countries_list,
-#     coefficients_continents_list,file=paste0(paste0('Resultados_Desastres_',today()),'.RData')) 
+steps <- c("t0","t1","t2","t3","t4")  #<<<--- vector con los días adelante del evento, hace referencia a como termina el nombre de las dummies
 
-# 2. En el objeto Residuos_paises_today() se guardan los residuos de la segunda regresion (por pais), los cuales son muy 
-# pesados y no se pueden cargar
-#save(resid_countries_list, file=paste0(paste0('Residuos_Paises_',today()),'.RData'))
+Por_tipo_desastre <- TRUE #<<<--- Variable bool. <FALSE> indica que se quiere revisar los CAR por pais donde sucedio el desastre. 
+                            #      <TRUE> indica que se quiere ver por tipo de desastre
 
-load(paste0(paste0('Resultados_Desastres_',saved.day),'.RData')) #del save 1.
-#load(paste0(paste0('Residuos_Paises_',saved.day),'.RData'))  ## del save 2. Solo puede correrlo JP, ya que los residuos estsn en su PC y  pesan demasiado para mandarlos por github
+if(Por_tipo_desastre){ 
+  name_column <- "Type_of_disaster"
+  resultado <- wilcoxon_Pagnottoni(coefficients_disasters_list,name_column,steps,indexes,Tipos.Desastres);resultado
+}else{
+  name_column <- "Country"
+  resultado <- wilcoxon_Pagnottoni(coefficients_countries_list,name_column,steps,indexes,paises);resultado
 }
