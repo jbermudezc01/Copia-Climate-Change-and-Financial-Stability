@@ -977,26 +977,23 @@ matching <- function(pais){
 #-- market.returns     : indice de mercado
 #-- estimation.start   : numero de dias previos al evento para el inicio de la ventana de estimacion
 #-- max.ar             : numero de dias maximos despues del evento para calcular retornos anormales
+#-- date.col.name      : nombre de la columna de fechas de eventos
+#-- var.col.name      : nombre de la columna que tiene informacion del evento como su locacion
 # ----Argumentos de salida  ----#
 #-- data.droped.events : dataframe de eventos filtrados. En este df ya no estan los eventos que no cuentan con una 
 #                        ventana minima de estimacion ni con una ventana minima de evento
 #---------------------------------------------------------------------------------------#
 
-drop.events <- function(data.events,market.returns,estimation.start,max.ar){
-  # Se detiene la funcion en caso de que ninguna columna de <data.events> sea de clase date
-  if(!any(sapply(data.events, inherits, "Date"))) {
-    stop("Al menos una de las columnas del dataframe debe tener clase Date")
+drop.events <- function(data.events,market.returns,estimation.start,max.ar,date.col.name, var.col.name){
+  
+  # Se renombran las columnas para un uso correcto de la funcion
+  colnames(data.events)[colnames(data.events) == date.col.name] <- "Start.Date"
+  colnames(data.events)[colnames(data.events) == var.col.name] <- "Country"
+  # Se detiene la funcion en caso de que la columna <data.events$Start.Date> no sea de clase date
+  if(!inherits(eventos$Start.Date,"Date")) {
+    stop(paste0(paste0("La columna ",date.col.name)," no es formato fecha."))
   }
-  # Se detiene la funcion en caso de que ninguna columna de <data.events> sea de clase character
-  if(!any(sapply(data.events, inherits, "character"))) {
-    stop("Al menos una de las columnas del dataframe debe tener clase character")
-  }
-  # Nombre de la columna con clase <"Date"> se cambia a <Start.Date> para un uso correcto de la funcion
-  col_classes <- sapply(data.events, class)
-  names(data.events)[col_classes == "Date"] <- "Start.Date"
-  # Nombre de la columna con clase <"character"> se cambia a <Country> para un uso correcto de las demas funciones 
-  col_classes <- sapply(data.events, class)
-  names(data.events)[col_classes == "character"] <- "Country"
+
   # Fecha minima para que la estimacion pueda empezar desde <estimation.start> dias previos al evento
   Fecha_minima_estimacion <- index(market.returns)[estimation.start+1]
   # Fecha minima para que se pueda realizar el calculo de retornos anormales para <max.ar>+1 dias
@@ -1100,7 +1097,7 @@ estimation.event.study <- function(data.events, days.evaluated, asset.returns, m
       # Agregar el error estandar a la lista <event_list>
       event_list[["Standard_Error"]]  <- standard_error
       # Agregar la lista <event_list> a la lista <all_events_list>, por lo que seria una lista de listas
-      all_events_list[[paste(i,name,sep="_")]] <- event_list
+      all_events_list[[paste(name,i,sep="_")]] <- event_list
     }
   } 
   return(all_events_list)

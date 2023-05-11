@@ -784,7 +784,7 @@ merged_data_disasters <- lapply(results_final, function(x) {
 
 steps <- c("t0","t1","t2","t3","t4")  #<<<--- vector con los días adelante del evento, hace referencia a como termina el nombre de las dummies
 
-Por_tipo_desastre <- TRUE #<<<--- Variable bool. <FALSE> indica que se quiere revisar los CAR por pais donde sucedio el desastre. 
+Por_tipo_desastre <- FALSE #<<<--- Variable bool. <FALSE> indica que se quiere revisar los CAR por pais donde sucedio el desastre. 
                             #      <TRUE> indica que se quiere ver por tipo de desastre
 
 if(Por_tipo_desastre){ 

@@ -112,7 +112,11 @@ base_retornos    <- base_retornos[index(mean_mov_average)]
 mean_mov_average <- mean_mov_average[index(base_retornos)]
 
 # Se eliminan los eventos que no cuentan con la ventana minima de estimacion ni con la ventana minima de evento usando la funcion <drop.events>
-eventos <- drop.events(data.events = eventos,market.returns = mean_mov_average,estimation.start = estimation_start,max.ar=max_abnormal_returns)
+date_col_name <- "Start.Date" #<<<--- Parametro que indica el nombre de la columna clase <Date>, la cual contiene la fecha de eventos
+geo_col_name  <- "Country"    #<<<--- Parametro que indica el nombre de la columna que contiene los paises, o puede ser cualquier otra variable 
+                              #       que se quiera estudiar, como regiones, ciudades, etc
+eventos <- drop.events(data.events = eventos,market.returns = mean_mov_average,estimation.start = estimation_start,max.ar=max_abnormal_returns, 
+                       date_col_name, geo_col_name)
 
 # -------------------------- Regresion estimation window ---------------------------------------------
 
@@ -121,7 +125,7 @@ eventos <- drop.events(data.events = eventos,market.returns = mean_mov_average,e
 #     Standard_error : error estandar de los errores de la estimacion por OLS
 # El objeto de salida de esta funcion sera la base para las pruebas de Wilcoxon y bootstrap
 
-all_events_list <- estimation.event.study(data.events = eventos,days.evaluated = days_to_be_evaluated,securities.returns = base_retornos,
+all_events_list <- estimation.event.study(data.events = eventos,days.evaluated = days_to_be_evaluated,asset.returns = base_retornos,
                                           market.returns = mean_mov_average,max.ar = max_abnormal_returns,es.start = estimation_start,
                                           es.end=estimation_end)
 
