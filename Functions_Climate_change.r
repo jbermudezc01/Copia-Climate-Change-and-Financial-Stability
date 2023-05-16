@@ -340,10 +340,9 @@ lag_function <- function(base_niveles,ind,AR.m,MA.m,d,bool=TRUE,metodo="CSS",dia
   #generamos una base de datos que genere columnas de rezagos, el numero de columnas sera el mismo que el orden 
   #obtenido en el procedimiento anterior
   if(p>0) lags_df <- timeSeries::lag((base_niveles[,ind]), c(1:p) )
-  
+
   #Lo colocamos desde el 8 de febrero para cuadrar con el indice de la base de datos principal
   lags_reduced <- lags_df[paste0(dia.inicial,"/"),]
-  
   #Nombres del dataframe de rezagos
   colnames(lags_reduced) <- paste0(ind,'.l',1:p) 
   
@@ -371,8 +370,7 @@ if(0){
     #Busca el dataframe con los rezagos
     lags_name <- paste0("lags_reduced_", country)
     if(exists(lags_name)==TRUE) lags_df <- get(lags_name) ## Primero toca ver si lags_name existe, ya que si existe algun país que no
-    #  tenga matriz de rezagos, lags_name no existe. En nuestro caso todos los países
-    #  tienen rezagos.
+    #  tenga matriz de rezagos, lags_name no existe. En nuestro caso todos los países tienen rezagos.
     
     #Busca las variables para el gdp y el fdi
     gdp_variable <- paste("gdp",country,sep="_")
@@ -1018,6 +1016,11 @@ drop.events <- function(data.events,market.returns,estimation.start,max.ar,date.
 #-- max.ar             : numero de dias maximos despues del evento para calcular retornos anormales
 #-- es.start           : numero de dias previos al evento para comenzar la estimacion
 #-- es.end             : numero de dias previos al evento para terminar la estimacion
+#-- add.exo            : booleano donde TRUE indica que se van a agregar todas las exogenas al modelo y FALSE si no se agregan
+#--                      default es TRUE
+#-- lags_df            : string que indica el nombre por el cual empiezan las matrices de rezagos en el codigo principal
+#-- base               : base de datos donde se encuentran las variables exogenas
+#-- vars.exo           : nombres de las variables en <base> que se quieren usar como exogenas
 # ----Argumentos de salida  ----#
 #-- all.events.list    : lista que incluye para cada par evento-indice la siguiente informacion:
 #--   <Dataframe>      : base de datos con retornos observados, estimados y anormales para la ventana 
@@ -1025,7 +1028,8 @@ drop.events <- function(data.events,market.returns,estimation.start,max.ar,date.
 #--   <Standard_Error> : error estandar de los residuales de la estimacion por OLS
 #---------------------------------------------------------------------------------------#
 
-estimation.event.study <- function(data.events, days.evaluated, asset.returns, market.returns, max.ar, es.start, es.end){
+estimation.event.study <- function(data.events, days.evaluated, asset.returns, market.returns, max.ar, es.start, es.end, add.exo =TRUE,
+                                   lags_df,base,vars.exo){
   all_events_list      <- list() # lista que contendra todas las series de retornos + errores estandar
   # Loop: Por cada evento se hace una regresion OLS con la muestra [-<es.start>,-<es.end>] dias antes del evento para estimar alfa, beta 
   for(i in 1:nrow(data.events)){
@@ -1057,6 +1061,9 @@ estimation.event.study <- function(data.events, days.evaluated, asset.returns, m
     # Loop para los casos en que haya mas de un indice por pais, se realiza regresion OLS para estimar alpha y beta
     # Nota: En general solo hay un indice por pais, pero en USA hay dos.
     for(name in index_names){
+      # <window.event.dates> son las fechas que pertenecen a la ventana de evento
+      window_event_dates <- index(asset.returns[,name][(event_start_index):(event_start_index+max.ar)])
+      
       # Creacion  de la base de datos de la ventana de estimacion en <asset.returns> para <name> 
       # y para el indice de mercado, <market.returns>, que es una var.exogena del modelo
       # <est.dependent.var> se refiere a la variable dependiente en la estimacion.
@@ -1070,24 +1077,56 @@ estimation.event.study <- function(data.events, days.evaluated, asset.returns, m
       # Detener la funcion si los indices de fechas de <est.dependent.var> y de <est.independent.var> no son los mismos
       if(!identical(index(est.dependent.var),index(est.independent.var))) stop("Las series tienen indices de fechas diferentes")
       
-      # Usar <as.numeric> para evitar problemas con la estimacion <lm()>
-      # Estimar el modelo por OLS
-      model          <- lm(as.numeric(est.dependent.var) ~ as.numeric(est.independent.var))
-      # Calcular los parametros de interes
-      alpha          <- model$coefficients[["(Intercept)"]] 
-      beta           <- model$coefficients[["as.numeric(est.independent.var)"]]
+      if(add.exo == TRUE){
+        if(pais == "USA") pais <- "USA1" # Usando la base <base_datos>, las columnas de Estados Unidos se llaman <USA1>
+        
+        # Seleccionar las variables <vars.exo> de la base de datos <base>
+        # Reducir variables exogenas al mismo indice que <est.dependent.var>
+        exo           <- base[,paste0(vars.exo,pais)]
+        exo_es_window <- exo[index(est.dependent.var)]
+        
+        ## Primero toca ver si <paste0(lags_df,name)> existe, 
+        # ya que si existe algun país que no tenga matriz de rezagos, <lags_name> no existe. En nuestro caso todos los países tienen rezagos.
+        if(exists(paste0(lags_df,name))==TRUE){
+          # Seleccionar los rezagos solamente del indice <name>
+          lags <- get(paste0(lags_df,name)) 
+          # Reducir indice de <lags> al mismo de <est.dependent.var>
+          lags_es_window <- lags[index(est.dependent.var)]
+          # Generar matriz con todas las variables exogenas, contando con la ventana de evento, para obtener los retornos estimados
+          matrix_model <- cbind(1, market.returns[c(index(est.dependent.var),window_event_dates)],
+                                lags[c(index(est.dependent.var),window_event_dates)],
+                                exo[c(index(est.dependent.var),window_event_dates)])
+          # Usar <as.numeric> para evitar problemas con la estimacion <lm()>
+          # Estimar el modelo por OLS
+          model  <- lm(as.numeric(est.dependent.var) ~ as.numeric(est.independent.var)+
+                         as.matrix(lags_es_window)+as.matrix(exo_es_window))
+        }else{
+          # Generar matriz con todas las variables exogenas, contando con la ventana de evento, para obtener los retornos estimados
+          matrix_model <- cbind(1, market.returns[c(index(est.dependent.var),window_event_dates)],
+                                exo[c(index(est.dependent.var),window_event_dates)])
+          # Usar <as.numeric> para evitar problemas con la estimacion <lm()>
+          # Estimar el modelo por OLS
+          model  <- lm(as.numeric(est.dependent.var) ~ as.numeric(est.independent.var)+
+                         as.matrix(exo_es_window))
+        }
+      }else{
+        matrix_model <- cbind(1, market.returns[c(index(est.dependent.var),window_event_dates)])
+        model <- lm(as.numeric(est.dependent.var) ~ as.numeric(est.independent.var))
+      }
+      
+      # Calcular los parametros 
+      betas          <- coef(model)
       standard_error <- sd(residuals(model))
       
       # Creacion series <observed>, <predicted> y <abnormal> solamente para la ventana de estimacion y la ventana de evento
       # Se usa el indice de <est.dependent.var> para obtener las fechas pertenecientes a la ventana de estimacion.
-      # <window.event.dates> son las fechas que pertenecen a la ventana de evento
-      window_event_dates <- index(asset.returns[,name][(event_start_index):(event_start_index+max.ar)])
       # Se selecciona de <asset.returns> solamente las observaciones que esten en la ventana de estimacion o la de evento
       observed           <- asset.returns[,name][c(index(est.dependent.var),window_event_dates)]
       # Se selecciona de <market.returns> solamente las observaciones que esten en la ventana de estimacion o la de evento
-      predicted          <- alpha + beta*(market.returns[index(observed)]) 
+      predicted <- matrix_model %*% betas
       # Se restan los retornos estimados de los observados
       abnormal           <- observed - predicted
+      
       # Se juntan las tres series en un solo dataframe
       df             <- merge(observed,predicted,abnormal)
       # Cambio de nombre de columnas

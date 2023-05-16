@@ -1,4 +1,4 @@
-# La base de retornos, <base_retornos>, se carga al correr del codigo <Replicacion_climate_change.R> de la linea 1 a 165
+# La base de retornos, <Retornos>, se carga al correr del codigo <Replicacion_climate_change.R> de la linea 1 a 174
 
 # Parametros event study --------------------------------------------------------------
 
@@ -108,14 +108,14 @@ if(1){
 #    <Start.Date> : fecha de inicio del evento
 
 # Previo a la estimacion, se asegura que los indices de los retornos de mercado y de securities sea el mismo
-base_retornos    <- base_retornos[index(mean_mov_average)]
-mean_mov_average <- mean_mov_average[index(base_retornos)]
+Retornos             <- Retornos[index(Media_Promedio_movil)]
+Media_Promedio_movil <- Media_Promedio_movil[index(Retornos)]
 
 # Se eliminan los eventos que no cuentan con la ventana minima de estimacion ni con la ventana minima de evento usando la funcion <drop.events>
 date_col_name <- "Start.Date" #<<<--- Parametro que indica el nombre de la columna clase <Date>, la cual contiene la fecha de eventos
 geo_col_name  <- "Country"    #<<<--- Parametro que indica el nombre de la columna que contiene los paises, o puede ser cualquier otra variable 
                               #       que se quiera estudiar, como regiones, ciudades, etc
-eventos <- drop.events(data.events = eventos,market.returns = mean_mov_average,estimation.start = estimation_start,max.ar=max_abnormal_returns, 
+eventos <- drop.events(data.events = eventos,market.returns = Media_Promedio_movil,estimation.start = estimation_start,max.ar=max_abnormal_returns, 
                        date_col_name, geo_col_name)
 
 # -------------------------- Regresion estimation window ---------------------------------------------
@@ -125,9 +125,16 @@ eventos <- drop.events(data.events = eventos,market.returns = mean_mov_average,e
 #     Standard_error : error estandar de los errores de la estimacion por OLS
 # El objeto de salida de esta funcion sera la base para las pruebas de Wilcoxon y bootstrap
 
-all_events_list <- estimation.event.study(data.events = eventos,days.evaluated = days_to_be_evaluated,asset.returns = base_retornos,
-                                          market.returns = mean_mov_average,max.ar = max_abnormal_returns,es.start = estimation_start,
-                                          es.end=estimation_end)
+# Para incluir rezagos de la dependiente, escribir el nombre de las bases de rezagos, por ej: "lags_", sin incluir el pais
+# Si no se desea incluir rezagos, dejar como NULL
+lags.base <- "lags_"
+
+# Otras variables exogenas de una base de datos que se quieren incluir. 
+var_exo <- c("gdp_","fdi_")
+
+all_events_list <- estimation.event.study(data.events = eventos,days.evaluated = days_to_be_evaluated,asset.returns = Retornos,
+                                          market.returns = Media_Promedio_movil,max.ar = max_abnormal_returns,es.start = estimation_start,
+                                          es.end=estimation_end, add.exo = TRUE, lags_df=lags.base, base=base_datos,vars.exo=var_exo)
 
 # Wilcoxon --------------------------------------------------------------
 
@@ -145,7 +152,7 @@ wilcoxon.resultado <- wilcoxon.jp.test(data.list = all_events_list,es.window.len
 # Para hacer el procedimiento por Bootstrap se sigue el procedimiento usado por Corrado & Truong (2008)
 boot_n_simul <- 1000 #<<<--- parametro que indica el numero de repeticiones para bootstrapping
 
-bootstrap.resultado <- bootstrap_CT(data.list = all_events_list,market.returns=mean_mov_average,
+bootstrap.resultado <- bootstrap_CT(data.list = all_events_list,market.returns=Media_Promedio_movil,
                                     es.window.length = length_estimation_window, ev.window.length = length_event_window,
                                     no.simul = boot_n_simul);bootstrap.resultado
 
