@@ -1558,7 +1558,7 @@ corrado_zivney <- function(data.list,es.window.length,ev.window.length){
   }
   
   # Para cada columna de full_rank tenemos que restarle el valor esperado de K_{it}, siguiendo la ecuacion 44 de Pynnonen (2022), teniendo en cuenta que 
-  # E[K_{it}] = (T_i'+1)/2 de acuerdo a Campbell y Wasley (1993), donde T_1' es el numero de retornos para la firma i en toda la muestra 
+  # E[K_{it}] = (T_i'+1)/2 de acuerdo a Campbell y Wasley (1993), donde T_1' es el numero de retornos para la firma k asociada al evento en toda la muestra 
   full_rank_reduced <- apply(full_rank, 2, function(x) x - ((nrow(full_rank) + 1) / 2))
   
   # Generar k promedio, siguiendo la ecuacion 44 de Pynnonen (2022)
