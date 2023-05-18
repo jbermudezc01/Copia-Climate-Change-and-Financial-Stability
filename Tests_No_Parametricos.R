@@ -1,4 +1,13 @@
-# La base de retornos, <Retornos>, se carga al correr del codigo <Replicacion_climate_change.R> de la linea 1 a 174
+# Para el análisis de Pagnottoni (2022) se utilizaba una base con la muestra reducida a <dia.inicial>, lo 
+# cual no se hace para Tommaso (2023), ya que necesitamos la mayor cantidad posible de datos antes de 
+# <dia.inicial>. 
+# En <base_Tommaso> estan las series que van a servir como variables dependientes, un indice de mercado,
+# y las variables exogenas del modelo.
+base_Tommaso <- merge(base_retornos,mean_mov_average,gdp_growth_base,fdi_growth_base)
+# Por construccion, <base_Tommaso> tiene dos columnas para Estados Unidos para gdp y fdi: <gdp_USA1>/<gdp_USA2> y <fdi_USA1>/<fdi_USA2>
+# Dejar solamente una columna para gdp y una para fdi que se llamen <gdp_USA> y <fdi_USA>
+base_Tommaso <- base_Tommaso[,!colnames(base_Tommaso) %in% c('gdp_USA2','fdi_USA2')]
+colnames(base_Tommaso) <- gsub("USA1$", "USA", colnames(base_Tommaso))
 
 # Parametros event study --------------------------------------------------------------
 
@@ -107,15 +116,22 @@ if(1){
 #    <Country>    : pais donde sucede el evento
 #    <Start.Date> : fecha de inicio del evento
 
-# Previo a la estimacion, se asegura que los indices de los retornos de mercado y de securities sea el mismo
-Retornos             <- Retornos[index(Media_Promedio_movil)]
-Media_Promedio_movil <- Media_Promedio_movil[index(Retornos)]
+
+# Agregar rezagos a base de datos -----------------------------------------
+
+# Se usa la funcion <create.lags>, que toma una base de datos junto a unas variables de interes. Retorna la base de datos inicial junto con 
+# rezagos de las variables de interes. Si se desea un numero de rezagos en especifico para todas las variables de interes, asignar el numero 
+# a <number_lags>. Si se desea un numero de rezagos para cada variable de interes, asignar una lista a <number_lags> con los numeros de 
+# rezagos. Nota: Si se coloca la lista tiene que tener el mismo numero de datos que numero de variables de interes.
+# Si se desea que se elijan los rezagos siguiendo el criterio de informacion de Akaike, dejar <number_lags> como NULL
+number_lags <- NULL
+base_lagged <- create.lags(base = base_Tommaso,interest.vars = indexes,no.lags = number_lags,AR.m = 20)
 
 # Se eliminan los eventos que no cuentan con la ventana minima de estimacion ni con la ventana minima de evento usando la funcion <drop.events>
 date_col_name <- "Start.Date" #<<<--- Parametro que indica el nombre de la columna clase <Date>, la cual contiene la fecha de eventos
 geo_col_name  <- "Country"    #<<<--- Parametro que indica el nombre de la columna que contiene los paises, o puede ser cualquier otra variable 
                               #       que se quiera estudiar, como regiones, ciudades, etc
-eventos <- drop.events(data.events = eventos,market.returns = Media_Promedio_movil,estimation.start = estimation_start,max.ar=max_abnormal_returns, 
+eventos <- drop.events(data.events = eventos,base = base_lagged,estimation.start = estimation_start,max.ar=max_abnormal_returns, 
                        date_col_name, geo_col_name)
 
 # -------------------------- Regresion estimation window ---------------------------------------------
@@ -132,9 +148,8 @@ lags.base <- "lags_"
 # Otras variables exogenas de una base de datos que se quieren incluir. 
 var_exo <- c("gdp_","fdi_")
 
-all_events_list <- estimation.event.study(data.events = eventos,days.evaluated = days_to_be_evaluated,asset.returns = Retornos,
-                                          market.returns = Media_Promedio_movil,max.ar = max_abnormal_returns,es.start = estimation_start,
-                                          es.end=estimation_end, add.exo = TRUE, lags_df=lags.base, base=base_datos,vars.exo=var_exo)
+all_events_list <- estimation.event.study(base = base_lagged,data.events = eventos[3:nrow(eventos),],days.evaluated = 5,market.returns = "Mean_Returns_Moving_Averages",
+                                           max.ar = 15,es.start = estimation_start,es.end = estimation_end,add.exo = TRUE,vars.exo = var_exo)
 
 # Wilcoxon --------------------------------------------------------------
 
