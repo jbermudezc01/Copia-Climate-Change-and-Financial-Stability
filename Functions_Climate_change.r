@@ -161,6 +161,10 @@ days <- function(x, m, months, dates, startstring=1, endstring=7){
   first_month  <- months[3*x+1] #Primer mes del trimeste
   second_month <- months[3*x+2]
   third_month  <- months[3*x+3]
+  # Si alguno de los anteriores es <NA>, establecerlo como <FALSE> para que no moleste con el if statement
+  if(is.na(first_month)) first_month <- FALSE
+  if(is.na(second_month)) second_month <- FALSE
+  if(is.na(third_month)) third_month <- FALSE
   for(date in dates){
     if(substr(date,startstring,endstring)==first_month |substr(date,startstring,endstring)==second_month|substr(date,startstring,endstring)==third_month){
       pos <- which(dates == date)
@@ -319,7 +323,7 @@ arma_seleccion_df = function(object, AR.m, MA.m, d, bool, metodo){
 #-- base_niveles: base a la cual se le sacaran los rezagos
 #-- ind         : caracteres indicando un indice bursatil
 #-- AR.m        : rezago máximo de la parte autorregresiva
-#-- Ma.m        : rezago máximo de la parte de promedio movil
+#-- MA.m        : rezago máximo de la parte de promedio movil
 #-- d           : orden de diferenciación
 #-- bool        : booleano que indica si realizar la estimación arima con constante (el default es TRUE)
 #-- metodo      : metodo por el cual se hará la estimación ARIMA (existe CS, ML y CSS-ML) (el default es CSS)
@@ -1167,7 +1171,7 @@ if(0){
 #                        El default es <NULL>, en cuyo caso para cada variable se le calculan los rezagos optimos
 #                        siguiendo el criterio de informacion de Akaike
 #-- AR.m               : rezago máximo de la parte autorregresiva
-#-- Ma.m               : rezago máximo de la parte de promedio movil
+#-- MA.m               : rezago máximo de la parte de promedio movil
 #-- d                  : orden de diferenciación
 #-- bool               : booleano que indica si realizar la estimación arima con constante (el default es TRUE)
 #-- metodo             : metodo por el cual se hará la estimación ARIMA (existe CS, ML y CSS-ML) (el default es CSS)
@@ -1196,7 +1200,7 @@ create.lags <- function(base, interest.vars,no.lags=NULL, AR.m, MA.m=0,d=0,bool=
     stop("no.lags tiene dimensiones incorrectas, se debe ingresar un solo numero o un vector del mismo tamaño que 
           las variables dependientes ingresadas")
   
-  # Por cada elemento en <base[,interest.vars]> generar rezagos dependiendo del valor de <lags> 
+  # Por cada elemento en <base[,interest.vars]> generar rezagos dependiendo del valor de <no.lags> 
   # Agregar los rezagos a una sola base
   # Si es <NULL> los numeros de rezagos se obtienen automaticamente
   
@@ -1204,7 +1208,7 @@ create.lags <- function(base, interest.vars,no.lags=NULL, AR.m, MA.m=0,d=0,bool=
     indice <- colnames(base[,interest.vars][,i])
     if(is.null(no.lags)){
       # Generar rezagos optimos
-      lags_var <- lag_function(base,indice, AR.m = 20,MA.m = 0,d = 0, bool = TRUE,metodo = "CSS")
+      lags_var <- lag_function(base,indice, AR.m,MA.m = 0,d = 0, bool = TRUE,metodo = "CSS")
       # Agregarlos al dataframe lags_df
       if(is.null(lags_df))lags_df <- lags_var else lags_df <- merge(lags_df, lags_var)
     }else if(length(no.lags) == 1){
@@ -1707,6 +1711,272 @@ wilcoxon_Pagnottoni <- function(coefficients.list,name.variable,pattern.step,pat
   }
   colnames(dataframe_wilcoxon) <- c(name.variable, "CAAR","Wilcoxon_statistic","p_value","Significance")
   return(dataframe_wilcoxon)
+}
+
+#---------------------------------------------------------------------------------------#
+
+#------------------------------   22. car_pagnottoni   ----- --------------------------#
+# Genera una grafica de los retornos anormales acumulados dependiendo del dia relativo al evento. 
+# Es posible generar una grafica con los cAR de cada evento de interes, o con el CAR promedio de los 
+# eventos de interes.
+#---------------------------------------------------------------------------------------#
+# ----Argumentos de entrada ----#
+#--   coeffs          : vector numerico con coeficientes
+#--   indices         : vector con nombres de indices 
+#--   interest.vars   : string que indica los tipos de desastres o paises que se encuentran en <coeffs>
+#--   average         : booleano, <TRUE> indica que se quiere graficar solamente el promedio de los CAR
+#--                     y <FALSE> indica que se quieren graficar todos los CAR resultantes del SUR
+# ----Argumentos de salida  ----#
+#-- 
+#---------------------------------------------------------------------------------------#
+
+car_pagnottoni = function(coeffs,indices,interest.vars,average){
+  # El titulo del grafico se encuentra revisando los nombres de <coeffs> respecto a <interest.vars>. 
+  # La siguiente linea busca cual es el tipo de desastre o pais que vamos a graficar
+  plot_title <- interest.vars[sapply(interest.vars, function(value) any(grepl(value, names(coeffs))))]
+  # La longitud de <plot_title> debe ser 1, o si no hay error. Si es mayor a 1 significa que hay alguna mezcla de 
+  # coeficientes, ya que tendriamos para dos tipos de desastres o dos paises
+  if(length(plot_title) !=1) stop("Hay un error con los coeficientes, por favor revisar que pertenezcan solamente a un tipo de
+                                  desastre o a solamente un pais")
+  car_matrix <- NULL
+  for(indice in indices){
+    # Segun el vector ingresado en <coeffs>, se buscan los coeficientes solamente para el indice
+    # <indice> y se ordenan en orden cronologico, teniendo en cuenta que por construccion, t0 es el dia
+    # del evento, t1 es el dia siguiente, t2 dos dias despues, ...
+    index.coefs <- coeffs[startsWith(names(coeffs), indice)]
+    names       <- sort(names(index.coefs), decreasing = FALSE)
+    index.coefs <- index.coefs[names]
+    # Generar matriz de CAR's, donde cada columna sera un indice y las filas seran los CAR para [t0,t0],[t0,t1],
+    # [t0,t2],... El numero de filas de la matriz sera igual al numero de elementos en <index.coefs>
+    if(is.null(car_matrix)) {
+      # <cumsum> genera la suma acumulada del vector <index.coefs>
+      car_matrix <- matrix(data=cumsum(index.coefs),nrow=length(index.coefs)) 
+    }else{
+      car_matrix <- cbind(car_matrix,as.numeric(cumsum(index.coefs)))
+    }
+  }
+  # Cambiar el nombre de filas y columnas
+  colnames(car_matrix) <- indices
+  rownames(car_matrix) <- 0:(nrow(car_matrix)-1)
+  if(average == FALSE){
+    base::plot(x=rownames(car_matrix),y=car_matrix[,1],type="l",main=plot_title,xlab="Dia relativo al evento",ylab="Retorno Anormal Acumulado (CAR)",
+                           ylim=c(min(car_matrix),max(car_matrix)))
+    for(i in 2:ncol(car_matrix)){
+      lines(x=rownames(car_matrix), y = car_matrix[,i],type="l")
+    }
+  }else{
+    base::plot(x=rownames(car_matrix), y = rowMeans(car_matrix),type="l",main=plot_title,xlab="Dia relativo al evento",ylab="Retorno Anormal Acumulado (CAR)")
+  }
+}
+#---------------------------------------------------------------------------------------#
+
+#------------------------------   22. arma_lags_database   -------------------------------#
+# Por ahora la funcion solo trabaja con rezagos de la parte AR(p)
+#---------------------------------------------------------------------------------------#
+# ----Argumentos de entrada ----#
+#--   base          : base de datos que contiene las series a las que se quiere sacar el numero de rezagos
+#--   interest.vars : vector con nombres de indices 
+#--   no.lags       : numero de rezagos a considerar. Si es un numero, se calcula ese numero de rezagos
+#                     para todas las <interest.vars>. Si es una lista con numeros, a la i-esima variable de 
+#                     <interst.vars> se le calcula el i-esimo elemento de no.lags.
+#                     El default es <NULL>, en cuyo caso para cada variable se le calculan los rezagos optimos
+#                     siguiendo el criterio de informacion de Akaike
+#--   AR.m          : rezago máximo de la parte autorregresiva
+#--   MA.m          : rezago máximo de la parte de promedio movil
+#--   d             : orden de diferenciación
+#--   bool          : booleano que indica si realizar la estimación arima con constante
+#--   metodo        : método por el cual se hará la estimación ARIMA (existe CS, ML y CSS-ML)
+# ----Argumentos de salida  ----#
+#--   base_num_rezagos : base de datos que contiene el numero de rezagos optimos para cada indice en <indices>
+#---------------------------------------------------------------------------------------#
+
+arma_lags_database <- function(base, interest.vars, no.lags, AR.m, MA.m, d, bool, metodo){
+  
+  base_num_rezagos <- data.frame(p=double(),q=double())   # dataframe que va a guardar todos los rezagos
+  
+  # El objeto <base> debe tener clase <zoo> o <ts>, o la funcion tendra errores 
+  if(!inherits(base,"zoo") & !inherits(base,"ts")) {
+    stop("La base ingresada no es ni de clase zoo ni de clase ts")
+  }
+  
+  # El objeto <no.lags> debe ser <numeric> o <integer> o <NULL> o la funcion tendra errores
+  if(!inherits(no.lags,"numeric") & !inherits(no.lags,"integer") & !inherits(no.lags,"NULL")) {
+    stop("El numero de rezagos ingresado no es numerico")
+  }
+  
+  # La longitud de <no.lags> puede ser o 0, o 1 o <length(interest.vars)>, de otro modo surgiria un error
+  if(length(no.lags)!=0 & length(no.lags)!=1 & length(no.lags)!=length(interest.vars)) 
+    stop("no.lags tiene dimensiones incorrectas, se debe ingresar un solo numero o un vector del mismo tamaño que 
+          las variables dependientes ingresadas")
+  
+  # Por cada elemento en <base[,interest.vars]> hallar los rezagos optimos dependiendo del valor de <no.lags>
+  # Si es <NULL> los numeros de rezagos se obtienen automaticamente con AIC
+  
+  for(i in 1:ncol(base[,interest.vars])){ 
+    indice <- colnames(base[,interest.vars][,i])
+    if(is.null(no.lags)){
+      # Encontrar rezagos optimos
+      lags_matrix <- arma_seleccion_df(base[,indice], AR.m =20,MA.m = 0,d = 0, bool = TRUE,metodo = "CSS")
+      p           <- lags_matrix[which.min(lags_matrix$AIC),'p']
+      q           <- lags_matrix[which.min(lags_matrix$AIC),'q']
+      # Agregarlos al dataframe base_num_rezagos
+      base_num_rezagos[indice,] <- c(p,q)
+    }else if(length(no.lags) == 1){
+      if(no.lags != 0){
+        # Si <no.lags> es un numero, simplemente p sera igual a <no.lags>
+        p <- no.lags
+        q <- MA.m
+        base_num_rezagos[indice,] <- c(p,q)
+      }
+    }else if(length(no.lags) == length(interest.vars)){
+      # Si <no.lags> tiene la misma cantidad de numeros que elementos en <interest.vars> se toma el i-esimo 
+      # numero como p-rezagos en el i-esimo indice, solamente si el i-esimo numero es distinto de 0
+      if(no.lags[i]!=0){
+        p <- no.lags[i]
+        q <- MA.m
+        base_num_rezagos[indice,] <- c(p,q)
+      }
+    }else if(length(no.lags) >1 & length(no.lags) != length(interest.vars)) 
+      stop("El vector de rezagos no.lags tiene que tener el mismo numero de elementos que indices ingresados")
+  }
+  return(base_num_rezagos)
+}
+
+#---------------------------------------------------------------------------------------#
+
+#------------------------------   22. volatility_event_study   -------------------------------#
+# Para cada evento estima un modelo apARCH(1,1) y calcula el forecast de la volatilidad condicional.
+# Por el momento la funcion solo corre con apARCH(1,1) y modelo de distribucion t. Faltaria parametrizarlos si se desean cambiar
+# El objeto que retorna es una lista de objetos "ESVolatility", donde cada uno de ellos incluye los coeficientes del modelo, los 
+# p_values de tests de bondad de ajuste de los errores estandarizados a distribucion t, junto al forecast de la volatilidad y los
+# errores durante la semana de evento.
+#---------------------------------------------------------------------------------------#
+# ----Argumentos de entrada ----#
+#--   base.evento   : base de datos que contiene los eventos con los que se hara el estudio de volatilidad
+#--   date.col.name : nombre de la columna de <base.evento> que indica la fecha del evento
+#--   geo.col.name  : nombre de la columna de <base.evento> que indica la geolocalizacion del evento (generalmente pais)
+#--   base      : base de datos que contiene las series financieras con las que se hace el estudio de volatilidad
+#--   interest.vars : vector con nombres de las columnas de <base> que corresponden a las series financieras
+#--   num_lags      : numero de rezagos a considerar. Si es un numero, se calcula ese numero de rezagos
+#                     para todas las <interest.vars>. Si es una lista con numeros, a la i-esima variable de 
+#                     <interest.vars> se le calcula el i-esimo elemento de no.lags.
+#                     El default es <NULL>, en cuyo caso para cada variable se le calculan los rezagos optimos
+#                     siguiendo el criterio de informacion de Akaike
+#--   AR.m          : rezago maximo de la parte autorregresiva
+#--   MA.m          : rezago maximo de la parte de promedio movil
+#--   d             : orden de diferenciacion
+#--   bool          : booleano que indica si realizar la estimacion arima con constante
+#--   metodo        : metodo por el cual se hara la estimación ARIMA (existe CS, ML y CSS-ML)
+#--   es.start      : numero que indica cuantos dias antes del evento comienza la ventana de estimacion
+#--   len.ev.window : numero que indica el tamanho de la venta de evento
+#--   var.exo       : strings que indican nombres de columnas de <base> que corresponden a variables exogenas que no 
+#--                   dependen del pais (o ciudad o region)
+#--   var.exo.pais  : strings que indican parte del nombre de alguna columna de <base> que corresponde, concatenado al pais,
+#--                   una variable exogena
+# ----Argumentos de salida  ----#
+#--   lista_volatilidad : lista de objetos clase "ESVolatility". Cada objeto de esta clase incluye los parametros estimados durante el
+#                         modelo ARMA(p,q)-apARCH(1,1), junto con p_values de pruebas de bondad de ajuste de los errores estandarizados
+#                         a la distribucion t. Ademas, incluye el forecast de la volatilidad para los <len.ev.window> dias siguientes
+#                         al evento. Por ultimo, incluye el error durante la ventana de evento
+#---------------------------------------------------------------------------------------#
+
+volatility_event_study = function(base.evento, date.col.name, geo.col.name, base, interest.vars, num_lags, AR.m = 20, MA.m = 0,d = 0,
+                                  bool = TRUE,metodo = "CSS", es.start,len.ev.window,var.exo,var.exo.pais){
+  # Crear una nueva clase de objetos para guardar informacion importante de la estimacion ARMA-GARCH
+  setClass("ESVolatility",slots=list(coefficients = "numeric",goodness_of_fit = "numeric",variance_forecast="xts",residuales_evento="xts"))
+  
+  # Generamos un dataframe que incluya los ordenes de rezagos para cada variable de interes, stock (Pagnottoni) o CDS
+  # Tambien se tendra un parametro que le permita al usuario decidir cuantos rezagos desea en especifico para todas las variables de interes.
+  # Si se desa el mismo numero de rezagos para todas las variables de interes, asignar el numero a <num_lags>. Si se desea un numero de 
+  # rezagos para cada variable de interes, asignar una lista a <num_lags> con los numeros de rezagos. 
+  # Nota: Si se coloca la lista, tiene que tener el mismo numero de datos que numero de variables de interes.
+  
+  # Si se desea que se elijan los rezagos siguiendo el criterio de informacion de Akaike, dejar <num_lags> como NULL
+  
+  lags_database <- arma_lags_database(base=base,interest.vars,num_lags,AR.m, MA.m,d,bool,metodo)
+  
+  lista_volatilidad <- list()
+  for(i in 1:nrow(base.evento)){
+    evento <- base.evento[i,]
+    pais_evento   <- evento[geo.col.name]
+    # Se obtiene primero el indice del pais donde sucedio el desastre
+    indice <- matching(pais_evento)[1] # El 1 solamente se coloca porque con la base de Pagnottoni, USA tiene dos stocks
+    # Ya no es necesario escribirlo cuando se utilicen los CDS, cada pais solo tiene un CDS
+    
+    # Loop que genera la posicion de desastre respecto al indice de <base>. Si la fecha del evento no esta en el indice de 
+    # <base>,se revisara hasta <nrow(base)> dias despues del desastre para ser considerado como el inicio del evento
+    for(j in 0:nrow(base)){
+      if((evento[,date.col.name]+j) %in% index(base[,indice])){ 
+        # Generacion del dia del desastre (o j dias despues del desastre, si el dia del desastre no esta en el indice de 
+        # <asset.returns>)
+        dia_evento  <- evento[,date.col.name]+j
+        # Generacion de la posicion del dia de desastre en el indice de fechas de <base>
+        # (o j dias despues del desastre, si el dia del desastre no esta en el indice de <base>)
+        indice_del_evento <- which(index(base[,indice]) == dia_evento)
+        break
+      }
+    }
+    
+    # <fin_estimacion> indica que la ventana de estimacion va hasta el dia anterior al dia de evento. Si se desea que termine mucho antes
+    # faltaria parametrizarlo
+    fin_estimacion      <- indice_del_evento - 1
+    inicio_estimacion   <- indice_del_evento - es.start
+    
+    # Estimacion APARCH con modelo de media ARMA -------------------------------
+    
+    # Se obtienen los ordenes para el modelo ARMA(p,q) del indice
+    p   <- lags_database[indice,"p"]
+    q   <- lags_database[indice,"q"]
+    
+    # Variables exogenas que dependen del pais
+    variables_pais <- paste(var.exo.pais,pais_evento,sep="_")
+    
+    # Especificacion apARCH
+    spec <- ugarchspec(variance.model = list(model = "apARCH", garchOrder = c(1, 1)),
+                       mean.model = list(armaOrder = c(p, q),
+                                         external.regressors = as.matrix(base[(inicio_estimacion:fin_estimacion),
+                                                                                  c(var.exo, variables_pais)])),
+                       distribution.model = "std")
+    fit <- ugarchfit(spec, data = base[(inicio_estimacion:fin_estimacion),indice],solver="hybrid")
+    
+    # Residuales
+    
+    resdi <- as.numeric(residuals(fit,standardize=TRUE))
+    
+    # Funcion de distribucion t
+    df <- fit@fit$coef["shape"]
+    t_gof <- gnfit(resdi,"t",df) #No rechazo H0, se sigue distribucion t
+    t_gof_pval <- c(t_gof$Apval,t_gof$Wpval) # Guardar el p_valor de lass pruebas Anderson-Darling y Cramer Von Misses
+    names(t_gof_pval) <- c("Anderson-Darling","Cramer-Von Misses")
+    
+    # Forecast volatilidad condicional
+    # Usando la ecuacion de Bialkowski (2008) para realizar el forecast de sigma^2
+    # h_t sale de fit@fit$var, \varepsilon_t sale de fit@fit$residuals y los errores estandarizados 
+    # salen de fit@fit!z
+    omega         <- fit@fit$coef["omega"]
+    alpha         <- fit@fit$coef["alpha1"]
+    beta          <- fit@fit$coef["beta1"]
+    fcast_var     <- c()
+    for(k in 1:len.ev.window){
+      j <- 0:(k-1)
+      fcast_var_ti  <- omega*sum((beta+alpha)^j) + (beta+alpha)^(k-1)*beta*(tail(fit@fit$var,1))+
+        (beta+alpha)^(k-1)*alpha*(tail((fit@fit$residuals)^2,1))
+      fcast_var <- c(fcast_var, fcast_var_ti)
+    }
+    
+    # Crear la serie de los residuales para la ventana de evento
+    forecast <- ugarchforecast(fit,n.ahead=len.ev.window)
+    residual_evento <- base[(indice_del_evento:(indice_del_evento+len.ev.window-1)),indice] - forecast@forecast$seriesFor
+    # Duda de como generar estos residuales
+    
+    # Convertir en xts <fcast_var>
+    fcast_var <- as.xts(fcast_var, order.by = index(residual_evento))
+    # Guardar objetos importantes
+    object <- new("ESVolatility",coefficients=coef(fit),goodness_of_fit=t_gof_pval,variance_forecast=fcast_var,
+                  residuales_evento=residual_evento)
+    lista_volatilidad <- c(lista_volatilidad,object)
+  }
+  return(lista_volatilidad)
 }
 
 #---------------------------------------------------------------------------------------#

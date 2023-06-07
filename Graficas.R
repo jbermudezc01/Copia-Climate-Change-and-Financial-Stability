@@ -39,11 +39,11 @@ for(model_name in names(coefficients_disasters_list)){
 }
 
 # Generamos la densidad de los retornos anormales acumulados para cada tipo de desastre
-densidad_CAR_bio <- densidad_CAR(coef_vec_fitsur_Bio,indexes)
-densidad_CAR_cli <- densidad_CAR(coef_vec_fitsur_Cli,indexes)
-densidad_CAR_geo <- densidad_CAR(coef_vec_fitsur_Geo,indexes)
-densidad_CAR_hyd <- densidad_CAR(coef_vec_fitsur_Hyd,indexes)
-densidad_CAR_met <- densidad_CAR(coef_vec_fitsur_Met,indexes)
+densidad_CAR_bio <- densidad_CAR(coef_vec_fitsur_Biological,indexes)
+densidad_CAR_cli <- densidad_CAR(coef_vec_fitsur_Climatological,indexes)
+densidad_CAR_geo <- densidad_CAR(coef_vec_fitsur_Geophysical,indexes)
+densidad_CAR_hyd <- densidad_CAR(coef_vec_fitsur_Hydrological,indexes)
+densidad_CAR_met <- densidad_CAR(coef_vec_fitsur_Meteorological,indexes)
 
 ### =============================== Graficas de retornos anormales ==================================
 
@@ -62,35 +62,61 @@ grafico_densidad(vector_car,main_car,labels,colors)
 
 #Para los AR_t_0 seria
 main_t_0   <- "Kernel density of AR t_0"  #<<<--- titulo para la grafica
-vector_t_0 <- c("dens_fitsur_Bio_t0","dens_fitsur_Cli_t0","dens_fitsur_Geo_t0",
-                "dens_fitsur_Hyd_t0","dens_fitsur_Met_t0") #<<<---vector de elementos a graficar
+vector_t_0 <- c("dens_fitsur_Biological_t0","dens_fitsur_Climatological_t0","dens_fitsur_Geophysical_t0",
+                "dens_fitsur_Hydrological_t0","dens_fitsur_Meteorological_t0") #<<<---vector de elementos a graficar
 grafico_densidad(vector_t_0,main_t_0,labels,colors)
 
 
 #Para los AR_t_1 seria
 main_t_1   <- "Kernel density of AR t_1"  #<<<--- titulo para la grafica
-vector_t_1 <- c("dens_fitsur_Bio_t1","dens_fitsur_Cli_t1","dens_fitsur_Geo_t1",
-                "dens_fitsur_Hyd_t1","dens_fitsur_Met_t1") #<<<---vector de elementos a graficar
+vector_t_1 <- c("dens_fitsur_Biological_t1","dens_fitsur_Climatological_t1","dens_fitsur_Geophysical_t1",
+                "dens_fitsur_Hydrological_t1","dens_fitsur_Meteorological_t1") #<<<---vector de elementos a graficar
 grafico_densidad(vector_t_1,main_t_1,labels,colors)
 
 
 #Para los AR_t_2 seria
 main_t_2   <- "Kernel density of AR t_2"  #<<<--- titulo para la grafica
-vector_t_2 <- c("dens_fitsur_Bio_t2","dens_fitsur_Cli_t2","dens_fitsur_Geo_t2",
-                "dens_fitsur_Hyd_t2","dens_fitsur_Met_t2") #<<<---vector de elementos a graficar
+vector_t_2 <- c("dens_fitsur_Biological_t2","dens_fitsur_Climatological_t2","dens_fitsur_Geophysical_t2",
+                "dens_fitsur_Hydrological_t2","dens_fitsur_Meteorological_t2") #<<<---vector de elementos a graficar
 grafico_densidad(vector_t_2,main_t_2,labels,colors)
 
 #Para los AR_t_3 seria
 main_t_3   <- "Kernel density of AR t_3"  #<<<--- titulo para la grafica
-vector_t_3 <- c("dens_fitsur_Bio_t3","dens_fitsur_Cli_t3","dens_fitsur_Geo_t3",
-                "dens_fitsur_Hyd_t3","dens_fitsur_Met_t3") #<<<---vector de elementos a graficar
+vector_t_3 <- c("dens_fitsur_Biological_t3","dens_fitsur_Climatological_t3","dens_fitsur_Geophysical_t3",
+                "dens_fitsur_Hydrological_t3","dens_fitsur_Meteorological_t3") #<<<---vector de elementos a graficar
 grafico_densidad(vector_t_3,main_t_3,labels,colors)
 
 #Para los AR_t_4 seria
 main_t_4   <- "Kernel density of AR t_4"  #<<<--- titulo para la grafica
-vector_t_4 <- c("dens_fitsur_Bio_t4","dens_fitsur_Cli_t4","dens_fitsur_Geo_t4",
-                "dens_fitsur_Hyd_t4","dens_fitsur_Met_t4") #<<<---vector de elementos a graficar
+vector_t_4 <- c("dens_fitsur_Biological_t4","dens_fitsur_Climatological_t4","dens_fitsur_Geophysical_t4",
+                "dens_fitsur_Hydrological_t4","dens_fitsur_Meteorological_t4") #<<<---vector de elementos a graficar
 grafico_densidad(vector_t_4,main_t_4,labels,colors)
+
+# Grafica de tiempo retornos anormales acumulados  -----------------------------------
+
+coefficients_list <- coefficients_disasters_list  #<<<--- parametro que indica para que lista de coeficientes se quiere
+                                                  #       realizar el grafico, ya sea por tipo de desastre <coefficients_disasters_list>
+                                                  #       o por pais donde sucedio el desastre <coefficients_countries_list>
+# Si se desea graficar solamente los CAR para algun(os) tipos de desastres o para algun(os) paises en especifico, se deben escribir en el 
+# parametro <var.interes>. Tienen que tener la misma ortografia que <Tipos.desastres>, en caso de haber escogido <coefficients_disasters_list>
+# o <paises> en caso de haber escogido <coefficients_countries_list>.
+# Por ejemplo, si solo se quiere ver el CAR asociado a Colombia, entonces var.interes <- "Colombia". 
+# Si se desea ver el CAR para todos los paises o todos los tipos de desastres, var.interes <- Tipos.desastres o var.interes <- paises
+var.interes <- Tipos.Desastres
+
+# Filtrar <coefficients_disasters_list> para que solo incluyan coeficientes para los tipos de desastre o paises incluidos en <var.interes>
+coefficients_list <- coefficients_list[grep(paste(var.interes,collapse = "|"),names(coefficients_list))]
+
+for(model in coefficients_list){
+  # Los coeficientes estan en la columna <Estimate>
+  coefficients <- model[,"Estimate"]
+  # Seleccionar solo los que pertenecen a una dummy
+  interest.index <- str_ends(names(coefficients),paste(steps,collapse="|"))
+  coefficients   <- coefficients[interest.index]
+  # <car_pagnottoni> genera la grafica de los CAR dependiendo de dia relativo al evento
+  car_pagnottoni(coefficients,indices = indexes,interest.vars = var.interes,average = TRUE)
+}
+
 
 ## ============================== Graficos A.3 de densidad de los retornos ========================================
 
@@ -154,33 +180,33 @@ colores.ar = c("#1964C4", "#C9675A", "#D5B259","darkorchid4","#709E3D")
 
 
 ## Para biological
-ar_data_Bio       <- coef_vec_fitsur_Bio[order_coef(names(coef_vec_fitsur_Bio),pagn_orden)] ##ordenar
+ar_data_Bio       <- coef_vec_fitsur_Biological[order_coef(names(coef_vec_fitsur_Biological),pagn_orden)] ##ordenar
 ar_data_frame_Bio <- data.frame(values = ar_data_Bio,  group=group, subgroup =steps)
 ar_data_frame_Bio$group <- factor(ar_data_frame_Bio$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica <grupo>
 plot_Bio <- grafico_estimates(ar_data_frame_Bio,"Abnormal return","Biological",colors = colores.ar)
 
 ## Para climatological
-ar_data_Cli       <- coef_vec_fitsur_Cli[order_coef(names(coef_vec_fitsur_Cli),pagn_orden)] ##ordenar
+ar_data_Cli       <- coef_vec_fitsur_Climatological[order_coef(names(coef_vec_fitsur_Climatological),pagn_orden)] ##ordenar
 ar_data_frame_Cli <- data.frame(values = ar_data_Cli, group=group, subgroup =steps)
 ar_data_frame_Cli$group <- factor(ar_data_frame_Cli$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica <grupo>
 plot_Cli <- grafico_estimates(ar_data_frame_Cli,"Abnormal return","Climatological",colors = colores.ar)
 
 ## Para geophysical
 
-ar_data_Geo       <- coef_vec_fitsur_Geo[order_coef(names(coef_vec_fitsur_Geo),pagn_orden)] ##ordenar
+ar_data_Geo       <- coef_vec_fitsur_Geophysical[order_coef(names(coef_vec_fitsur_Geophysical),pagn_orden)] ##ordenar
 ar_data_frame_Geo <- data.frame(values = ar_data_Geo, group=group, subgroup =steps)
 ar_data_frame_Geo$group <- factor(ar_data_frame_Geo$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica <grupo>
 plot_Geo <- grafico_estimates(ar_data_frame_Geo,"Abnormal return","Geophysical",colors = colores.ar)
 
 ## Para hydrological
 
-ar_data_Hyd       <- coef_vec_fitsur_Hyd[order_coef(names(coef_vec_fitsur_Hyd),pagn_orden)] ##ordenar
+ar_data_Hyd       <- coef_vec_fitsur_Hydrological[order_coef(names(coef_vec_fitsur_Hydrological),pagn_orden)] ##ordenar
 ar_data_frame_Hyd <- data.frame(values = ar_data_Hyd, group=group, subgroup =steps)
 ar_data_frame_Hyd$group <- factor(ar_data_frame_Hyd$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica <grupo>
 plot_Hyd <- grafico_estimates(ar_data_frame_Hyd,"Abnormal return","Hydrological",colors = colores.ar)
 
 ## Para meteorological
-ar_data_Met       <- coef_vec_fitsur_Met[order_coef(names(coef_vec_fitsur_Met),pagn_orden)] ##ordenar
+ar_data_Met       <- coef_vec_fitsur_Meteorological[order_coef(names(coef_vec_fitsur_Meteorological),pagn_orden)] ##ordenar
 ar_data_frame_Met <- data.frame(values = ar_data_Met,  group=group, subgroup =steps)
 ar_data_frame_Met$group <- factor(ar_data_frame_Met$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica <grupo>
 plot_Met <- ggplot(ar_data_frame_Met, aes(x=group,y=values,fill=subgroup))+
@@ -219,7 +245,7 @@ for(model_name in names(coefficients_disasters_list)){
 
 #Para biological
 
-t_data_Bio       <- t_test_fitsur_Bio[order_coef(names(t_test_fitsur_Bio),pagn_orden)] ##ordenar
+t_data_Bio       <- t_test_fitsur_Biological[order_coef(names(t_test_fitsur_Biological),pagn_orden)] ##ordenar
 t_data_frame_Bio <- data.frame(values = t_data_Bio,  group=group, subgroup =steps)
 t_data_frame_Bio$group <- factor(t_data_frame_Bio$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica <grupo>
 plot_t_Bio <- grafico_estimates(t_data_frame_Bio, "t_test", "Biological",colors = colores.ar)
@@ -227,14 +253,14 @@ plot_t_Bio <- grafico_estimates(t_data_frame_Bio, "t_test", "Biological",colors 
 
 #Para climatological
 
-t_data_Cli       <- t_test_fitsur_Cli[order_coef(names(t_test_fitsur_Cli),pagn_orden)] ##ordenar
+t_data_Cli       <- t_test_fitsur_Climatological[order_coef(names(t_test_fitsur_Climatological),pagn_orden)] ##ordenar
 t_data_frame_Cli <- data.frame(values = t_data_Cli, group=group,subgroup =steps)
 t_data_frame_Cli$group <- factor(t_data_frame_Cli$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica <grupo>
 plot_t_Cli <- grafico_estimates(t_data_frame_Cli, "t_test", "Climatological",colors = colores.ar)
 
 ## Para geophysical
 
-t_data_Geo       <- t_test_fitsur_Geo[order_coef(names(t_test_fitsur_Geo),pagn_orden)] ##ordenar
+t_data_Geo       <- t_test_fitsur_Geophysical[order_coef(names(t_test_fitsur_Geophysical),pagn_orden)] ##ordenar
 t_data_frame_Geo <- data.frame(values = t_data_Geo, group=group, subgroup =steps)
 t_data_frame_Geo$group <- factor(t_data_frame_Geo$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica <grupo>
 
@@ -243,7 +269,7 @@ plot_t_Geo <- grafico_estimates(t_data_frame_Geo, "t_test", "Geophysical",colors
 
 ## Para hydrological
 
-t_data_Hyd       <- t_test_fitsur_Hyd[order_coef(names(t_test_fitsur_Hyd),pagn_orden)] ##ordenar
+t_data_Hyd       <- t_test_fitsur_Hydrological[order_coef(names(t_test_fitsur_Hydrological),pagn_orden)] ##ordenar
 t_data_frame_Hyd <- data.frame(values = t_data_Hyd, group=group, subgroup =steps)
 t_data_frame_Hyd$group <- factor(t_data_frame_Hyd$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica <grupo>
 
@@ -252,7 +278,7 @@ plot_t_Hyd <- grafico_estimates(t_data_frame_Hyd, "t_test", "Hydrological",color
 
 ## Para meteorological
 
-t_data_Met       <- t_test_fitsur_Met[order_coef(names(t_test_fitsur_Met),pagn_orden)] ##ordenar
+t_data_Met       <- t_test_fitsur_Meteorological[order_coef(names(t_test_fitsur_Meteorological),pagn_orden)] ##ordenar
 t_data_frame_Met <- data.frame(values = t_data_Met, group=group, subgroup =steps)
 t_data_frame_Met$group <- factor(t_data_frame_Met$group, levels = labels_grafico) ## Para preservar el orden de la variable categorica <grupo>
 

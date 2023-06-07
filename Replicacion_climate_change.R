@@ -35,7 +35,6 @@ library(dynlm)
 library(systemfit)
 library(ks)
 library(gridExtra)
-#library(xlsx)
 library(stringr)
 library(maps)
 library(mapproj)
@@ -44,6 +43,7 @@ library(tmap)
 library(sf)
 library(ggsci)
 library(classInt)
+library(gnFit)
 
 # Cargar funciones --------------------------------------------------------
 
@@ -53,61 +53,88 @@ source('Functions_Climate_change.r')
 
 # Se genera un vector con el nombre de los paises de los cuales se tiene datos de indice bursatil
 
-indexes   <- c("S.PASX200","BEL20","Bovespa","S.PTSXComposite","S.PCLXIPSA","OMXCopenhagen20","OMXHelsinki25","CAC40",
-               "DAX","HangSeng","Nifty50","JakartaStockExchange","S.PBMVIPC","AEX","OSEBenchmark","WIG20","MOEXRussia",
-               "SouthAfricaTop40","KOSPI","IBEX35","OMXStockholm30","SMI","SETIndex","BIST100","FTSE100","NASDAQComposite",
-               "Nasdaq100") #<<<--- Lista de los indices analizados sin caracteres especiales por motivos de la regresion
+bool_cds <- 0  #<<<--- Parametro que indica si se carga la base de datos de CDS o los retornos de Pagnottoni (2022). 1 si se desan los CDS. 0 si los retornos.
 
-countries <- c("Australia","Belgium", "Brazil", "Canada", "Chile", "Denmark", "Finland",
-               "France", "Germany", "HongKong", "India", "Indonesia","Mexico","Netherlands","Norway","Poland","Russia",
-               "SouthAfrica","SouthKorea", "Spain", "Sweden","Switzerland","Thailand","Turkey", 
-               "UnitedKingdom","USA1","USA2") #<<<--- Lista de los paises de cada indice, con el proposito de leer los excel con los datos
-
-Tipos.Desastres  <- c("Biological","Climatological","Geophysical","Hydrological","Meteorological")  #<<<--- Tipos de desastres considerados
-no.rezagos.de.desatres <- 4  #<<<--- Numero de rezagos de los desastres <w> (i.e. t0, t1, ..., tw)
-
-# Establecemos el directorio de los datos
-Dir  = paste0(getwd(),'/Bases/') #Directorio de datos, se supone que el subdirectorio <Bases> existe
-
-# Genera una lista de los codigos bursatiles en formato xts.
-# La longitud de la lista es igual al numero de archivos con nombre stocks_<country> que existe en <Dir>.
-
-# Para cada pais que se encuentra en <countries>, vamos a tener una base de datos del indice bursatil que le corresponde. Cada una tiene 7 columnas:
-# la primera, <Date>, corresponde a los dias en los cuales tenemos datos para el indice; la segunda, <Price>, corresponde a los precios de cierre 
-# para cada dia; la tercera, <Open>, corresponde a los precios de apertura para cada dia; la cuarta, <High>, corresponde al mayor precio registrado
-# en el dia; la quinta, <Low>, corresponde al menor precio registrado en el dia; la sexta, <Vol.>, corresponde al volumen de acciones que se tranzaron;
-# la septima, <Change%>, corresponde al cambio porcentual en el precio de cierre. 
-# Dado que de las bases de datos nos interesan sobre todo <Date> y <Price>, al final generaremos una base que contenga todos los precios de cierre de
-# todos los paises que esta en <countries>. Cabe recalcar que en el vector <indexes> tenemos los nombres de los indices bursatiles en el orden 
-# correspondiente a los paises en <countries>.
-xts_list     <- list() 
-for (country in countries) {
-  # Genera el nombre del archivo csv, siguiendo el Directorio especificado, añadiendole /Stocks_ country.csv
-  csv_file <- paste0(Dir,"Stocks_", country, ".csv")
-  # Genera un archivo csv para el país <country>
-  csv      <- read.csv(csv_file, header = TRUE, sep = ";", quote = "\"", col.names = c("Date","Price", "Open", 
-                                                                                       "High","Low","Vol.","Change%"))
-  colnames <- names(csv)
+if(!bool_cds){
+  indexes   <- c("S.PASX200","BEL20","Bovespa","S.PTSXComposite","S.PCLXIPSA","OMXCopenhagen20","OMXHelsinki25","CAC40",
+                 "DAX","HangSeng","Nifty50","JakartaStockExchange","S.PBMVIPC","AEX","OSEBenchmark","WIG20","MOEXRussia",
+                 "SouthAfricaTop40","KOSPI","IBEX35","OMXStockholm30","SMI","SETIndex","BIST100","FTSE100","NASDAQComposite",
+                 "Nasdaq100") #<<<--- Lista de los indices analizados
   
-  # Loop que corre por todas las columnas del archivo <csv> menos la primera (ya que es un dia), retirandole las
-  # comas que podrían generar problemas para reconocerlo como formato número
-  for (colname in colnames[2:length(colnames)]) {
-    csv[, colname] <- as.numeric(gsub(",","",csv[, colname]))
-  } # Muestra warning() ya que hay una columna que contiene caracteres "M" 
+  countries <- c("Australia","Belgium", "Brazil", "Canada", "Chile", "Denmark", "Finland",
+                 "France", "Germany", "HongKong", "India", "Indonesia","Mexico","Netherlands","Norway","Poland","Russia",
+                 "SouthAfrica","SouthKorea", "Spain", "Sweden","Switzerland","Thailand","Turkey", 
+                 "UnitedKingdom","USA1","USA2") #<<<--- Lista de los paises de cada indice, con el proposito de leer los excel con los datos
   
-  csv$Date <- as.Date(csv$Date, "%m/%d/%Y")
+  Tipos.Desastres  <- c("Biological","Climatological","Geophysical","Hydrological","Meteorological")  #<<<--- Tipos de desastres considerados
+  no.rezagos.de.desatres <- 4  #<<<--- Numero de rezagos de los desastres <w> (i.e. t0, t1, ..., tw)
   
-  # Generar la lista de los xts, solamente de la columna <Price>, teniendo en cuenta los índices incluidos en <Date>
-  xts_list[[country]] <- xts(csv$Price, csv$Date)
+  # Establecemos el directorio de los datos
+  Dir  = paste0(getwd(),'/Bases/') #Directorio de datos, se supone que el subdirectorio <Bases> existe
+  
+  # Genera una lista de los codigos bursatiles en formato xts.
+  # La longitud de la lista es igual al numero de archivos con nombre stocks_<country> que existe en <Dir>.
+  
+  # Para cada pais que se encuentra en <countries>, vamos a tener una base de datos del indice bursatil que le corresponde. Cada una tiene 7 columnas:
+  # la primera, <Date>, corresponde a los dias en los cuales tenemos datos para el indice; la segunda, <Price>, corresponde a los precios de cierre 
+  # para cada dia; la tercera, <Open>, corresponde a los precios de apertura para cada dia; la cuarta, <High>, corresponde al mayor precio registrado
+  # en el dia; la quinta, <Low>, corresponde al menor precio registrado en el dia; la sexta, <Vol.>, corresponde al volumen de acciones que se tranzaron;
+  # la septima, <Change%>, corresponde al cambio porcentual en el precio de cierre. 
+  # Dado que de las bases de datos nos interesan sobre todo <Date> y <Price>, al final generaremos una base que contenga todos los precios de cierre de
+  # todos los paises que esta en <countries>. Cabe recalcar que en el vector <indexes> tenemos los nombres de los indices bursatiles en el orden 
+  # correspondiente a los paises en <countries>.
+  xts_list     <- list() 
+  for (country in countries) {
+    # Genera el nombre del archivo csv, siguiendo el Directorio especificado, añadiendole /Stocks_ country.csv
+    csv_file <- paste0(Dir,"Stocks_", country, ".csv")
+    # Genera un archivo csv para el país <country>
+    csv      <- read.csv(csv_file, header = TRUE, sep = ";", quote = "\"", col.names = c("Date","Price", "Open", 
+                                                                                         "High","Low","Vol.","Change%"))
+    colnames <- names(csv)
+    
+    # Loop que corre por todas las columnas del archivo <csv> menos la primera (ya que es un dia), retirandole las
+    # comas que podrían generar problemas para reconocerlo como formato número
+    for (colname in colnames[2:length(colnames)]) {
+      csv[, colname] <- as.numeric(gsub(",","",csv[, colname]))
+    } # Muestra warning() ya que hay una columna que contiene caracteres "M" 
+    
+    csv$Date <- as.Date(csv$Date, "%m/%d/%Y")
+    
+    # Generar la lista de los xts, solamente de la columna <Price>, teniendo en cuenta los índices incluidos en <Date>
+    xts_list[[country]] <- xts(csv$Price, csv$Date)
+  }
+  
+  # Generar una base de datos que junte todos los indices bursatiles en formato xts.
+  # Las matriz <base_test> tiene las siguientes dimensiones:
+  #     columnas: numero de <indexes> analizados
+  #     filas   : total de dias en el que hay al menos un dato para cualquier indice
+  base_test <- do.call(merge,xts_list)
+  # Cambiar nombres de las columnas por los nombres de los <indexes>
+  colnames(base_test) <- indexes
+}else{
+  indexes     <- c("CDS_Brazil","CDS_Chile","CDS_Colombia","CDS_Mexico","CDS_Peru") #<<<--- Lista de los indices analizados. Corresponde a los 
+  #       nombres en <base_cds>
+  date_column <- "Date"  #<<<--- Parametro que le indica al usuario el nombre de la columna de las fechas
+  countries   <- c("Brazil","Chile","Colombia","Mexico","Peru") #<<<--- Lista de los paises de cada CDS
+  
+  Tipos.Desastres  <- c("Biological","Climatological","Geophysical","Hydrological","Meteorological")  #<<<--- Tipos de desastres considerados
+  no.rezagos.de.desatres <- 4  #<<<--- Numero de rezagos de los desastres <w> (i.e. t0, t1, ..., tw)
+  
+  # Establecemos el directorio de los datos
+  Dir  = paste0(getwd(),'/Bases/') #Directorio de datos, se supone que el subdirectorio <Bases> existe
+  
+  # Leer la base de datos
+  base_cds <- readxl::read_excel(path = paste0(Dir,"CDS_Data_VIX_EMBI.xlsx"))
+  
+  # Seleccionar las columnas de interes (<indexes>)
+  cds <- base_cds %>% dplyr::select(indexes)
+  
+  # Generar una base de datos que junte todos los CDS en formato xts.
+  # Las matriz <base_test> tiene las siguientes dimensiones:
+  #     columnas: numero de <indexes> analizados
+  #     filas   : total de dias en el que hay al menos un dato para cualquier indice
+  base_test <- as.xts(cds,order.by = as.Date(base_cds[[date_column]]))
 }
-
-# Generar una base de datos que junte todos los indices bursatiles en formato xts.
-# Las matriz <base_test> tiene las siguientes dimensiones:
-#     columnas: numero de <indexes> analizados
-#     filas   : total de dias en el que hay al menos un dato para cualquier indice
-base_test <- do.call(merge,xts_list)
-# Cambiar nombres de las columnas por los nombres de los <indexes>
-colnames(base_test) <- indexes
 
 # Generar un vector de fechas en los que solo se tiene valores para n < <min.dias.stock> mercados.
 
@@ -166,28 +193,44 @@ colnames(mean_mov_average) = c("Mean_Returns_Moving_Averages") # Nombre de la va
 
 # Hay que tener en cuenta que la muestra que se utiliza en el paper no es la misma que la que se tiene en las bases,
 # por lo que se reduce la base para los datos del febrero 08 2001 a diciembre 30 2019.
-# La funcion <muestra_paper> va a seleccionar desde un cierto dia, el cual elegimos 08 febrero 2001 siguiendo el paper.
-dia.inicial <- "2001-02-08"   #<<<--- Dia inicial de la muestra
-
-# Se obliga que la muestra comience en <dia.inicial>
-# La matriz <Retornos> conserva el mismo numero de columnas.
-Retornos       = base_retornos[paste0(dia.inicial,"/"),]
-Media_Promedio_movil = mean_mov_average[paste0(dia.inicial,"/")]
-
-# Tabla 1 Pagnottoni: Estadistica descriptiva -----------------------------
-
-## Generar (skewness, kurtosis, mean, max, min, sd) de los retornos de los <indexes> acc. 
-skewness <- moments::skewness(Retornos)
-kurtosis <- moments::kurtosis(Retornos)
-mean     <- apply(Retornos, MARGIN=2, FUN=mean)
-max      <- apply(Retornos, MARGIN=2, FUN=max)
-min      <- apply(Retornos, MARGIN=2, FUN=min)
-sd       <- apply(Retornos, MARGIN=2, FUN=sd)
-
-# La matriz <Stats> tiene por numero de columnas a aquellas medidas de estadística descriptiva, y las filas son igual al numero de <indexes>
-Stats = cbind(min,max,mean,sd,skewness,kurtosis )
-print(Stats, digits=3)
-
+# La funcion <muestra_paper> va a seleccionar desde un cierto dia, el cual elegimos 08 febrero 2001 ("2001-02-08") siguiendo el paper.
+# Para el analisis con CDS no tenemos fecha especifica, asi que se colocaria NULL
+dia.inicial <- "2001-02-08"  #<<<--- Dia inicial de la muestra
+if(!is.null(dia.inicial)){
+  # Se obliga que la muestra comience en <dia.inicial>
+  # La matriz <Retornos> conserva el mismo numero de columnas.
+  Retornos       = base_retornos[paste0(dia.inicial,"/"),]
+  Media_Promedio_movil = mean_mov_average[paste0(dia.inicial,"/")]
+  
+  # Tabla 1 Pagnottoni: Estadistica descriptiva -----------------------------
+  
+  ## Generar (skewness, kurtosis, mean, max, min, sd) de los retornos de los <indexes> acc. 
+  skewness <- moments::skewness(Retornos)
+  kurtosis <- moments::kurtosis(Retornos)
+  mean     <- apply(Retornos, MARGIN=2, FUN=mean)
+  max      <- apply(Retornos, MARGIN=2, FUN=max)
+  min      <- apply(Retornos, MARGIN=2, FUN=min)
+  sd       <- apply(Retornos, MARGIN=2, FUN=sd)
+  
+  # La matriz <Stats> tiene por numero de columnas a aquellas medidas de estadística descriptiva, y las filas son igual al numero de <indexes>
+  Stats = cbind(min,max,mean,sd,skewness,kurtosis )
+  print(Stats, digits=3)
+}else{
+  # Tabla 1 Pagnottoni: Estadistica descriptiva -----------------------------
+  
+  ## Generar (skewness, kurtosis, mean, max, min, sd) de los retornos de los <indexes> acc. 
+  skewness <- moments::skewness(base_retornos)
+  kurtosis <- moments::kurtosis(base_retornos)
+  mean     <- apply(base_retornos, MARGIN=2, FUN=mean)
+  max      <- apply(base_retornos, MARGIN=2, FUN=max)
+  min      <- apply(base_retornos, MARGIN=2, FUN=min)
+  sd       <- apply(base_retornos, MARGIN=2, FUN=sd)
+  
+  # La matriz <Stats> tiene por numero de columnas a aquellas medidas de estadística descriptiva, y las filas son igual al numero de <indexes>
+  Stats = cbind(min,max,mean,sd,skewness,kurtosis )
+  print(Stats, digits=3)
+}
+  
 # Desagregacion temporal --------------------------------------------------
 
 # Las variables a desagregar diariamente son el crecimiento del GDP trimestral y el crecimiento del FDI anual.
@@ -204,7 +247,11 @@ if(1){
   # Leer la base de datos, establecer el formato fecha y generar la base de datos en xts y la lista a ser desagregada
   # De este modo se genera una lista <quarterly_series>, de longitud igual al numero de <indexes>.
   # Cada elemento de <quarterly_series> es un vector numerico con la misma longitud de los datos en los archivos excel
-  gdp_countries      <- read_xlsx(paste0(Dir,"GDP_countries_corregida.xlsx"), sheet="GDP") #<<<--- Base de datos con GDPs
+  if(!bool_cds){
+    gdp_countries <- read_xlsx(paste0(Dir,"GDP_countries_corregida.xlsx"), sheet="GDP") #<<<--- Base de datos con GDPs
+    }else{
+    gdp_countries <- read_xlsx(paste0(Dir,"GDP_countries_cds.xlsx")) #<<<--- Base de datos con GDPs
+  }
   dates.low.freq     <- as.Date(as.yearqtr(gdp_countries$Time),frac=1) #date format, se supone que existe una col llamada <Time>
   quarterly_series   <- as.list(gdp_countries[,-1]) #Se quita la columna de fechas y se genera una lista de sus columnas
   
@@ -277,7 +324,9 @@ if(1){
   # De este modo se genera una lista <fdi_series>, de longitud igual al numero de <indexes>.
   # Cada elemento de <fdi_series> es un vector numerico con la misma longitud de los datos en los archivos excel
   fdi_countries    = read_xlsx(paste0(Dir,"FDI_anual.xlsx"), sheet="FDI") #<<--- Base datos de los FDI
-  fdi_countries_ts = as.ts(fdi_countries[,-1],start=2001,frequency=1)     #<<--- Fecha y freq inicial de los datos 
+  date.col         = "Year"  #<<<---parametro que indica titulo de la columna de las fechas
+  fdi_countries_ts = as.ts(fdi_countries[,-which(names(fdi_countries)==date.col)],
+                           start=min(fdi_countries[,date.col]),frequency=1)   #<<<--- <frequency> es parametro de frecuencia de los datos  
   fdi_series       = as.list(fdi_countries_ts)
   
   ##Matriz de agregacion anual FDI 
@@ -308,12 +357,79 @@ if(1){
   colnames(fdi_growth_base) <- names[1:ncol(fdi_growth_base)]
   colnames(fdi_growth_base) <- paste("fdi",colnames(fdi_growth_base),sep="_")
 }
+  
+if(!is.null(dia.inicial)){
+  # Por otro lado, tambien es necesario reducir la muestra a las bases para que concuerden con la muestra de paper
+  # Podemos usar la funcion que estaba anteriormente especificada
+  # Ambas matrices (<Crecimiento_PIB> y <Crecimiento_FDI>) conservan el mismo numero de columnas, pero sus filas se ven reducidas a las mismas de <Retornos> 
+  Crecimiento_PIB <- gdp_growth_base[paste0(dia.inicial,"/"),]
+  Crecimiento_FDI <- fdi_growth_base[paste0(dia.inicial,"/"),]
+}
 
-# Por otro lado, tambien es necesario reducir la muestra a las bases para que concuerden con la muestra de paper
-# Podemos usar la funcion que estaba anteriormente especificada
-# Ambas matrices (<Crecimiento_PIB> y <Crecimiento_FDI>) conservan el mismo numero de columnas, pero sus filas se ven reducidas a las mismas de <Retornos> 
-Crecimiento_PIB <- gdp_growth_base[paste0(dia.inicial,"/"),]
-Crecimiento_FDI <- fdi_growth_base[paste0(dia.inicial,"/"),]
+# Revisar autocorrelacion serial ------------------------------------------
+
+#El siguiente codigo es para revisar la autocorrelacion serial de la serie de retornos de cada indice, con 
+#50, 100 y n/4 rezagos. Al 5% para todos los indices se viola la hipótesis nula para al menos un rezago
+if(0){
+  lags.test = round(nrow(base_retornos)/4)
+  correlacionados <- c()
+  no_correlacionados <- c()
+  
+  #Generamos un loop for, que crea dos vectores, en el primero incluye aquellos paises con un p-valor menor al 5%
+  #para un test Ljung-Box con lags.test rezagos; es decir, incluye a los paises que se puede rechazar la no autocorrelacion
+  #Mientras que en el segundo vector incluye a los paises que no tienen evidencia para rechazar la no autocorrelacion
+  
+  for (i in 1:ncol(base_retornos)) {
+    result <- Box.test(base_retornos[, i], lag = lags.test, type = "Ljung-Box")
+    if(result$p.value < 0.05){
+      correlacionados <- c(correlacionados,colnames(base_retornos[,i]))
+    }else{
+      no_correlacionados <- c(no_correlacionados,colnames(base_retornos[,i]))
+    }
+  }
+}
+
+
+# Agregar rezagos a las ecuaciones ----------------------------------------
+
+# Como se encontró correlacion serial para casi todas las series usando el test de Ljung - Box con 20 rezagos y n/4
+# rezagos. Modelamos cada retorno siguiendo un modelo AR(p), siendo p = 0 a 20, y elegimos el modelo segun el 
+# criterio de Akaike
+
+## Loop para obtener las matrices de rezagos para cada <indice>
+if(!is.null(dia.inicial)){
+  for(indice in indexes){
+    var_name <- paste0("lags_",indice)
+    Lags     <- lag_function(base_retornos,indice,AR.m=20, MA.m=0, d=0, bool=TRUE, metodo="CSS",dia.inicial)
+    assign(var_name,Lags)
+  }
+}else{
+  for(indice in indexes){
+    var_name <- paste0("lags_",indice)
+    Lags     <- lag_function(base_retornos,indice,AR.m=20, MA.m=0, d=0, bool=TRUE, metodo="CSS",dia.inicial)
+    assign(var_name,Lags)
+    # Falta reducir las bases <base_retornos>, <mean_mov_average>,<gdp_growth_base> y <fdi_growth_base> y todas las de 
+    # rezagos para que tengan la misma cantidad de datos
+    # Guardar el indice mas reducido entre todas las matrices de rezagos, comparando con el indice de <mean_mov_average>,
+    # que es la serie con el indice mas reducido hasta el momento
+    indice_mas_reducido <- index(mean_mov_average)
+    if(length(index(Lags))<length(index(mean_mov_average))) indice_mas_reducido <- index(Lags)
+  }
+}
+
+if(is.null(dia.inicial)){
+  #Reducir las bases de datos segun <indice_mas_reducido>
+  Retornos             <- base_retornos[indice_mas_reducido,]
+  Media_Promedio_movil <- mean_mov_average[indice_mas_reducido,]
+  Crecimiento_PIB      <- gdp_growth_base[indice_mas_reducido,]
+  Crecimiento_FDI      <- fdi_growth_base[indice_mas_reducido,]
+  for(indice in indexes){
+    lag_base         <- get(paste0("lags_",indice))
+    lag_base_reduced <- test[indice_mas_reducido,]
+    name             <- paste0("lags_",indice)
+    assign(name, lag_base_reduced)
+  }
+}
 
 # Dummies corregidas ------------------------------------------------------
 
@@ -324,9 +440,13 @@ Crecimiento_FDI <- fdi_growth_base[paste0(dia.inicial,"/"),]
 #                  <na.start> : dummy que toma el valor de 1 si se supuso que el dia del evento fue el primer dia del mes y 0 en otro caso
 #                  <end>      : corresponde al ultimo dia del desastre
 #                  <na.end>   : dummy que toma el valor de 1 si se supuso que el ultimo dia del evento fue el ultimo dia del mes y 0 en otro caso
-dummies <- create_dummies(excel_file=paste0(Dir,"emdata_dummies_arregladas.xlsx"), 
+if(!bool_cds){
+  dummies <- create_dummies(excel_file=paste0(Dir,"emdata_dummies_arregladas.xlsx"), 
                           Retornos, no.rezagos=no.rezagos.de.desatres, first.calendar.days.tobe.evaluated = 10 ) 
-
+}else{
+  dummies <- create_dummies(excel_file=paste0(Dir,"emdata_dummies_cds.xlsx"), 
+                            Retornos, no.rezagos=no.rezagos.de.desatres, first.calendar.days.tobe.evaluated = 10 ) 
+}
 # Calculo de interacciones entre D y Rmt
 names.int    = paste0('Int_D_', dimnames(dummies)[[1]])
 # <interactions> sera una matriz con el mismo numero de filas que <Retornos> y su numero de columnas es length(dimnames(<dummies>)[[1]])
@@ -382,42 +502,6 @@ if(0){
   write.xlsx(base_final,"Base_datos_final.xlsx",row.names= FALSE)
 }
 
-# Revisar autocorrelacion serial ------------------------------------------
-
-#El siguiente codigo es para revisar la autocorrelacion serial de la serie de retornos de cada indice, con 
-#50, 100 y n/4 rezagos. Al 5% para todos los indices se viola la hipótesis nula para al menos un rezago
-if(0){
-  lags.test = round(nrow(base_retornos)/4)
-  correlacionados <- c()
-  no_correlacionados <- c()
-  
-  #Generamos un loop for, que crea dos vectores, en el primero incluye aquellos paises con un p-valor menor al 5%
-  #para un test Ljung-Box con lags.test rezagos; es decir, incluye a los paises que se puede rechazar la no autocorrelacion
-  #Mientras que en el segundo vector incluye a los paises que no tienen evidencia para rechazar la no autocorrelacion
-  
-  for (i in 1:ncol(base_retornos)) {
-    result <- Box.test(base_retornos[, i], lag = lags.test, type = "Ljung-Box")
-    if(result$p.value < 0.05){
-      correlacionados <- c(correlacionados,colnames(base_retornos[,i]))
-    }else{
-      no_correlacionados <- c(no_correlacionados,colnames(base_retornos[,i]))
-    }
-  }
-}
-
-# Agregar rezagos a las ecuaciones ----------------------------------------
-
-# Como se encontró correlacion serial para casi todas las series usando el test de Ljung - Box con 20 rezagos y n/4
-# rezagos. Modelamos cada retorno siguiendo un modelo AR(p), siendo p = 0 a 20, y elegimos el modelo segun el 
-# criterio de Akaike
-
-## Loop para obtener las matrices de rezagos para cada <indice>
-for(indice in indexes){
-  var_name <- paste0("lags_",indice)
-  Lags     <- lag_function(base_retornos,indice,AR.m=20, MA.m=0, d=0, bool=TRUE, metodo="CSS",dia.inicial)
-  assign(var_name,Lags)
-}
-
 # Estimacion del modelo SUR -----------------------------------------------
 
 ### Realizar for loop a lo largo de todos los paises para obtener las ecuaciones a estimar. 
@@ -432,7 +516,7 @@ for(indice in indexes){
 # <resid_disasters_list>, que incluyen por un lado los modelos estimados y por el otro los residuales.
 # ----COLOCAR <if(1)> SI SE DESEA ESTIMAR EL MODELO ----#
 load.SUR  = 1            #<<<<-- 1 si se carga el SUR inicial, 0 si se corre y salva el SUR inicial 
-saved.day = "2023-04-05" #<<<--- fecha del save() en formato yyyy-mm-dd
+saved.day = "2023-05-24" #<<<--- fecha del save() en formato yyyy-mm-dd
 if(!load.SUR){
   eqsystem              = list()
   fitted_models         = c()
@@ -445,7 +529,7 @@ if(!load.SUR){
       eqsystem[[indexes[i]]]    =  model_equation.LF(database=base_datos, countries[i], indexes[i],
                                                      var.exo=var.exo,  var.exo.pais=c('gdp','fdi'),  Lags='lags')
     }
-    name          = paste0("fitsur_", substr(disaster,1,3) )
+    name          = paste0("fitsur_", disaster)
     fitted_models = c(fitted_models, name)
     assign(name, systemfit(eqsystem, method="SUR"))
     coefficients_disasters_list[[name]]   <- summary(get(name))$coefficients
@@ -538,8 +622,8 @@ if(!load.SURpaises){
   # pesados y no se pueden cargar
   save(resid_countries_list, file=paste0(paste0('Residuos_Paises_',saved.day),'.RData'))
 } else{
- load(paste0(paste0('Resultados_Desastres_Paises_',saved.day),'.RData')) #del save 1. 
- #load(paste0(paste0('Residuos_Paises_',saved.day),'.RData'))  ## del save 2. Solo puede correrlo JP, ya que los residuos estsn en su PC y  pesan demasiado para mandarlos por github
+  load(paste0(paste0('Resultados_Desastres_Paises_',saved.day),'.RData')) #del save 1. 
+  #load(paste0(paste0('Residuos_Paises_',saved.day),'.RData'))  ## del save 2. Solo puede correrlo JP, ya que los residuos estsn en su PC y  pesan demasiado para mandarlos por github
 }
 
 # Manejo de los datos para graficar ---------------------------------------
@@ -729,7 +813,7 @@ if(0){
   merged_data$decile <- cut(merged_data$n, breaks=deciles, labels=FALSE,include.lowest=TRUE) # A cada <region> le asigan un numero (decil) entre 1 y 10
   merged_data$decile <- factor(merged_data$decile) ## Dejar claro que es variable discreta, no continua
 }
-  
+
 # Para realizar el resto de mapamundis primero es necesario ordenar la columna <Disaster.subgroup> alfabeticamente
 emdat_final_sorted <- emdat_final %>% arrange(Disaster.Subgroup)
 
@@ -785,7 +869,7 @@ merged_data_disasters <- lapply(results_final, function(x) {
 steps <- c("t0","t1","t2","t3","t4")  #<<<--- vector con los días adelante del evento, hace referencia a como termina el nombre de las dummies
 
 Por_tipo_desastre <- FALSE #<<<--- Variable bool. <FALSE> indica que se quiere revisar los CAR por pais donde sucedio el desastre. 
-                            #      <TRUE> indica que se quiere ver por tipo de desastre
+#      <TRUE> indica que se quiere ver por tipo de desastre
 
 if(Por_tipo_desastre){ 
   name_column <- "Type_of_disaster"

@@ -131,7 +131,7 @@ base_lagged <- create.lags(base = base_Tommaso,interest.vars = indexes,no.lags =
 date_col_name <- "Start.Date" #<<<--- Parametro que indica el nombre de la columna clase <Date>, la cual contiene la fecha de eventos
 geo_col_name  <- "Country"    #<<<--- Parametro que indica el nombre de la columna que contiene los paises, o puede ser cualquier otra variable 
                               #       que se quiera estudiar, como regiones, ciudades, etc
-eventos <- drop.events(data.events = eventos,base = base_lagged,estimation.start = estimation_start,max.ar=max_abnormal_returns, 
+eventos_filtrado <- drop.events(data.events = eventos,base = base_lagged,estimation.start = estimation_start,max.ar=max_abnormal_returns, 
                        date_col_name, geo_col_name)
 
 # -------------------------- Regresion estimation window ---------------------------------------------
@@ -141,14 +141,17 @@ eventos <- drop.events(data.events = eventos,base = base_lagged,estimation.start
 #     Standard_error : error estandar de los errores de la estimacion por OLS
 # El objeto de salida de esta funcion sera la base para las pruebas de Wilcoxon y bootstrap
 
-# Para incluir rezagos de la dependiente, escribir el nombre de las bases de rezagos, por ej: "lags_", sin incluir el pais
-# Si no se desea incluir rezagos, dejar como NULL
-lags.base <- "lags_"
+#Ya no es necesario. <create_lags> genera automaticamente la base de datos con los rezagos deseados
+if(0){
+  # Para incluir rezagos de la dependiente, escribir el nombre de las bases de rezagos, por ej: "lags_", sin incluir el pais
+  # Si no se desea incluir rezagos, dejar como NULL
+  lags.base <- "lags_"
+}
 
 # Otras variables exogenas de una base de datos que se quieren incluir. 
 var_exo <- c("gdp_","fdi_")
 
-all_events_list <- estimation.event.study(base = base_lagged,data.events = eventos[3:nrow(eventos),],days.evaluated = 5,market.returns = "Mean_Returns_Moving_Averages",
+all_events_list <- estimation.event.study(base = base_lagged,data.events = eventos_filtrado[3:nrow(eventos_filtrado),],days.evaluated = 5,market.returns = "Mean_Returns_Moving_Averages",
                                            max.ar = 15,es.start = estimation_start,es.end = estimation_end,add.exo = TRUE,vars.exo = var_exo)
 
 # Wilcoxon --------------------------------------------------------------
@@ -175,3 +178,142 @@ bootstrap.resultado <- bootstrap_CT(data.list = all_events_list,market.returns=M
 
 corrado.resultado <- corrado_zivney(data.list = all_events_list,es.window.length = length_estimation_window,
                                     ev.window.length = length_event_window); corrado.resultado
+
+
+# Volatility event study --------------------------------------------------
+
+# El siguiente programa sigue la metodologia del paper The impact of natural disasters on stock returns and volatilities
+# of local firms (Bourdeau-Brien)
+
+estimation_vol_start <- 500 #<<<-- ventana para la estimacion de la volatilidad previa al evento. 
+vol_ev_window <- 15  #<<<--- Tamaño de la ventana de evento
+
+# Se eliminan los eventos que no cuentan con la ventana minima de estimacion ni con la ventana minima de evento usando la funcion <drop.events>
+eventos_filtrado <- drop.events(data.events = eventos,base = base_lagged,estimation.start = estimation_vol_start,max.ar=vol_ev_window, 
+                                date_col_name, geo_col_name)
+
+# Agregar columna a <eventos_filtrado>, ya que no deberian haber desastres con 500 dias de diferencia
+# Se agrega la columna que indica el numero que le corresponde al dia cuando sucedio
+index_vector <- c()
+for(i in 1:nrow(eventos_filtrado)){
+  for(j in 0:days_to_be_evaluated){
+    if((eventos_filtrado[i,'Start.Date']+j) %in% index(base_Tommaso)){ 
+      indice <- which(index(base_Tommaso)==eventos_filtrado[i,'Start.Date']+j)
+      index_vector <- c(index_vector,indice)
+      break
+    }
+  }
+}
+
+eventos_filtrado <- cbind(eventos_filtrado, index_vector)
+
+overlap_parameter <- 100 #<<<--- Tamaño de los intervalos para asegurar que las ventanas de estimacion no se sobrepongan
+
+# Crear las categorias. Para cada una de ellas solamente va a quedar un evento por cada país (o 0 si en el evento no ocurrieron
+# desastres durante la categoría)
+h      <- 0:ceiling((max(eventos_filtrado$index_vector)-estimation_vol_start)/overlap_parameter)
+breaks <- estimation_vol_start + overlap_parameter*h
+
+# Dividir los eventos en las categorias
+eventos_filtrado <- eventos_filtrado %>%
+  mutate(intervalo = cut(index_vector, breaks = breaks, labels = FALSE, include.lowest = TRUE))
+
+# Por cada pais-categoria solamente puede quedar un evento, con fin de que las ventanas de estimacion no tengan un traslape
+# Todavia no se ha determinado cual de ellos debe mantenerse para el analisis, por ahora es el primero que sucede en 
+# la categoria
+eventos_filtrado <- eventos_filtrado %>%
+  group_by(Country) %>%
+  distinct(Country, intervalo, .keep_all = TRUE)
+
+#<if(0)> porque todo lo que sigue fue integrado en la funcion <volatility_event_study>
+if(0){
+  # -------------------------------------------------------------------------
+  
+  test <- apply(eventos_filtrado, MARGIN = 1,FUN = )
+  
+  evento_prueba <- eventos_filtrado[5,]
+  dia_evento    <- evento_prueba[2]
+  pais_evento   <- evento_prueba[1]
+  
+  indice_del_evento   <- which(index(base_Tommaso)==dia_evento)
+  t_menos_1           <- indice_del_evento -1
+  t_menos_es_window   <- indice_del_evento - estimation_vol_start
+  
+  # Estimacion APARCH con modelo de media ARMA -------------------------------
+  
+  # Generamos un dataframe que incluya los ordenes de rezagos para cada variable de interes, stock (Pagnottoni) o CDS
+  # Tambien se tendra un parametro que le permita al usuario decidir cuantos rezagos desea en especifico para todas las variables de interes.
+  # Si se desa el mismo numero de rezagos para todas las variables de interes, asignar el numero a <num_lags>. Si se desea un numero de 
+  # rezagos para cada variable de interes, asignar una lista a <num_lags> con los numeros de rezagos. 
+  # Nota: Si se coloca la lista, tiene que tener el mismo numero de datos que numero de variables de interes.
+  
+  # Si se desea que se elijan los rezagos siguiendo el criterio de informacion de Akaike, dejar <num_lags> como NULL
+  num_lags <- NULL #<<<--- parametro para decidir cuantos rezagos agregar al modelo de la media en el modelo ARMA-GARCH
+  lags_database <- arma_lags_database(base=base_Tommaso,interest.vars=indexes,num_lags, AR.m = 20, MA.m = 0,d = 0,
+                                      bool = TRUE,metodo = "CSS")
+  
+  # Se obtiene primero el indice del pais donde sucedio el desastre
+  indice_s <- matching(pais_evento)[1] # El 1 solamente se coloca porque con la base de Pagnottoni, USA tiene dos stocks
+                                       # Ya no es necesario escribirlo cuando se utilicen los CDS, cada pais solo tiene un CDS
+  
+  # Se obtienen los ordenes para el modelo ARMA(p,q) del indice
+  mod_base <- arma_seleccion_df(object = base_Tommaso[,indice_s], AR.m = 20,MA.m = 0,d = 0,bool = TRUE,metodo = "CSS")
+  p   <- mod_base[which.min(mod_base$AIC),'p']
+  q   <- mod_base[which.min(mod_base$AIC),'q']
+  
+  spec <- ugarchspec(variance.model = list(model = "apARCH", garchOrder = c(1, 1)),
+                     mean.model = list(armaOrder = c(p, q),
+                                       external.regressors = as.matrix(base_Tommaso[(t_menos_es_window:t_menos_1),
+                                                                                    c("Mean_Returns_Moving_Averages",
+                                                                                      paste0("gdp_", pais_evento),
+                                                                                      paste0("fdi_", pais_evento))])),
+                     distribution.model = "std")#, fixed.pars = list(delta=1))
+  fit <- ugarchfit(spec, data = base_Tommaso[(t_menos_es_window:t_menos_1),indice_s],solver="hybrid")
+  
+  # Residuales
+  
+  resdi <- as.numeric(residuals(fit,standardize=TRUE))
+  
+  # Coeficiente de asimetria
+  asymmetry <- coef(fit)["gamma1"]
+  
+  # Funcion de distribucion t
+  df <- fit@fit$coef["shape"]
+  t_gof <- gnfit(resdi,"t",df) #No rechazo H0, se sigue distribucion t
+  t_gof_pval <- c(t_gof$Apval,t_gof$Wpval) # Guardar el p_valor de lass pruebas Anderson-Darling y Cramer Von Misses
+  names(t_gof_pval) <- c("Anderson-Darling","Cramer-Von Misses")
+  
+  # Forecast volatilidad condicional
+  # Usando la ecuacion de Bialkowski (2008) para realizar el forecast de sigma^2
+  # h_t sale de fit@fit$var, \varepsilon_t sale de fit@fit$residuals y los errores estandarizados 
+  # salen de fit@fit!z
+  omega         <- fit@fit$coef["omega"]
+  alpha         <- fit@fit$coef["alpha1"]
+  beta          <- fit@fit$coef["beta1"]
+  fcast_var     <- c()
+  for(k in 1:vol_ev_window){
+    j <- 0:(k-1)
+    fcast_var_ti  <- omega*sum((beta+alpha)^j) + (beta+alpha)^(k-1)*beta*(tail(fit@fit$var,1))+
+                     (beta+alpha)^(k-1)*alpha*(tail((fit@fit$residuals)^2,1))
+    fcast_var <- c(fcast_var, fcast_var_ti)
+  }
+  
+  # Crear la serie de los residuales para la ventana de evento
+  residual_evento <- base_Tommaso[(indice_del_evento:(indice_del_evento+vol_ev_window-1)),indice_s] - forecast@forecast$seriesFor
+  # Duda de como generar estos residuales
+  
+  # Convertir en xts <fcast_var>
+  fcast_var <- as.xts(fcast_var, order.by = index(residual_evento))
+  
+  setClass("ESVolatility",slots=list(coefficients = "numeric",goodness_of_fit = "numeric",variance_forecast="xts",residuales_evento="xts"))
+  
+  object <- new("ESVolatility",coefficients=coef(fit),goodness_of_fit=t_gof_pval,variance_forecast=fcast_var,residuales_evento=residual_evento)
+}
+
+#Ejemplo
+start <- Sys.time()
+lista_test <-volatility_event_study(base.evento = eventos_filtrado[1:10,],date.col.name = "Start.Date",geo.col.name = "Country",
+                                    base.vol = base_Tommaso,interest.vars = indexes,num_lags = NULL,es.start=estimation_vol_start,
+                                    len.ev.window = vol_ev_window,var.exo="Mean_Returns_Moving_Averages",var.exo.pais = c("gdp","fdi"))
+end <- Sys.time()
+
