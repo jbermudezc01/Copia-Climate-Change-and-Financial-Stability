@@ -9,12 +9,10 @@ cat("\014")
 # Cargar librerias --------------------------------------------------------
 
 library(tidyverse)
-library(lubridate)
 library(xts)
 library(timeDate)
 library(zoo)
 library(tempdisagg)
-library(readxl)
 library(tsbox)
 library(quantmod)
 library(timeSeries)
