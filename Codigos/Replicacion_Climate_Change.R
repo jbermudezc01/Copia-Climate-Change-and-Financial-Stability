@@ -51,6 +51,7 @@ library(xtable)  # Para exportar tablas a latex
 library(RColorBrewer)
 library(tools)
 library(writexl)  # Para crear excel
+library(readxl)
 
 # Cargar funciones --------------------------------------------------------
 
@@ -293,9 +294,9 @@ if(1){
   # De este modo se genera una lista <quarterly_series>, de longitud igual al numero de <indexes>.
   # Cada elemento de <quarterly_series> es un vector numerico con la misma longitud de los datos en los archivos excel
   if(!bool_paper){
-    gdp_countries <- read_xlsx(paste0(Dir,"GDP_countries_corregida.xlsx"), sheet="GDP") #<<<--- Base de datos con GDPs
+    gdp_countries <- readxl::read_xlsx(paste0(Dir,"GDP_countries_corregida.xlsx"), sheet="GDP") #<<<--- Base de datos con GDPs
   }else{
-    gdp_countries <- read_xlsx(paste0(Dir,"GDP_countries_cds.xlsx")) #<<<--- Base de datos con GDPs
+    gdp_countries <- readxl::read_xlsx(paste0(Dir,"GDP_countries_cds.xlsx")) #<<<--- Base de datos con GDPs
     if(!bool_cds){
       # Por el momento la idea es  reducir tanto <base_precios> como <base_retornos> y <mercado.retornos> para que terminen en el tercer trimestre del 2022, 
       # ya que hasta ese punto hay datos de GDP. Reducir tambien la base <gdp_countries> para que comienze en el tercer trimestre del 
@@ -387,9 +388,9 @@ if(1){
   # De este modo se genera una lista <fdi_series>, de longitud igual al numero de <indexes>.
   # Cada elemento de <fdi_series> es un vector numerico con la misma longitud de los datos en los archivos excel
   if(!bool_paper){
-    fdi_countries <- read_xlsx(paste0(Dir,"FDI_anual.xlsx"), sheet="FDI") #<<--- Base datos de los FDI
+    fdi_countries <- readxl::read_xlsx(paste0(Dir,"FDI_anual.xlsx"), sheet="FDI") #<<--- Base datos de los FDI
   }else{
-    fdi_countries <- read_xlsx(paste0(Dir,"fdi_cds.xlsx")) #<<<--- Base de datos con GDPs
+    fdi_countries <- readxl::read_xlsx(paste0(Dir,"fdi_cds.xlsx")) #<<<--- Base de datos con GDPs
     if(!bool_cds){
       # En este caso, para los stocks, solamente se tienen datos a partir del 2006, por lo que se retiran los datos del 2004 y 2005
       # de la base <fdi_countries>
