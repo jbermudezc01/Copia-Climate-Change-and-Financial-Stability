@@ -289,9 +289,12 @@ corrado.resultado <- corrado_zivney(data.list = all.events.list.true,es.window.l
 
 
 # BMP Savickas para media con GARCH ---------------------------------------
-
+# <if(0)> porque la funcion <bmp_savickas> ahora se corre para cada ventana 
+if(0){
 bmp.savickas.resultado <- bmp_savickas(data.list = all.events.list.true, es.window.length = length_estimation_window,
                                        ev.window.length = length_event_window,ev.window.begin = inicio.ventana.evento); bmp.savickas.resultado
+}
+
 # Dataframe con muchas ventanas
 matrix.bmp <- matrix(nrow=(max_abnormal_returns-inicio.ventana.evento+1),ncol=(length(lista.separada)+1))
 for(i in seq_along(lista.separada)){
