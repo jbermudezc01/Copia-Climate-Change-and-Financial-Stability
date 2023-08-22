@@ -56,7 +56,7 @@ library(writexl)  # Para crear excel
 
 # Cargar funciones --------------------------------------------------------
 
-source('Functions_Climate_change.r')
+source(paste0(getwd(),'/Codigos/Functions_Climate_change.r'))
 
 # Lectura de datos --------------------------------------------------------
 
