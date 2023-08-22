@@ -271,13 +271,17 @@ table.wilcoxon <- kable(dataframe.wilcoxon, format = "html", escape = FALSE) %>%
 
 # Bootstrap CAAR  (sin GARCH) ----------------------------------------------------------
 
-# Para hacer el procedimiento por Bootstrap se sigue el procedimiento usado por Corrado & Truong (2008)
-boot_n_simul <- 1000 #<<<--- parametro que indica el numero de repeticiones para bootstrapping
-
-bootstrap.resultado <- bootstrap_CT(data.list = all.events.list.true,market.returns=market.returns,
-                                    es.window.length = length_estimation_window, ev.window.length = length_event_window,
-                                    no.simul = boot_n_simul);bootstrap.resultado
-
+# length(unlist(purrr::map(all.events.list, ~.x@error_estandar))) se utiliza para ver la longitud de los elementos
+# <@error.estandar>, ya que si todos son 0 significa que la estimacion se realizo con GARCH y el siguiente
+# procedimiento no tiene sentido
+if(length(unlist(purrr::map(all.events.list, ~.x@error_estandar)))>0){
+  # Para hacer el procedimiento por Bootstrap se sigue el procedimiento usado por Corrado & Truong (2008)
+  boot_n_simul <- 1000 #<<<--- parametro que indica el numero de repeticiones para bootstrapping
+  
+  bootstrap.resultado <- bootstrap_CT(data.list = all.events.list.true,market.returns=market.returns,
+                                      es.window.length = length_estimation_window, ev.window.length = length_event_window,
+                                      no.simul = boot_n_simul);bootstrap.resultado
+}
 # Corrado and Zivney rank test --------------------------------------------
 
 corrado.resultado <- corrado_zivney(data.list = all.events.list.true,es.window.length = length_estimation_window,
