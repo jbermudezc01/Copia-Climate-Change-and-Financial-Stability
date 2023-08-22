@@ -320,10 +320,12 @@ table.bmp <- kable(dataframe.bmp, format = "html", escape = FALSE) %>%
 # Tambien se puede hacer la tabla para BMP con bootstrap usando la funcion <bmp.bootstrap>
 
 # J statistic para media con GARCH ----------------------------------------
-
+# <if(0)> porque todavia no se ha incluido en la funcion un argumento para cuando <inicio.ventana.evento> sea diferente de 0.
+# Pero no es el estadistico que vamos a usar, por lo que no es problematico
+if(0){
 j.statistic.resultado  <- j_statistic(data.list = all.events.list.true, es.window.length = length_estimation_window,
                                       ev.window.length = length_event_window); j.statistic.resultado
-
+}
 # Volatility event study --------------------------------------------------
 
 # El siguiente programa sigue la metodologia del paper The impact of natural disasters on stock returns and volatilities
@@ -343,7 +345,7 @@ columna.filtrar.vol <- 'Total.Affected' #<<<--- Columna para filtrar la base de 
 eventos.volatilidad <- reducir.eventos(umbral.evento.vol,base_lagged,eventos.filtrado.volatilidad,
                                  col.fecha='Start.Date',col.grupo = 'Country',col.filtro = columna.filtrar.vol)
 
-load.volatility <- 0           #<<<<-- 1 si se cargan los resultados de volatilidad, 0 si es necesario correr el codigo
+load.volatility <- 1           #<<<<-- 1 si se cargan los resultados de volatilidad, 0 si es necesario correr el codigo
 last.saved.day  <-"2023-08-10" #<<<--- fecha del save() en formato yyyy-mm-dd (resultados con CDS estan el 8 de agosto. el 10 de agosto esta con indices)
 if(!load.volatility){
     volatility_results <- volatility_event_study(base.evento = eventos.volatilidad,date.col.name = "Start.Date",geo.col.name = "Country",
