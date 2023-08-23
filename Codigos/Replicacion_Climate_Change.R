@@ -5,7 +5,7 @@ if (Sys.info()["sysname"]=='Windows')  setwd('C:/Users/jpber/OneDrive/Documents/
 if (Sys.info()["sysname"]!='Windows')  setwd('/Users/lumelo/archivos/Climate-Change-and-Financial-Stability/Github/Climate-Change-and-Financial-Stability')
 
 cat("\014")
-
+#
 # Cargar librerias --------------------------------------------------------
 
 library(tidyverse)
