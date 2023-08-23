@@ -358,7 +358,7 @@ if(!load.volatility){
 # Eliminar objetos NA
 volatility_results <- purrr::discard(volatility_results,is.na)
 
-v.columna.agrupar <- 'Country' #<<<--- Columna del evento con la cual se quiere separar la lista <volatility_results>
+v.columna.agrupar <- 'Disaster.Subgroup' #<<<--- Columna del evento con la cual se quiere separar la lista <volatility_results>
 # 'Country' la separa por pais donde sucedio el desastre y 'Disaster.Subgroup' por el tipo de desastre
 # Separar la lista dependiendo de una columna en especifico introducida por el usuario 
 v.lista.separada <- split(volatility_results, sapply(volatility_results, function(x) x@info.evento[[v.columna.agrupar]]))
@@ -381,14 +381,14 @@ matrix.volatilidad <- matrix(nrow=(vol_ev_window),ncol=(length(v.lista.separada)
 
 for(i in seq_along(v.lista.separada)){
   for(j in (1:(vol_ev_window))){
-    prueba <- bootstrap.volatility(v.lista.separada[[i]],estimation_vol_start,j)
+    prueba <- bootstrap.volatility(v.lista.separada[[i]],estimation_vol_start,j,5000)
     matrix.volatilidad[j,i] <- paste(prueba$CAV,prueba$Significancia)
   }
 }
 
 k <- length(v.lista.separada)+1
 for(j in (1:(vol_ev_window))){ 
-  prueba.cav <- bootstrap.volatility(volatility_results,estimation_vol_start,j)
+  prueba.cav <- bootstrap.volatility(volatility_results,estimation_vol_start,j,5000)
   matrix.volatilidad[j,k] <- paste(prueba.cav$CAV,prueba.cav$Significancia)
 }
 colnames(matrix.volatilidad) <- c(names(v.lista.separada),'Todos')
