@@ -2477,7 +2477,7 @@ volatility_event_study = function(base.evento, date.col.name, geo.col.name, base
 #-- data.droped.events : dataframe de eventos filtrados. En este df ya no estan los eventos que no cuentan con una 
 #                        ventana minima de estimacion ni con una ventana minima de evento
 #---------------------------------------------------------------------------------------#
-bootstrap.volatility <- function(volatility.list,es.window.length,ev.window.length){ 
+bootstrap.volatility <- function(volatility.list,es.window.length,ev.window.length,bootstrap_vol_iterations){ 
   # Detener la funcion si hay algun elemento que no tenga la clase 'ESmean'
   if (any(!sapply(volatility.list, inherits, "ESVolatility"))) {
     stop('La lista contiene elementos que no fueron creados con la funcion estimation.event.study.')
@@ -2536,7 +2536,6 @@ bootstrap.volatility <- function(volatility.list,es.window.length,ev.window.leng
   # La tercera dimension indica el numero de matrices en el array, siendo igual al numero de eventos
   
   # Realizar el bootstrap 
-  bootstrap_vol_iterations <- 5000 #<<<--- numero de iteraciones del bootstrap
   cav_empiric_vector <-c()
   
   for(b in 1:bootstrap_vol_iterations){
