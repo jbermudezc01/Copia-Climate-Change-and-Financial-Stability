@@ -10,13 +10,10 @@ if(1){
   # Cargar librerias --------------------------------------------------------
   
   library(tidyverse)
-  library(lubridate)
-  library(data.table)
   library(xts)
   library(timeDate)
   library(zoo)
   library(tempdisagg)
-  library(readxl)
   library(tsbox)
   library(quantmod)
   library(timeSeries)
@@ -36,6 +33,7 @@ if(1){
   library(dynlm)
   library(systemfit)
   library(ks)
+  library(knitr)
   library(gridExtra)
   library(stringr)
   library(maps)
@@ -54,25 +52,27 @@ if(1){
   library(RColorBrewer)
   library(tools)
   library(writexl)  # Para crear excel
+  library(readxl)
   
   # Cargar funciones --------------------------------------------------------
-  
-  source('Functions_Climate_change.r')
+  source(paste0(getwd(),'/Codigos/Functions_Climate_Change.r')) # Source de las funciones
 }
 
 # Los siguientes argumentos van a filtrar los resultados y tablas
 serie             <- 'Indices'      #<<<--- puede ser 'Indices' o 'CDS'
-tipo.estudio      <- 'media'        #<<<--- puede ser 'media' o 'varianza'
-regresor.mercado  <- 'PM'           #<<<--- puede ser 'PM' o 'benchmark', para CDS todavia no hay benchmark
+tipo.estudio      <- 'varianza'     #<<<--- puede ser 'media' o 'varianza'
+regresor.mercado  <- 'benchmark'    #<<<--- puede ser 'PM' o 'benchmark', para CDS todavia no hay benchmark
 umbrales.evento   <- c(50,100,200)  #<<<--- puede ser 50 100 o 200
 if(tipo.estudio=='media') es.windows <- c(200,300,500) #<<<--- Para media puede ser 200, 300 o 500. Para varianza solamente 500
 if(tipo.estudio=='varianza') es.windows <- 500
 columnas.tabla    <- 'tipodesastre' #<<<--- Las tablas de la media estan guardadas tanto por tipo de desastre como por pais
 # <columnas.tabla> toma el valor de 'tipodesastre' o 'pais'
 
+# Organizacion tablas -----------------------------------------------------
+
 lista.wilcoxon  <- list()
 lista.bmp       <- list()
-list.bootstrap <- list()
+lista.bootstrap <- list()
 indice.lista   <- 0
 for(i in seq_along(umbrales.evento)){
   umbral.del.evento <- umbrales.evento[i]
@@ -88,19 +88,88 @@ for(i in seq_along(umbrales.evento)){
       names(lista.bmp)[[indice.lista]] <- paste('Estimacion',estimation.window,'traslape',umbral.del.evento,sep='_')
     }
     if(tipo.estudio=='varianza'){
-      list.bootstrap[[indice.lista]] <- dataframe.volatilidad
+      lista.bootstrap[[indice.lista]] <- dataframe.volatilidad
+      names(lista.bootstrap)[[indice.lista]] <- paste('Estimacion',estimation.window,'traslape',umbral.del.evento,sep='_')
     }
   }
 }
 
+# Tablas para la media ----------------------------------------------------
 
-# Create the main data table
-main_table <- data.table(
-  ID = c(1, 2, 3),
-  SubTable = list(
-    data.table(ID = c(10, 20, 30), Value = c(100, 200, 300)),
-    data.table(ID = c(40, 50, 60), Value = c(400, 500, 600))
-  )
-)
+if(tipo.estudio == 'media'){
+  tipo.evento   <- 'Todos' # Geophysical, Hydrological, Meteorological o Todos 
+  lista.interes <- lista.wilcoxon
+  dataframe.wil     <- purrr::map_dfc(lista.interes, ~.x[,tipo.evento])
+  dataframe.wil200  <- dataframe.wil[,grep('Estimacion_200',colnames(dataframe.wil))] # Escoger los datos que se tienen para estimacion con 200 dias
+  dataframe.wil300  <- dataframe.wil[,grep('Estimacion_300',colnames(dataframe.wil))] # Escoger los datos que se tienen para estimacion con 300 dias
+  dataframe.wil500 <- dataframe.wil[,grep('Estimacion_500',colnames(dataframe.wil))] # Escoger los datos que se tienen para estimacion con 500 dias
+  # Retirar nombres de columnas para hacer rbind 
+  colnames(dataframe.wil200) <- NA
+  colnames(dataframe.wil300) <- NA
+  colnames(dataframe.wil500) <- NA
+  # Juntarlos en un gran dataframe
+  dataframe.wil.organizado <- rbind(dataframe.wil200,dataframe.wil300, dataframe.wil500)
+  # Nombres de columnas
+  colnames(dataframe.wil.organizado) <- c('est50','est100','est200')
+  # Añadir columna de dias de estimacion
+  dataframe.wil.organizado$`Estimacion` <- c(rep(NA,7),200,rep(NA,14),300,rep(NA,14),500,rep(NA,7))
+  # Mutar las columnas <50>, <100> y <200> para agregar un '/', para poder colocar la significancia de BMP en la misma tabla
+  dataframe.wil.organizado <- dataframe.wil.organizado %>% 
+    mutate('50' = paste(est50,'/'), '100' = paste(est100,'/'),'200' = paste(est200,'/'))
+  # Seleccionar solamente las columnas de interes
+  dataframe.wil.organizado <- dataframe.wil.organizado %>% dplyr::select(Estimacion,`50`,`100`,`200`)
+  
+  lista.de.interes <- lista.bmp  
+  data.bmp         <- purrr::map_dfc(lista.de.interes, ~.x[,tipo.evento])
+  data.bmp200      <- data.bmp[,grep('Estimacion_200',colnames(data.bmp))] # Escoger los datos que se tienen para estimacion con 200 dias
+  data.bmp300      <- data.bmp[,grep('Estimacion_300',colnames(data.bmp))] # Escoger los datos que se tienen para estimacion con 300 dias
+  data.bmp500      <- data.bmp[,grep('Estimacion_500',colnames(data.bmp))] # Escoger los datos que se tienen para estimacion con 500 dias
+  # Retirar nombres de columnas para hacer rbind 
+  colnames(data.bmp200) <- NA
+  colnames(data.bmp300) <- NA
+  colnames(data.bmp500) <- NA
+  # Juntarlos en un gran dataframe
+  data.bmp.organizado <- rbind(data.bmp200,data.bmp300, data.bmp500)
+  # Nombres de filas
+  colnames(data.bmp.organizado) <- c('est50','est100','est200')
+  # Mutar para solamente tener los * de significancia
+  # Mutar para solamente tener los * de significancia
+  data.bmp.organizado <- data.bmp.organizado %>% 
+    mutate('50bmp' = gsub("[^*]","",est50),'100bmp'=gsub("[^*]","",est100),'200bmp' = gsub("[^*]","",est200))
+  
+  # Lo unico que falta es juntar los dos dataframe: <dataframe.wil.organizado> y <data.bmp.organizado> para tener un solo dataframe con la significancia de 
+  # ambos tests
+  dataframe.final <- cbind(dataframe.wil.organizado,data.bmp.organizado)
+  dataframe.final <- dataframe.final %>% 
+    mutate('50' = paste(`50`,`50bmp`),'100'=paste(`100`,`100bmp`),'200'=paste(`200`,`200bmp`)) %>% 
+    dplyr::select(Estimacion,`50`,`100`,`200`)
+  
+  # Exportar a latex
+  kable(dataframe.final,format='latex') 
+}
 
+# Tablas para la varianza -------------------------------------------------
 
+if(tipo.estudio == 'varianza'){
+  tipo.evento   <- 'Todos' # Geophysical, Hydrological, Meteorological o Todos 
+  lista.interes <- lista.bootstrap
+  dataframe.var     <- purrr::map_dfc(lista.interes, ~.x[,tipo.evento])
+  dataframe.var200  <- dataframe.var[,grep('Estimacion_200',colnames(dataframe.var))] # Escoger los datos que se tienen para estimacion con 200 dias
+  dataframe.var300  <- dataframe.var[,grep('Estimacion_300',colnames(dataframe.var))] # Escoger los datos que se tienen para estimacion con 300 dias
+  dataframe.var500 <- dataframe.var[,grep('Estimacion_500',colnames(dataframe.var))] # Escoger los datos que se tienen para estimacion con 500 dias
+  # Retirar nombres de columnas para hacer rbind 
+  colnames(dataframe.var200) <- NA
+  colnames(dataframe.var300) <- NA
+  colnames(dataframe.var500) <- NA
+  # Juntarlos en un gran dataframe
+  dataframe.var.organizado <- rbind(dataframe.var200,dataframe.var300, dataframe.var500)
+  # Nombres de columnas
+  colnames(dataframe.var.organizado) <- c('50','100','200')
+  # Añadir columna de dias de estimacion
+  dataframe.var.organizado$`Estimacion` <- c(rep(NA,7),500,rep(NA,7)) # se elige asi ya que <dataframe.var200> y <dataframe.var300> son NA
+  # Reordenar las columnas
+  dataframe.var.final <- dataframe.var.organizado %>% dplyr::select(Estimacion,`50`,`100`,`200`)
+  
+  # Exportar a latex
+  kable(dataframe.var.final,format='latex') 
+}

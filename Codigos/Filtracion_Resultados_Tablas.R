@@ -10,12 +10,10 @@ if(1){
   # Cargar librerias --------------------------------------------------------
   
   library(tidyverse)
-  library(lubridate)
   library(xts)
   library(timeDate)
   library(zoo)
   library(tempdisagg)
-  library(readxl)
   library(tsbox)
   library(quantmod)
   library(timeSeries)
@@ -35,6 +33,7 @@ if(1){
   library(dynlm)
   library(systemfit)
   library(ks)
+  library(knitr)
   library(gridExtra)
   library(stringr)
   library(maps)
@@ -53,10 +52,10 @@ if(1){
   library(RColorBrewer)
   library(tools)
   library(writexl)  # Para crear excel
+  library(readxl)
   
   # Cargar funciones --------------------------------------------------------
-  
-  source('Functions_Climate_change.r')
+  source(paste0(getwd(),'/Codigos/Functions_Climate_Change.r')) # Source de las funciones
 }
 
 # Los siguientes argumentos van a filtrar los resultados y tablas
@@ -66,7 +65,7 @@ regresor.mercado  <- 'PM'       #<<<--- puede ser 'PM' o 'benchmark', para CDS t
 umbral.del.evento <- 200         #<<<--- puede ser 50 100 o 200
 estimation.window <- 200        #<<<--- Para media puede ser 200, 300 o 500. Para CDS solamente 500
 columnas.tabla    <- 'tipodesastre' #<<<--- Las tablas de la media estan guardadas tanto por tipo de desastre como por pais
-                                    # <columnas.tabla> toma el valor de 'tipodesastre' o 'pais'
+# <columnas.tabla> toma el valor de 'tipodesastre' o 'pais'
 
 if(tipo.estudio == 'media') 
   load(file=paste0(getwd(),'/Resultados_regresion/',serie,'_tra',umbral.del.evento,'_est',estimation.window,'_',tipo.estudio,'_',regresor.mercado,'.RData'))
@@ -115,7 +114,7 @@ if(tipo.estudio == 'media'){
     # los que se asumio el dia
     if(columnas.tabla == 'pais') {
       columna.agrupar  <- 'Country'  #<<<--- Columna del evento por la cual se quiere separar la lista de regresiones para las tablas/graficas
-    # 'Country' la separa por pais donde sucedio el desastre y 'Disaster.Subgroup' por el tipo de desastre
+      # 'Country' la separa por pais donde sucedio el desastre y 'Disaster.Subgroup' por el tipo de desastre
     }else{columna.agrupar <- 'Disaster.Subgroup'}
     suppressWarnings(all.events.list <- purrr::discard(all_events_list,is.na))
     
@@ -133,9 +132,9 @@ if(tipo.estudio == 'media'){
     colnames(dataframe.bmp)[ncol(dataframe.bmp)] <- paste(colnames(dataframe.bmp)[ncol(dataframe.bmp)],
                                                           length(all.events.list))
     colnames(dataframe.wilcoxon)[2:(ncol(dataframe.wilcoxon)-1)] <- paste(colnames(dataframe.wilcoxon)[2:(ncol(dataframe.wilcoxon)-1)],
-                                                                unlist(lapply(lista.separada,FUN = length)))
+                                                                          unlist(lapply(lista.separada,FUN = length)))
     colnames(dataframe.wilcoxon)[ncol(dataframe.wilcoxon)] <- paste(colnames(dataframe.wilcoxon)[ncol(dataframe.wilcoxon)],
-                                                          length(all.events.list))
+                                                                    length(all.events.list))
   }
   print(dataframe.bmp)
   print(dataframe.wilcoxon)
