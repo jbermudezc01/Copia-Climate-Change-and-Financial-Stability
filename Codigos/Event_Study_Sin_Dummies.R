@@ -330,7 +330,7 @@ j.statistic.resultado  <- j_statistic(data.list = all.events.list.true, es.windo
 
 # El siguiente programa sigue la metodologia del paper The impact of natural disasters on stock returns and volatilities
 # of local firms (Bourdeau-Brien)
-estimation_vol_start <- 500 #<<<-- ventana para la estimacion de la volatilidad previa al evento. 
+estimation_vol_start <- 750 #<<<-- ventana para la estimacion de la volatilidad previa al evento. 
 vol_ev_window        <- 15  #<<<--- Tamaño de la ventana de evento
 
 # Filtrar los eventos para que solo queden aquellos que cumplan con una ventana minima de estimacion y una ventana minima de 
@@ -340,7 +340,7 @@ eventos.filtrado.volatilidad <- drop.events(data.events = emdat_base,base = base
 
 # Filtrar la base de datos para solamente dejar los eventos mas significativos, y tambien asegurar que dentro de la 
 # ventana de estimacion no hayan otros eventos.
-umbral.evento.vol   <- 50 #<<<--- Numero de dias minimo entre cada evento. Lo anterior para que no se traslapen los eventos
+umbral.evento.vol   <- 100 #<<<--- Numero de dias minimo entre cada evento. Lo anterior para que no se traslapen los eventos
 columna.filtrar.vol <- 'Total.Affected' #<<<--- Columna para filtrar la base de eventos 'Total.Affected' o 'Damages'
 eventos.volatilidad <- reducir.eventos(umbral.evento.vol,base_lagged,eventos.filtrado.volatilidad,
                                  col.fecha='Start.Date',col.grupo = 'Country',col.filtro = columna.filtrar.vol)
@@ -351,7 +351,7 @@ if(!load.volatility){
     volatility_results <- volatility_event_study(base.evento = eventos.volatilidad,date.col.name = "Start.Date",geo.col.name = "Country",
                                       base.vol = base_Tommaso,interest.vars = indexes,num_lags = NULL,es.start=estimation_vol_start,
                                       len.ev.window = vol_ev_window,var.exo="market.returns",var.exo.pais = c("gdp","fdi"),
-                                      bool.cds = bool_cds,bool.paper = bool_paper)
+                                      bool.cds = bool_cds,bool.paper = bool_paper,garch = 'apARCH')
     save(volatility_results,file=paste0(paste0('Resultados_Volatilidad_',last.saved.day),'.RData'))
 }else load(paste0(paste0('Resultados_Volatilidad_',last.saved.day),'.RData'))
 

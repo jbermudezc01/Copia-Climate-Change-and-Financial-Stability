@@ -2238,7 +2238,7 @@ arma_lags_database <- function(base, interest.vars, no.lags, AR.m, MA.m, d, bool
 #---------------------------------------------------------------------------------------#
 
 volatility_event_study = function(base.evento, date.col.name, geo.col.name, base.vol, interest.vars, num_lags, AR.m = 20, MA.m = 0,d = 0,
-                                  bool = TRUE,metodo = "CSS", es.start,len.ev.window,var.exo,var.exo.pais,bool.paper,bool.cds){
+                                  bool = TRUE,metodo = "CSS", es.start,len.ev.window,var.exo,var.exo.pais,bool.paper,bool.cds,garch){
   # Crear una nueva clase de objetos para guardar informacion importante de la estimacion ARMA-GARCH
   setClass("ESVolatility",slots=list(coefficients = "numeric",goodness_of_fit = "numeric",res_estandar_estimacion="xts",
                                      res_no_estandar_estimacion="xts",variance_forecast="xts",residuales_evento="xts",
@@ -2293,7 +2293,7 @@ volatility_event_study = function(base.evento, date.col.name, geo.col.name, base
     # <if(0)> ya que mas adelante se incluye dentro de un loop <While> para prevenir errores en la funcion
     if(0){
       # Especificacion apARCH
-      spec <- ugarchspec(variance.model = list(model = "apARCH", garchOrder = c(1, 1)),
+      spec <- ugarchspec(variance.model = list(model = garch, garchOrder = c(1, 1)),
                          mean.model = list(armaOrder = c(p, q),
                                            external.regressors = as.matrix(base.vol[(inicio_estimacion:fin_estimacion),
                                                                                     c(var.exo, variables_pais)])),
@@ -2318,7 +2318,7 @@ volatility_event_study = function(base.evento, date.col.name, geo.col.name, base
       tryCatch({
         # Especificacion sGARCH
         spec <- ugarchspec(
-          variance.model = list(model = "apARCH", garchOrder = c(1, 1)),
+          variance.model = list(model = garch, garchOrder = c(1, 1)),
           mean.model = list(
             armaOrder = c(p, q),
             # Para la primera iteracion del loop <While> se utilizan los datos de la ventana de estimacion
