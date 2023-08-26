@@ -1,5 +1,5 @@
-serie            <- 'CDS'
 tipo.estudio     <- 'varianza'
+if(bool_cds){serie <- 'CDS'}else{serie <- 'Indices'}
 if(promedio.movil){regresor.mercado <- 'PM'}else{regresor.mercado <- 'benchmark'}
 if(tipo.estudio == 'media') save(all_events_list, 
      file=paste0(getwd(),'/Resultados_regresion/',serie,'_tra',umbral.evento,'_est',estimation_start,'_',tipo.estudio,'_',regresor.mercado,'.RData'))
