@@ -1,4 +1,4 @@
-serie            <- 'indices'
+serie            <- 'CDS'
 tipo.estudio     <- 'varianza'
 if(promedio.movil){regresor.mercado <- 'PM'}else{regresor.mercado <- 'benchmark'}
 if(tipo.estudio == 'media') save(all_events_list, 

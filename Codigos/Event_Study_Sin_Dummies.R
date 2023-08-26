@@ -11,7 +11,7 @@ colnames(base_Tommaso) <- gsub("USA1$", "USA", colnames(base_Tommaso))
 
 # Parametros event study --------------------------------------------------------------
 
-estimation_start         <- 200  #<<<--- No. de dias antes del evento para comenzar la estimacion
+estimation_start         <- 250  #<<<--- No. de dias antes del evento para comenzar la estimacion
 estimation_end           <- 1    #<<<--- No. dias antes del evento para finalizar la estimacion
 max_abnormal_returns     <- 15   #<<<--- No. dias maximos despues del evento para calcular retorno anormal
 days_to_be_evaluated     <- 5    #<<<--- No. dias despues del evento a ser evaluados
@@ -121,9 +121,12 @@ if(1){
 
 # Mas adelante se muestra que la variable con menos observaciones faltantes es <Total.Affected> por lo cual
 # sera utilizada para medir la signifcancia. Se remueven valores <NA> y menores a 10000
-emdat_base <- emdat_base %>% 
-  dplyr::filter(!is.na(Total.Affected)) %>% 
-  dplyr::filter(Total.Affected>=10000)
+filtro.significancia <- F # <T> cuando se quiere filtrar apriori por aquellos eventos con mas de 10000 afectados, <F> si no se desea
+if(filtro.significancia){
+  emdat_base <- emdat_base %>% 
+    dplyr::filter(!is.na(Total.Affected)) %>% 
+    dplyr::filter(Total.Affected>=10000)
+}
 # Este filtrado se realiza post estimacion
 if(0){
   # Siguiendo el paper de (Cavallo, Becerra y Acevedo. p 163) se divide la base de datos de desastres
@@ -173,7 +176,7 @@ if(0){
 
 # Filtrar la base de datos para solamente dejar los eventos mas significativos, y tambien asegurar que dentro de la 
 # ventana de estimacion no hayan otros eventos.
-umbral.evento   <- 200 #<<<--- Numero de dias minimo entre cada evento. Lo anterior para que no se traslapen los eventos
+umbral.evento   <- 250 #<<<--- Numero de dias minimo entre cada evento. Lo anterior para que no se traslapen los eventos
 columna.filtrar <- 'Total.Affected' #<<<--- Columna para filtrar la base de eventos 'Total.Affected' o 'Damages'
 eventos.final <- reducir.eventos(umbral = umbral.evento,base=base_lagged,eventos = eventos_filtrado,
                                  col.fecha='Start.Date',col.grupo = 'Country',col.filtro = columna.filtrar)
@@ -330,7 +333,7 @@ j.statistic.resultado  <- j_statistic(data.list = all.events.list.true, es.windo
 
 # El siguiente programa sigue la metodologia del paper The impact of natural disasters on stock returns and volatilities
 # of local firms (Bourdeau-Brien)
-estimation_vol_start <- 750 #<<<-- ventana para la estimacion de la volatilidad previa al evento. 
+estimation_vol_start <- 500 #<<<-- ventana para la estimacion de la volatilidad previa al evento. 
 vol_ev_window        <- 15  #<<<--- Tamaño de la ventana de evento
 
 # Filtrar los eventos para que solo queden aquellos que cumplan con una ventana minima de estimacion y una ventana minima de 
@@ -340,18 +343,18 @@ eventos.filtrado.volatilidad <- drop.events(data.events = emdat_base,base = base
 
 # Filtrar la base de datos para solamente dejar los eventos mas significativos, y tambien asegurar que dentro de la 
 # ventana de estimacion no hayan otros eventos.
-umbral.evento.vol   <- 100 #<<<--- Numero de dias minimo entre cada evento. Lo anterior para que no se traslapen los eventos
+umbral.evento.vol   <- 250 #<<<--- Numero de dias minimo entre cada evento. Lo anterior para que no se traslapen los eventos
 columna.filtrar.vol <- 'Total.Affected' #<<<--- Columna para filtrar la base de eventos 'Total.Affected' o 'Damages'
 eventos.volatilidad <- reducir.eventos(umbral.evento.vol,base_lagged,eventos.filtrado.volatilidad,
                                  col.fecha='Start.Date',col.grupo = 'Country',col.filtro = columna.filtrar.vol)
 
 load.volatility <- 1           #<<<<-- 1 si se cargan los resultados de volatilidad, 0 si es necesario correr el codigo
-last.saved.day  <-"2023-08-10" #<<<--- fecha del save() en formato yyyy-mm-dd (resultados con CDS estan el 8 de agosto. el 10 de agosto esta con indices)
+last.saved.day  <-"2023-07-24" #<<<--- fecha del save() en formato yyyy-mm-dd (resultados con CDS estan el 8 de agosto. el 10 de agosto esta con indices)
 if(!load.volatility){
     volatility_results <- volatility_event_study(base.evento = eventos.volatilidad,date.col.name = "Start.Date",geo.col.name = "Country",
                                       base.vol = base_Tommaso,interest.vars = indexes,num_lags = NULL,es.start=estimation_vol_start,
                                       len.ev.window = vol_ev_window,var.exo="market.returns",var.exo.pais = c("gdp","fdi"),
-                                      bool.cds = bool_cds,bool.paper = bool_paper,garch = 'apARCH')
+                                      bool.cds = bool_cds,bool.paper = bool_paper,garch = 'sGARCH')
     save(volatility_results,file=paste0(paste0('Resultados_Volatilidad_',last.saved.day),'.RData'))
 }else load(paste0(paste0('Resultados_Volatilidad_',last.saved.day),'.RData'))
 
@@ -378,17 +381,17 @@ for(i in seq_along(v.lista.separada)){
 
 # Dataframe con muchas ventanas
 matrix.volatilidad <- matrix(nrow=(vol_ev_window),ncol=(length(v.lista.separada)+1))
-
+iteraciones.bootstrap <- 1
 for(i in seq_along(v.lista.separada)){
   for(j in (1:(vol_ev_window))){
-    prueba <- bootstrap.volatility(v.lista.separada[[i]],estimation_vol_start,j,5000)
+    prueba <- bootstrap.volatility(v.lista.separada[[i]],estimation_vol_start,j,iteraciones.bootstrap)
     matrix.volatilidad[j,i] <- paste(prueba$CAV,prueba$Significancia)
   }
 }
 
 k <- length(v.lista.separada)+1
 for(j in (1:(vol_ev_window))){ 
-  prueba.cav <- bootstrap.volatility(volatility_results,estimation_vol_start,j,5000)
+  prueba.cav <- bootstrap.volatility(volatility_results,estimation_vol_start,j,iteraciones.bootstrap)
   matrix.volatilidad[j,k] <- paste(prueba.cav$CAV,prueba.cav$Significancia)
 }
 colnames(matrix.volatilidad) <- c(names(v.lista.separada),'Todos')

@@ -124,6 +124,7 @@ if(!bool_paper){
   base_test <- do.call(merge,xts_list)
   # Cambiar nombres de las columnas por los nombres de los <indexes>
   colnames(base_test) <- indexes
+  xts.mercado <- NA # Para base de Pagnottoni no hay retorno de mercado "exogeno", ya que es el promedio movil
 }else{
   date_column <- "Date"  #<<<--- Parametro que le indica al usuario el nombre de la columna de las fechas
   countries   <- c('Brazil','Chile','China','Colombia','Indonesia','Korea','Malaysia','Mexico','Peru',
@@ -153,6 +154,7 @@ if(!bool_paper){
     # no contengan caracteres especiales ni espacios, para lo cual se usa la funcion <gsub>
     indexes <- gsub("[^[:alnum:]]", "", indexes)
     colnames(base_test) <- gsub("[^[:alnum:]]", "", colnames(base_test))
+    xts.mercado <- NA # Para los cDS no se tiene un retorno de mercado exogeno, ya que es el promedio movil
   }else{
     indexes         <- c('BIST100','Bovespa','ChinaA50','JSX','KOSPI','S.PBMVIPC','S.PCLXIPSA','SouthAfricaTop40',
                          'IGBVL','KLCI','COLCAP') # Nombre indices para el paper. JSX es el de Jakarta
@@ -199,7 +201,7 @@ base_precios <- base[complete.cases(base),]
 xts.mercado <- xts.mercado[index(base_precios)]
 # Tambien es necesario realizar interpolacion a la base <xts.mercado>
 xts.mercado <- na.approx(xts.mercado)
-if(!bool_cds){
+if(!promedio.movil){
   # Genera la base de retornos. Se coloca [2:nrow(base_precios)] porque de no hacerlo toda la primera fila serian valores
   # NA, por lo que se perdio un dato. El operador diff se realizo para toda la <base_precios>,pero el <[2:nrow(base_precios)]>
   # lo que hace es solamente quitar la primera fila de NA.
@@ -265,12 +267,12 @@ if(!is.null(dia.inicial)){
   # Tabla 1 Pagnottoni: Estadistica descriptiva -----------------------------
   digitos.redondear <- 3 #<<<--- a cuantos digitos se desea redondear las estadisticas descriptivas
   ## Generar (skewness, kurtosis, mean, max, min, sd) de los retornos de los <indexes> acc. 
-  skewness <- round(moments::skewness(merge(base_retornos,mercado.retornos)),digitos.redondear)
-  kurtosis <- round(moments::kurtosis(merge(base_retornos,mercado.retornos)),digitos.redondear)
-  mean     <- apply(merge(base_retornos,mercado.retornos), MARGIN=2, function(x) round(mean(x),digitos.redondear))
-  max      <- apply(merge(base_retornos,mercado.retornos), MARGIN=2, function(x) round(max(x),digitos.redondear))
-  min      <- apply(merge(base_retornos,mercado.retornos), MARGIN=2, function(x) round(min(x),digitos.redondear))
-  sd       <- apply(merge(base_retornos,mercado.retornos), MARGIN=2, function(x) round(sd(x),digitos.redondear))
+  skewness <- round(moments::skewness(merge(base_retornos,market.returns),na.rm = T),digitos.redondear)
+  kurtosis <- round(moments::kurtosis(merge(base_retornos,market.returns),na.rm = T),digitos.redondear)
+  mean     <- apply(merge(base_retornos,market.returns), MARGIN=2, function(x) round(mean(x,na.rm=T),digitos.redondear))
+  max      <- apply(merge(base_retornos,market.returns), MARGIN=2, function(x) round(max(x,na.rm=T),digitos.redondear))
+  min      <- apply(merge(base_retornos,market.returns), MARGIN=2, function(x) round(min(x,na.rm=T),digitos.redondear))
+  sd       <- apply(merge(base_retornos,market.returns), MARGIN=2, function(x) round(sd(x,na.rm=T),digitos.redondear))
   
   # La matriz <Stats> tiene por numero de columnas a aquellas medidas de estadística descriptiva, y las filas son igual al numero de <indexes>
   Stats = cbind(min,max,mean,sd,skewness,kurtosis)
@@ -488,7 +490,7 @@ if(!is.null(dia.inicial)){
     # y todas las de rezagos para que tengan la misma cantidad de datos
     # Guardar el indice mas reducido entre todas las matrices de rezagos, comparando con el indice de <market.returns>,
     # que es la serie con el indice mas reducido hasta el momento
-    indice.mas.reducido <- min(length(index(market.returns)),length(index(base_retornos)),length(index(mercado.retornos)),
+    indice.mas.reducido <- min(length(index(market.returns)),length(index(base_retornos)),
                                length(index(fdi_growth_base)),length(index(gdp_growth_base)))
     indice_mas_reducido <- index(tail(base_retornos,indice.mas.reducido))
     if(length(index(Lags))<length(index(market.returns))) indice_mas_reducido <- index(Lags)
@@ -499,7 +501,7 @@ if(is.null(dia.inicial)){
   #Reducir las bases de datos segun <indice_mas_reducido>
   Retornos             <- base_retornos[indice_mas_reducido,]
   market.returns <- market.returns[indice_mas_reducido,]
-  mercado.retornos     <- mercado.retornos[indice_mas_reducido,]
+  #mercado.retornos     <- mercado.retornos[indice_mas_reducido,]
   Crecimiento_PIB      <- gdp_growth_base[indice_mas_reducido,]
   Crecimiento_FDI      <- fdi_growth_base[indice_mas_reducido,]
   for(indice in indexes){
