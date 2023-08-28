@@ -11,7 +11,7 @@ colnames(base_Tommaso) <- gsub("USA1$", "USA", colnames(base_Tommaso))
 
 # Parametros event study --------------------------------------------------------------
 
-estimation_start         <- 250  #<<<--- No. de dias antes del evento para comenzar la estimacion
+estimation_start         <- 200  #<<<--- No. de dias antes del evento para comenzar la estimacion
 estimation_end           <- 1    #<<<--- No. dias antes del evento para finalizar la estimacion
 max_abnormal_returns     <- 15   #<<<--- No. dias maximos despues del evento para calcular retorno anormal
 days_to_be_evaluated     <- 5    #<<<--- No. dias despues del evento a ser evaluados
@@ -121,7 +121,7 @@ if(1){
 
 # Mas adelante se muestra que la variable con menos observaciones faltantes es <Total.Affected> por lo cual
 # sera utilizada para medir la signifcancia. Se remueven valores <NA> y menores a 10000
-filtro.significancia <- F # <T> cuando se quiere filtrar apriori por aquellos eventos con mas de 10000 afectados, <F> si no se desea
+filtro.significancia <- T # <T> cuando se quiere filtrar apriori por aquellos eventos con mas de 10000 afectados, <F> si no se desea
 if(filtro.significancia){
   emdat_base <- emdat_base %>% 
     dplyr::filter(!is.na(Total.Affected)) %>% 
@@ -200,7 +200,11 @@ saved.day = "2023-08-10" #<<<--- fecha del save() en formato yyyy-mm-dd
 if(!load.eventslist){
   all_events_list <- estimation.event.study(bool.paper = bool_paper, bool.cds=bool_cds,base = base_lagged,data.events = eventos.final,market.returns = "market.returns",
                                             max.ar = 15,es.start = estimation_start,es.end = estimation_end,add.exo = TRUE,vars.exo = var_exo,GARCH = "sGARCH")
-  save(all_events_list,file=paste0(paste0('Resultados_sin_dummies_',saved.day),'.RData'))
+  if(bool_cds){serie <- 'CDS'}else{serie <- 'Indices'}
+  if(promedio.movil){regresor.mercado <- 'PM'}else{regresor.mercado <- 'benchmark'}
+  save(all_events_list, 
+       file=paste0(getwd(),'/Resultados_regresion/',serie,'_tra',umbral.evento,'_est',estimation_start,'_media_',regresor.mercado,'.RData'))
+  # save(all_events_list,file=paste0(paste0('Resultados_sin_dummies_',saved.day),'.RData'))
 }else{
   load(paste0(paste0('Resultados_sin_dummies_',saved.day),'.RData'))
 } 
@@ -333,7 +337,7 @@ j.statistic.resultado  <- j_statistic(data.list = all.events.list.true, es.windo
 
 # El siguiente programa sigue la metodologia del paper The impact of natural disasters on stock returns and volatilities
 # of local firms (Bourdeau-Brien)
-estimation_vol_start <- 500 #<<<-- ventana para la estimacion de la volatilidad previa al evento. 
+estimation_vol_start <- 750 #<<<-- ventana para la estimacion de la volatilidad previa al evento. 
 vol_ev_window        <- 15  #<<<--- Tamaño de la ventana de evento
 
 # Filtrar los eventos para que solo queden aquellos que cumplan con una ventana minima de estimacion y una ventana minima de 
@@ -343,19 +347,23 @@ eventos.filtrado.volatilidad <- drop.events(data.events = emdat_base,base = base
 
 # Filtrar la base de datos para solamente dejar los eventos mas significativos, y tambien asegurar que dentro de la 
 # ventana de estimacion no hayan otros eventos.
-umbral.evento.vol   <- 250 #<<<--- Numero de dias minimo entre cada evento. Lo anterior para que no se traslapen los eventos
+umbral.evento.vol   <- 100 #<<<--- Numero de dias minimo entre cada evento. Lo anterior para que no se traslapen los eventos
 columna.filtrar.vol <- 'Total.Affected' #<<<--- Columna para filtrar la base de eventos 'Total.Affected' o 'Damages'
 eventos.volatilidad <- reducir.eventos(umbral.evento.vol,base_lagged,eventos.filtrado.volatilidad,
                                  col.fecha='Start.Date',col.grupo = 'Country',col.filtro = columna.filtrar.vol)
 
-load.volatility <- 1           #<<<<-- 1 si se cargan los resultados de volatilidad, 0 si es necesario correr el codigo
+load.volatility <- 0           #<<<<-- 1 si se cargan los resultados de volatilidad, 0 si es necesario correr el codigo
 last.saved.day  <-"2023-07-24" #<<<--- fecha del save() en formato yyyy-mm-dd (resultados con CDS estan el 8 de agosto. el 10 de agosto esta con indices)
 if(!load.volatility){
     volatility_results <- volatility_event_study(base.evento = eventos.volatilidad,date.col.name = "Start.Date",geo.col.name = "Country",
                                       base.vol = base_Tommaso,interest.vars = indexes,num_lags = NULL,es.start=estimation_vol_start,
                                       len.ev.window = vol_ev_window,var.exo="market.returns",var.exo.pais = c("gdp","fdi"),
                                       bool.cds = bool_cds,bool.paper = bool_paper,garch = 'sGARCH')
-    save(volatility_results,file=paste0(paste0('Resultados_Volatilidad_',last.saved.day),'.RData'))
+    # save(volatility_results,file=paste0(paste0('Resultados_Volatilidad_',last.saved.day),'.RData'))
+    if(bool_cds){serie <- 'CDS'}else{serie <- 'Indices'}
+    if(promedio.movil){regresor.mercado <- 'PM'}else{regresor.mercado <- 'benchmark'}
+    save(volatility_results, 
+         file=paste0(getwd(),'/Resultados_regresion/',serie,'_tra',umbral.evento.vol,'_est',estimation_vol_start,'_varianza_',regresor.mercado,'.RData'))
 }else load(paste0(paste0('Resultados_Volatilidad_',last.saved.day),'.RData'))
 
 # Eliminar objetos NA

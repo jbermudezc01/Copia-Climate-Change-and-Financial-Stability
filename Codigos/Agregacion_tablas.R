@@ -64,7 +64,7 @@ tipo.estudio      <- 'varianza'     #<<<--- puede ser 'media' o 'varianza'
 regresor.mercado  <- 'benchmark'    #<<<--- puede ser 'PM' o 'benchmark', para CDS todavia no hay benchmark
 umbrales.evento   <- c(50,100,200)  #<<<--- puede ser 50 100 o 200
 if(tipo.estudio=='media') es.windows <- c(200,300,500) #<<<--- Para media puede ser 200, 300 o 500. Para varianza solamente 500
-if(tipo.estudio=='varianza') es.windows <- 500
+if(tipo.estudio=='varianza') es.windows <- c(500,750,1000)
 columnas.tabla    <- 'tipodesastre' #<<<--- Las tablas de la media estan guardadas tanto por tipo de desastre como por pais
 # <columnas.tabla> toma el valor de 'tipodesastre' o 'pais'
 
@@ -154,19 +154,19 @@ if(tipo.estudio == 'varianza'){
   tipo.evento   <- 'Todos' # Geophysical, Hydrological, Meteorological o Todos 
   lista.interes <- lista.bootstrap
   dataframe.var     <- purrr::map_dfc(lista.interes, ~.x[,tipo.evento])
-  dataframe.var200  <- dataframe.var[,grep('Estimacion_200',colnames(dataframe.var))] # Escoger los datos que se tienen para estimacion con 200 dias
-  dataframe.var300  <- dataframe.var[,grep('Estimacion_300',colnames(dataframe.var))] # Escoger los datos que se tienen para estimacion con 300 dias
-  dataframe.var500 <- dataframe.var[,grep('Estimacion_500',colnames(dataframe.var))] # Escoger los datos que se tienen para estimacion con 500 dias
+  dataframe.var500  <- dataframe.var[,grep('Estimacion_500',colnames(dataframe.var))] # Escoger los datos que se tienen para estimacion con 200 dias
+  dataframe.var750  <- dataframe.var[,grep('Estimacion_750',colnames(dataframe.var))] # Escoger los datos que se tienen para estimacion con 300 dias
+  dataframe.var1000 <- dataframe.var[,grep('Estimacion_1000',colnames(dataframe.var))] # Escoger los datos que se tienen para estimacion con 500 dias
   # Retirar nombres de columnas para hacer rbind 
-  colnames(dataframe.var200) <- NA
-  colnames(dataframe.var300) <- NA
   colnames(dataframe.var500) <- NA
+  colnames(dataframe.var750) <- NA
+  colnames(dataframe.var1000) <- NA
   # Juntarlos en un gran dataframe
-  dataframe.var.organizado <- rbind(dataframe.var200,dataframe.var300, dataframe.var500)
+  dataframe.var.organizado <- rbind(dataframe.var500,dataframe.var750, dataframe.var1000)
   # Nombres de columnas
   colnames(dataframe.var.organizado) <- c('50','100','200')
   # Añadir columna de dias de estimacion
-  dataframe.var.organizado$`Estimacion` <- c(rep(NA,7),500,rep(NA,7)) # se elige asi ya que <dataframe.var200> y <dataframe.var300> son NA
+  dataframe.var.organizado$`Estimacion` <- c(rep(NA,7),500,rep(NA,14),750,rep(NA,14),1000,rep(NA,7)) # se elige asi ya que <dataframe.var200> y <dataframe.var300> son NA
   # Reordenar las columnas
   dataframe.var.final <- dataframe.var.organizado %>% dplyr::select(Estimacion,`50`,`100`,`200`)
   

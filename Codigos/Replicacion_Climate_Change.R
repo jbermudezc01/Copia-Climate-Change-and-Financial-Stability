@@ -63,9 +63,9 @@ source(paste0(getwd(),'/Codigos/Functions_Climate_Change.r')) # Source de las fu
 
 bool_paper <- T #<<<--- Parametro que indica si se carga la base de datos que utilizaremos o los retornos de Pagnottoni (2022). 
 # <T> si se desea la base de datos para el paper. <F> si los retornos de Pagnottoni
-bool_cds   <- T  #<<<--- Parametro que indice si se hara el analisis sobre los CDS (<TRUE>) y <F> si se realizara sobre los stocks
+bool_cds   <- F  #<<<--- Parametro que indice si se hara el analisis sobre los CDS (<TRUE>) y <F> si se realizara sobre los stocks
 
-promedio.movil <- T #<<<-- parametro (booleano) para que el usuario decida cual sera el retorno de mercado, <T> si es el promedio movil de 
+promedio.movil <- F #<<<-- parametro (booleano) para que el usuario decida cual sera el retorno de mercado, <T> si es el promedio movil de 
 # de los retornos de los indices, <F> si es otra variable
 
 if(!bool_paper){
@@ -201,7 +201,7 @@ base_precios <- base[complete.cases(base),]
 xts.mercado <- xts.mercado[index(base_precios)]
 # Tambien es necesario realizar interpolacion a la base <xts.mercado>
 xts.mercado <- na.approx(xts.mercado)
-if(!promedio.movil){
+if(!bool_cds){
   # Genera la base de retornos. Se coloca [2:nrow(base_precios)] porque de no hacerlo toda la primera fila serian valores
   # NA, por lo que se perdio un dato. El operador diff se realizo para toda la <base_precios>,pero el <[2:nrow(base_precios)]>
   # lo que hace es solamente quitar la primera fila de NA.

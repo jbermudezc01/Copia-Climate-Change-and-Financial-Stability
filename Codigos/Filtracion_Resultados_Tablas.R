@@ -1,9 +1,9 @@
 # Los siguientes argumentos van a filtrar los resultados y tablas
-serie             <- 'Indices'  #<<<--- puede ser 'Indices' o 'CDS'
-tipo.estudio      <- 'media' #<<<--- puede ser 'media' o 'varianza'
+serie             <- 'CDS'  #<<<--- puede ser 'Indices' o 'CDS'
+tipo.estudio      <- 'varianza' #<<<--- puede ser 'media' o 'varianza'
 regresor.mercado  <- 'PM'       #<<<--- puede ser 'PM' o 'benchmark', para CDS todavia no hay benchmark
-umbral.del.evento <- 200         #<<<--- puede ser 50 100 o 200
-estimation.window <- 200        #<<<--- Para media puede ser 200, 300 o 500. Para CDS solamente 500
+umbral.del.evento <- 250         #<<<--- puede ser 50 100 o 200
+estimation.window <- 500        #<<<--- Para media puede ser 200, 300 o 500. Para CDS solamente 500
 columnas.tabla    <- 'tipodesastre' #<<<--- Las tablas de la media estan guardadas tanto por tipo de desastre como por pais
 # <columnas.tabla> toma el valor de 'tipodesastre' o 'pais'
 
@@ -81,7 +81,7 @@ if(tipo.estudio == 'media'){
 }
 
 # tipo.estudio == 'varianza' ---------------------------------------------
-# Se puede hacer un load de las tablas de significancia <table.wilcoxon> y <table.bmp>
+# Se puede hacer un load de las tablas de significancia 
 if(tipo.estudio == 'varianza'){
   load((file=paste0(getwd(),'/Resultados_regresion/Tablas/Tablas_',serie,'_tra',umbral.del.evento,'_est',
                     estimation.window,'_',tipo.estudio,'_',regresor.mercado,'_',columnas.tabla,'.RData')))

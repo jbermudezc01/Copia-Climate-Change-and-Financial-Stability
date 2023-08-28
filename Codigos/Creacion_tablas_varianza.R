@@ -1,12 +1,75 @@
+if(1){
+  if(Sys.info()["sysname"]=='Windows') Sys.setlocale("LC_TIME","English")
+  
+  rm(list = ls())
+  if (Sys.info()["sysname"]=='Windows')  setwd('C:/Users/jpber/OneDrive/Documents/Codigo_compartido_Melo/Climate_Change_and_Financial_Stability/Climate-Change-and-Financial-Stability')
+  if (Sys.info()["sysname"]!='Windows')  setwd('/Users/lumelo/archivos/Climate-Change-and-Financial-Stability/Github/Climate-Change-and-Financial-Stability')
+  
+  cat("\014")
+  
+  # Cargar librerias --------------------------------------------------------
+  
+  library(tidyverse)
+  library(xts)
+  library(timeDate)
+  library(zoo)
+  library(tempdisagg)
+  library(tsbox)
+  library(quantmod)
+  library(timeSeries)
+  library(forecast)
+  library(nlme)
+  library(seasonal)   
+  library(openxlsx)
+  library(urca)
+  library(fable)
+  library(lmtest)
+  library(moments)
+  library(stargazer)
+  library(Hmisc)
+  library(scales)
+  library(vars)
+  library(smoots)
+  library(dynlm)
+  library(systemfit)
+  library(ks)
+  library(knitr)
+  library(gridExtra)
+  library(stringr)
+  library(maps)
+  library(mapproj)
+  library(ggthemes)
+  library(tmap)
+  library(sf)
+  library(ggsci)
+  library(classInt)
+  library(gnFit)
+  library(rugarch)
+  library(knitr)
+  library(kableExtra)
+  library(janitor) # Para manejo de tablas descriptivas
+  library(xtable)  # Para exportar tablas a latex 
+  library(RColorBrewer)
+  library(tools)
+  library(writexl)  # Para crear excel
+  library(readxl)
+  
+  # Cargar funciones --------------------------------------------------------
+  source(paste0(getwd(),'/Codigos/Functions_Climate_Change.r')) # Source de las funciones
+  
+  countries   <- c('Brazil','Chile','China','Colombia','Indonesia','Korea','Malaysia','Mexico','Peru',
+                   'SouthAfrica','Turkey') #<<<--- Lista de los paises de cada CDS/indice
+}
+
 # Prueba de filtro  -------------------------------------------------------
 directorio.saved        <- paste0(getwd(),'/Resultados_regresion/')
 directorio.guardar      <- paste0(directorio.saved,'Tablas/')
 
-tipo.serie              <- 'CDS'   #<<<--- Puede ser 'CDS' o 'Indices'  
-ventana.estimacion      <- '500'   #<<<--- Puede ser 200, 300 o 500   (Importante que sea string)
-ventana.traslape        <- '250'   #<<<--- Puede ser 50, 100 o 200   (Importante que sea string)
+tipo.serie              <- 'Indices'   #<<<--- Puede ser 'CDS' o 'Indices'  
+ventana.estimacion      <- '750'   #<<<--- Puede ser 200, 300 o 500   (Importante que sea string)
+ventana.traslape        <- '50'   #<<<--- Puede ser 50, 100 o 200   (Importante que sea string)
 tipo.estudio            <- 'varianza' #<<<--- Puede ser de 'media' o 'varianza'
-regresor.mercado        <- 'PM'    #<<<--- Retornos de mercado 'PM' es promedio movil y 'MSCI' es el retorno MSCI Emerging Markets
+regresor.mercado        <- 'benchmark'    #<<<--- Retornos de mercado 'PM' es promedio movil y 'MSCI' es el retorno MSCI Emerging Markets
 
 tipos.desastre.eliminar <- c('Biological','Climatological') #<<<--- NULL si no se desea eliminar ningun tipo de desastre 
 paises.resultados       <- countries # Seleccionar los paises sobre los cuales se quiere hacer el analisis de resultados. <countries> si se desea
