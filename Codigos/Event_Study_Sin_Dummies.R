@@ -11,7 +11,7 @@ colnames(base_Tommaso) <- gsub("USA1$", "USA", colnames(base_Tommaso))
 
 # Parametros event study --------------------------------------------------------------
 
-estimation_start         <- 200  #<<<--- No. de dias antes del evento para comenzar la estimacion
+estimation_start         <- 500  #<<<--- No. de dias antes del evento para comenzar la estimacion
 estimation_end           <- 1    #<<<--- No. dias antes del evento para finalizar la estimacion
 max_abnormal_returns     <- 15   #<<<--- No. dias maximos despues del evento para calcular retorno anormal
 days_to_be_evaluated     <- 5    #<<<--- No. dias despues del evento a ser evaluados
@@ -176,7 +176,7 @@ if(0){
 
 # Filtrar la base de datos para solamente dejar los eventos mas significativos, y tambien asegurar que dentro de la 
 # ventana de estimacion no hayan otros eventos.
-umbral.evento   <- 250 #<<<--- Numero de dias minimo entre cada evento. Lo anterior para que no se traslapen los eventos
+umbral.evento   <- 50 #<<<--- Numero de dias minimo entre cada evento. Lo anterior para que no se traslapen los eventos
 columna.filtrar <- 'Total.Affected' #<<<--- Columna para filtrar la base de eventos 'Total.Affected' o 'Damages'
 eventos.final <- reducir.eventos(umbral = umbral.evento,base=base_lagged,eventos = eventos_filtrado,
                                  col.fecha='Start.Date',col.grupo = 'Country',col.filtro = columna.filtrar)
@@ -191,7 +191,7 @@ eventos.final <- reducir.eventos(umbral = umbral.evento,base=base_lagged,eventos
 # Otras variables exogenas de una base de datos que se quieren incluir. 
 var_exo <- c("gdp_","fdi_")
 
-load.eventslist <- 1     #<<<<-- 1 si se cargan los datos, 0 si se corre la funcion para estimar 
+load.eventslist <- 0     #<<<<-- 1 si se cargan los datos, 0 si se corre la funcion para estimar 
 saved.day = "2023-08-10" #<<<--- fecha del save() en formato yyyy-mm-dd
 # saved.day = '2023-07-25' tiene los resultados al establecer <umbral.evento>=250 y <columna.filtrar> = 'Total.Affected'
 # saved.day = '2023-08-01' tiene los resultados al establecer <umbral.evento>=200 y <columna.filtrar> = 'Damages'
@@ -212,6 +212,10 @@ if(!load.eventslist){
 # Hay elementos en <all_events_list> que son <NA> dado que la estimacion no convergio, por lo que es necesario
 # eliminarlos
 suppressWarnings(all.events.list <- purrr::discard(all_events_list,is.na))
+
+# Ver cuantos eventos tienen fecha exacta
+fecha.exacta        <- round(table(unlist(purrr::map(all.events.list, ~.x@evento$na_start)))/length(all.events.list)*100,2)
+names(fecha.exacta) <- c('Tiene fecha exacta','No tiene fecha exacta'); fecha.exacta
 # Dejar solamente los eventos que tengan fecha exacta
 all.events.list.true <- purrr::keep(all.events.list, ~ .x@evento$na_start == 0)
 
@@ -415,85 +419,3 @@ dataframe.volatilidad        <- data.frame(matrix.volatilidad)
 # Exportarla a latex
 table.volatilidad <- kable(dataframe.volatilidad, format = "html", escape = FALSE) %>%
   kable_styling(bootstrap_options = c("striped", "hover"));table.volatilidad
-
-# Codigo para el test de volatilidad, <if(0)> porque se genero una funcion <bootstrap.volatility>
-if(0){
-  # Calculo Mt y CAV --------------------------------------------------------
-  # El calculo de tanto Mt como CAV sale de Bourdeau (2017)
-  # Por simplicidad de calculos, guardar los residuales observados (epsilon) y los pronosticos de la varianza condicional
-  epsilon <- matrix(nrow=vol_ev_window,ncol=length(volatility_results))
-  sigma_cuad <- matrix(nrow=vol_ev_window,ncol=length(volatility_results))
-  for(i in 1:length(volatility_results)){
-    epsilon[,i] <- volatility_results[[i]]@residuales_evento
-    sigma_cuad[,i] <- volatility_results[[i]]@variance_forecast
-  }
-  
-  # <if(0)> porque el codigo fue mejorado en el siguiente  bloque de codigo
-  if(0){
-    Mt <- c()
-    for(i in 1:vol_ev_window){
-      termino_sumatoria <- c()
-      for(j in 1:length(volatility_results)){
-        numerador         <- (length(volatility_results)*epsilon[i,j]-sum(epsilon[i,]))^2
-        denominador       <- (length(volatility_results))*(length(volatility_results)-2)*sigma_cuad[i,j]+sum(sigma_cuad[i,])
-        termino_sumatoria <- c(termino_sumatoria, numerador/denominador)
-      }
-      Mt[i] <- (1/(length(volatility_results)-1))*sum(termino_sumatoria)
-    }
-  }
-  
-  # Es el mismo codigo anterior pero con operaciones vectorizadas (chatGPT). Si generan los mismos resultados
-  # El proceso se encuentra en la funcion <mt_function>
-  Mt <- mt_function(epsilon,sigma_cuad)
-  
-  # La volatilidad anormal acumulada (CAV) esta definida como
-  cav <- sum(Mt) - length(Mt)
-  
-  # Bootstrap Volatility ----------------------------------------------------
-  
-  # El siguiente procedimiento de bootstrap sigue la formulacion desarrollada por Mnasri y Nechi (2016)
-  # Generar matriz kxN (<estimation_vol_start>x<length(volatility_results>) de los residuales de las ecuaciones GARCH
-  
-  E_matrix <- matrix(nrow=estimation_vol_start,ncol=length(volatility_results)) 
-  for(i in 1:length(volatility_results)){
-    E_matrix[,i] <- coredata(volatility_results[[i]]@res_estandar_estimacion)
-  }
-  
-  # Reescalar la matriz para que cada columna tenga media 0 y varianza 1
-  E_matrix <- scale(E_matrix)
-  
-  # Generar un array de <lenght(volatility_results)> matrices, cada una con tamaño 
-  # (<estimation_vol_start>x<vol_ev_window>)
-  residual_array <- array(dim=c(estimation_vol_start,vol_ev_window,length(volatility_results)))
-  
-  # Multiplicar cada columna de la matriz <E_matrix> por el vector de desviacion estandar condicional estimada
-  for(i in 1:length(volatility_results)){
-    forecasted_sd <- sqrt(coredata(volatility_results[[i]]@variance_forecast))
-    residual_array[,,i] <- E_matrix[,i] %*% t(forecasted_sd)
-  }
-  # El codigo anterior genera un array de dimensiones <estimation_vol_start>x<vol_ev_window>x<length_volatility_results>
-  # La primera dimension indica el numero de filas de cada matriz, siendo igual a la longitud de la ventana de estimacion
-  # La segunda dimension indica el numero de columnas de cada matriz, siendo igual a la longitud de la ventana de evento
-  # La tercera dimension indica el numero de matrices en el array, siendo igual al numero de eventos
-  
-  # Realizar el bootstrap 
-  bootstrap_vol_iterations <- 10000 #<<<--- numero de iteraciones del bootstrap
-  cav_empiric_vector <-c()
-  
-  for(b in 1:bootstrap_vol_iterations){
-    set.seed(b)
-    # Seleccionar <length(volatility_results)> numeros aleatorios
-    random_nums <- sample(1:estimation_vol_start,length(volatility_results),replace = T)
-    # Seleccionar la <random_num>-esima fila de cada matriz dentro del array y organizarlas en una matriz para calcular Mt
-    epsilon_boot <- matrix(NA,nrow=vol_ev_window,ncol=length(volatility_results))
-    for(k in 1:length(volatility_results)) epsilon_boot[,k] <- residual_array[random_nums[k],,k]
-    Mt_boot  <- mt_function(epsilon_boot,sigma_cuad)
-    cav_boot <- sum(Mt_boot) - length(Mt_boot)
-    cav_empiric_vector <- c(cav_empiric_vector,cav_boot)
-  }
-  
-  # El p-value esta definido por Bourdeau (2017), quien dice que es la proporcion de valores que son mayores al
-  # cav calculado originalmente
-  
-  pvalue_bootstrap <- sum(cav_empiric_vector > cav)/bootstrap_vol_iterations
-}

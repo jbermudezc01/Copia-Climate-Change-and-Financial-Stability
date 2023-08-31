@@ -52,6 +52,7 @@ library(RColorBrewer)
 library(tools)
 library(writexl)  # Para crear excel
 library(readxl)
+library(bizdays);library('RQuantLib') # Revisar si las series contienen dias festivos
 
 # Cargar funciones --------------------------------------------------------
 
@@ -159,7 +160,8 @@ if(!bool_paper){
     indexes         <- c('BIST100','Bovespa','ChinaA50','JSX','KOSPI','S.PBMVIPC','S.PCLXIPSA','SouthAfricaTop40',
                          'IGBVL','KLCI','COLCAP') # Nombre indices para el paper. JSX es el de Jakarta
     columna.mercado <- c('MSCI')
-    base.stocks     <- readxl::read_excel(path = paste0(Dir, 'Stocks_Paper.xlsx'))
+    base.stocks     <- readxl::read_excel(path = paste0(Dir, 'Stocks_Paper_Completos.xlsx')) 
+    # <Stocks_Paper.xlsx> tiene la base desde el 5 de junio del 2006, <Stocks_Paper_Completos> desde el 7 de octubre del 2004
     # Volver objeto xts
     base_test <- as.xts(base.stocks[, !colnames(base.stocks) %in% c(date_column,columna.mercado)],order.by = as.Date(base.stocks[[date_column]]))  
     # Cambiar nombres de las columnas por los nombres de los <indexes>
@@ -301,12 +303,15 @@ if(1){
     gdp_countries <- readxl::read_xlsx(paste0(Dir,"GDP_countries_cds.xlsx")) #<<<--- Base de datos con GDPs
     if(!bool_cds){
       # Por el momento la idea es  reducir tanto <base_precios> como <base_retornos> y <mercado.retornos> para que terminen en el tercer trimestre del 2022, 
-      # ya que hasta ese punto hay datos de GDP. Reducir tambien la base <gdp_countries> para que comienze en el tercer trimestre del 
-      # 2006, ya que desde ese trimestre se tienen datos de stocks
-      trimestres.remover <- c('2004Q4','2005Q1','2005Q2','2005Q3','2005Q4','2006Q1')
+      # ya que hasta ese punto hay datos de GDP. 
+      if(0){
+        #Reducir tambien la base <gdp_countries> para que comienze en el tercer trimestre del 
+        # 2006, ya que desde ese trimestre se tienen datos de stocks
+        trimestres.remover <- c('2004Q4','2005Q1','2005Q2','2005Q3','2005Q4','2006Q1')
+        gdp_countries <- gdp_countries %>% 
+          dplyr::filter(!(Time %in% trimestres.remover))
+      } # <if(0)> porque ya no es necesario eliminar los primeros trimestres ya que ya hay datos para indices de bolsa
       trimestre.final    <- as.Date(as.yearqtr(tail(gdp_countries$Time,1)),frac=1) # Final del tercer trimestre del 2022
-      gdp_countries <- gdp_countries %>% 
-        dplyr::filter(!(Time %in% trimestres.remover))
       # La razon de transformar <base_precios> es porque la desagregacion temporal se hace en base al indice que tenga <base_precios>.
       # La razon de transformar <base_retornos> es porque es la base que se va a utilizar para el SUR.
       base_retornos <- base_retornos[index(base_retornos)<=trimestre.final]
@@ -393,13 +398,13 @@ if(1){
     fdi_countries <- readxl::read_xlsx(paste0(Dir,"FDI_anual.xlsx"), sheet="FDI") #<<--- Base datos de los FDI
   }else{
     fdi_countries <- readxl::read_xlsx(paste0(Dir,"fdi_cds.xlsx")) #<<<--- Base de datos con GDPs
-    if(!bool_cds){
+    if(0){
       # En este caso, para los stocks, solamente se tienen datos a partir del 2006, por lo que se retiran los datos del 2004 y 2005
       # de la base <fdi_countries>
       years.remove <- c('2004','2005')
       fdi_countries <- fdi_countries %>% 
         dplyr::filter(!(Year%in% years.remove))
-    }
+    } # ya no es necesario remover el 2004 y 2005
   }
   fdi_countries    <- fdi_countries %>% dplyr::mutate_all(as.numeric) # Asegurar que sean datos numericos
   date.col         <- "Year"  #<<<---parametro que indica titulo de la columna de las fechas
@@ -428,7 +433,15 @@ if(1){
   # <vec_cte> corresponde a la serie indicadora, al igual que la matriz de var-cov permanecen iguales a las usadas en los GDPs
   # La base <fdi_growth_base> tiene las siguientes dimensiones: columnas - el numero de <indexes>, filas - el mismo de <base_retornos> 
   fdi_daily_series = chow_lin(fdi_series, fdi_agregacion_matriz, vec_cte, matriz_var_cov_0,base_indice = base_precios)
-  fdi_growth_base  = apply(fdi_daily_series, MARGIN=2, function(x) diff(log(x))) #diff(log(series))
+  # Necesitamos controlar posibles datos que den <= 0 (Revisar)
+  fdi_daily_series2 = apply(fdi_daily_series, MARGIN = 2, function(col) {
+    min.value   <- min(col[col>0])
+    col[col<=0] <- min.value
+    return(col)
+  })
+  fdi_daily_series2 <- xts(fdi_daily_series2, order.by = index(fdi_daily_series))
+  
+  fdi_growth_base  = apply(fdi_daily_series2, MARGIN=2, function(x) diff(log(x))) #diff(log(series))
   fdi_growth_base  = as.xts(fdi_growth_base, order.by=index(base_precios[-1,]))
   
   # Colocamos los mismos nombres que la base de retornos pero le agregamos un prefijo fdi
