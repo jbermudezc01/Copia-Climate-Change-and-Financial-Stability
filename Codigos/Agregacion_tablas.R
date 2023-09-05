@@ -97,7 +97,7 @@ for(i in seq_along(umbrales.evento)){
 # Tablas para la media ----------------------------------------------------
 
 if(tipo.estudio == 'media'){
-  tipo.evento   <- 'Todos' # Geophysical, Hydrological, Meteorological o Todos 
+  tipo.evento   <- 'Meteorological' # Geophysical, Hydrological, Meteorological o Todos 
   lista.interes <- lista.wilcoxon
   dataframe.wil     <- purrr::map_dfc(lista.interes, ~.x[,tipo.evento])
   dataframe.wil200  <- dataframe.wil[,grep('Estimacion_200',colnames(dataframe.wil))] # Escoger los datos que se tienen para estimacion con 200 dias
@@ -141,7 +141,8 @@ if(tipo.estudio == 'media'){
   # ambos tests
   dataframe.final <- cbind(dataframe.wil.organizado,data.bmp.organizado)
   dataframe.final <- dataframe.final %>% 
-    mutate('50' = paste(`50`,`50bmp`),'100'=paste(`100`,`100bmp`),'200'=paste(`200`,`200bmp`)) %>% 
+    mutate('50' = paste(rep(paste0('[1,',1:15,']'),3),`50`,`50bmp`),'100'=paste(rep(paste0('[1,',1:15,']'),3),`100`,`100bmp`),
+           '200'=paste(rep(paste0('[1,',1:15,']'),3),`200`,`200bmp`)) %>% 
     dplyr::select(Estimacion,`50`,`100`,`200`)
   
   # Exportar a latex
@@ -168,7 +169,11 @@ if(tipo.estudio == 'varianza'){
   # Añadir columna de dias de estimacion
   dataframe.var.organizado$`Estimacion` <- c(rep(NA,7),500,rep(NA,14),750,rep(NA,14),1000,rep(NA,7)) # se elige asi ya que <dataframe.var200> y <dataframe.var300> son NA
   # Reordenar las columnas
-  dataframe.var.final <- dataframe.var.organizado %>% dplyr::select(Estimacion,`50`,`100`,`200`)
+  dataframe.var.final <- dataframe.var.organizado %>% 
+                           mutate('50'= paste(rep(paste0('[0,',0:14,']'),3),`50`),
+                                  '100'= paste(rep(paste0('[0,',0:14,']'),3),`100`),
+                                  '200'= paste(rep(paste0('[0,',0:14,']'),3),`200`)) %>% 
+                           dplyr::select(Estimacion,`50`,`100`,`200`)
   
   # Exportar a latex
   kable(dataframe.var.final,format='latex') 

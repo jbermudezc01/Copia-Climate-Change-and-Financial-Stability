@@ -66,8 +66,8 @@ directorio.saved        <- paste0(getwd(),'/Resultados_regresion/')
 directorio.guardar      <- paste0(directorio.saved,'Tablas/')
 
 tipo.serie              <- 'Indices'   #<<<--- Puede ser 'CDS' o 'Indices'  
-ventana.estimacion      <- '200'   #<<<--- Puede ser 200, 300 o 500   (Importante que sea string)
-ventana.traslape        <- '50'   #<<<--- Puede ser 50, 100 o 200   (Importante que sea string)
+ventana.estimacion      <- '500'   #<<<--- Puede ser 200, 300 o 500   (Importante que sea string)
+ventana.traslape        <- '50'  #<<<--- Puede ser 50, 100 o 200   (Importante que sea string)
 tipo.estudio            <- 'media' #<<<--- Puede ser de 'media' o 'varianza'
 regresor.mercado        <- 'benchmark'    #<<<--- Retornos de mercado 'PM' es promedio movil y 'benchmark' es el retorno MSCI Emerging Markets
 
