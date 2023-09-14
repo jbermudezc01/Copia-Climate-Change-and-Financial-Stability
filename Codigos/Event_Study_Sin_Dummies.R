@@ -8,7 +8,130 @@ base_Tommaso <- merge(base_retornos,market.returns,gdp_growth_base,fdi_growth_ba
 # Dejar solamente una columna para gdp y una para fdi que se llamen <gdp_USA> y <fdi_USA>
 base_Tommaso <- base_Tommaso[,!colnames(base_Tommaso) %in% c('gdp_USA2','fdi_USA2')]
 colnames(base_Tommaso) <- gsub("USA1$", "USA", colnames(base_Tommaso))
+# Base de eventos ---------------------------------------------------------
 
+# Si <unico_pais> es NULL, se obtiene una base de datos con los eventos de todos los paises de <countries>
+# En caso de querer analizar solamente un pais, se escribe en <unico_pais>
+unico_pais <- NULL
+
+# Lectura de y filtros de la base de eventos <emdat_completa>. 
+if(1){
+  # Lectura de la base de datos <EMDAT>,  en excel, se dejaron los desastres entre el 8-feb-2001 y 31-dic-2019 (fechas usadas en el paper).
+  # Para los eventos que corresponden a CDS se dejaron del primer trimestre de 2004 al tercero del 2022
+  if(!bool_paper){
+    emdat_completa <- openxlsx::read.xlsx(paste0(Dir,"EMDAT_Mapamundi.xlsx"),sheet = "Mapamundi") #<<<--- base de datos 
+  }else{
+    emdat_completa <- openxlsx::read.xlsx(paste0(Dir,'EMDAT_CDS_ORIGINAL.xlsx'),sheet='emdat data') #<<<--- base de datos 
+  }
+  # Correccion del nombre de algunos paises en <emdat_base>
+  emdat_completa <- emdat_completa %>% 
+    mutate(Country = case_when(
+      Country == "United Kingdom of Great Britain and Northern Ireland (the)" ~ "UnitedKingdom",
+      Country == "United States of America (the)" ~ "USA",
+      Country == "Hong Kong" ~ "HongKong",
+      Country == "Netherlands (the)" ~ "Netherlands",
+      Country == "Russian Federation (the)" ~ "Russia",
+      Country == "South Africa" ~ "SouthAfrica",
+      Country == "Korea (the Republic of)" ~ "SouthKorea",
+      TRUE ~ Country
+    ))
+  # Se seleccionan las columnas de interes
+  if(0){
+    #  <Disaster Subgroup>: uno de los cinco subgrupos de desastres: meteorologico, geofisico, hidrologico, climatologico, extraterrestrial
+    #  <Disaster Type>: tipo de desastre
+    #  <Disaster Subtype>: subtipo del desastre
+    #  <Country>: pais donde sucedio el desastre
+    #  <Start Year>: año en que inicio el desastre
+    #  <Start Month>: mes en que inicio el desastre
+    #  <Start Day>: dia en que inicio el desastre
+    #  <End Year>: año en que termino el desastre
+    #  <End Month>: mes en que termino el desastre
+    #  <End Day>: dia en que termino el desastre
+    #  <Total Deaths>: total de muertes 
+    #  <No Injured>: numero de heridos
+    #  <No Affected>: numero de afectados
+    #  <No Homeless>: numero de personas cuya casa fue destruida
+    #  <Total Affected>: total de afectados
+    #  <Damages>: total de daños totales en miles de dolares ajustados al 2021
+  }
+  emdat_base <- emdat_completa %>% 
+    dplyr::select('Disaster.Subgroup','Disaster.Type','Disaster.Subtype','Country','Start.Year','Start.Month','Start.Day','End.Year','End.Month',
+                  'End.Day','Total.Deaths','No.Injured','No.Affected','No.Homeless','Total.Affected',
+                  Damages = "Total.Damages,.Adjusted.('000.US$)")
+  
+  # Generacion de <Start.Date> para cada evento  ---------------------------------------------
+  
+  # Algunas de las fechas tienen NA en el dia, por lo cual se asume que es el primer dia del mes.
+  # En estos casos, la variable dummy <na_start> es igual a 1, o.w. es 0.
+  if(sum(is.na(emdat_base$Start.Day))!=0){
+    warning("Hay dias faltantes en la base de datos! Se va a asumir que el dia de inicio del desastre es el primero del mes")
+    # Creacion de la variable <na_start>
+    emdat_base <- emdat_base %>%
+      mutate(na_start = ifelse(is.na(Start.Day),1,0))
+    # Cambiar valores <NA> por el primer dia del mes
+    emdat_base <- emdat_base %>% 
+      mutate(Start.Day=replace_na(Start.Day,1)) # <replace_na> se utiliza para reemplazar los valores <NA> por <1>
+  }
+  # Generacion de la fecha completa del inicio de evento, <Start.Date>, 
+  # a partir de <Start.Year>, <Start.Month> y <Start.Day>
+  emdat_base <- emdat_base %>% 
+    unite(Start.Date, c(Start.Year, Start.Month, Start.Day), sep = "-",remove=FALSE) %>% 
+    mutate(Start.Date = as.Date(Start.Date))
+  
+  # Vector con los nombres de paises usados para la generacion de la base de eventos
+  if(is.null(unico_pais)){
+    paises.usados <- countries 
+  }else{
+    paises.usados <- unico_pais
+  }
+  
+  # Filtrar la base solo por los paises de <paises.usados>
+  emdat_base <- emdat_base %>% 
+    dplyr::filter(Country %in% paises.usados)
+}
+
+# El codigo anterior genera una base de datos con variables:
+#    <Country>    : pais donde sucede el evento
+#    <Start.Date> : fecha de inicio del evento
+
+
+# Filtrar la base de eventos para buscar eventos mas significativos -------
+
+# Mas adelante se muestra que la variable con menos observaciones faltantes es <Total.Affected> por lo cual
+# sera utilizada para medir la signifcancia. Se remueven valores <NA> y menores a 10000
+filtro.significancia <- T # <T> cuando se quiere filtrar apriori por aquellos eventos con mas de 10000 afectados, <F> si no se desea
+if(filtro.significancia){
+  emdat_base <- emdat_base %>% 
+    dplyr::filter(!is.na(Total.Affected)) %>% 
+    dplyr::filter(Total.Affected>=10000)
+}
+# Este filtrado se realiza post estimacion
+if(0){
+  # Siguiendo el paper de (Cavallo, Becerra y Acevedo. p 163) se divide la base de datos de desastres
+  # Generando una para incluir solamente los desastres hidrologicos, meteorologicos y geofisicos
+  emdat_filtrado1 <- emdat_base %>% 
+    dplyr::filter(Disaster.Subgroup%in% c('Meteorological', 'Hydrological','Geophysical')) %>% 
+    dplyr::filter(na_start==0)
+  sort(apply(emdat_filtrado1,MARGIN = 2,function(x) round((((sum(is.na(x))))/length(x))*100,1)),decreasing=T)
+  # La variable con menos datos faltantes de <emdat_filtrado1> con la que podemos medir la significancia del 
+  # desastre es <Total.Affected>, a la que solo le falta 12.2% de los datos 
+  # Aparte, en el mismo paper, realizan los procedimientos solamente para tres eventos en especifico: tormentas, 
+  # terremotos e inundaciones
+  emdat_filtrado2 <- emdat_base %>% 
+    dplyr::filter(Disaster.Type %in% c('Storm','Earthquake','Flood')) %>% 
+    dplyr::filter(na_start==0)
+  sort(apply(emdat_filtrado2,MARGIN = 2,function(x) round((((sum(is.na(x))))/length(x))*100,1)),decreasing=T)
+  # Para <emdat_filtrado2> tambien es <Total.Affected> de la cual solamente falta el 8.7% de los datos
+}
+# Agregar rezagos a base de datos -----------------------------------------
+
+# Se usa la funcion <create.lags>, que toma una base de datos junto a unas variables de interes. Retorna la base de datos inicial junto con 
+# rezagos de las variables de interes. Si se desea un numero de rezagos en especifico para todas las variables de interes, asignar el numero 
+# a <number_lags>. Si se desea un numero de rezagos para cada variable de interes, asignar una lista a <number_lags> con los numeros de 
+# rezagos. Nota: Si se coloca la lista tiene que tener el mismo numero de datos que numero de variables de interes.
+# Si se desea que se elijan los rezagos siguiendo el criterio de informacion de Akaike, dejar <number_lags> como NULL
+number_lags <- NULL
+base_lagged <- create.lags(base = base_Tommaso,interest.vars = indexes,no.lags = number_lags,AR.m = 20)
 # Parametros event study --------------------------------------------------------------
 
 estimation_windows <- c(200,300,500) #<<<--- No. de dias antes del evento para comenzar la estimacion
@@ -24,156 +147,12 @@ for(estimation_start in estimation_windows){
   # Asegurar que la ventana de evento no sea mayor que los retornos anormales estimados. 
   if(length_car_window > max_abnormal_returns) length_car_window <- max_abnormal_returns
   
-  # Otros parametros --------------------------------------------------------
-  if(0){
-    paises.pagnottoni <- c("Australia","Belgium", "Brazil", "Canada", "Chile", "Denmark", "Finland",
-                           "France", "Germany", "HongKong", "India", "Indonesia","Mexico","Netherlands","Norway","Poland","Russia",
-                           "SouthAfrica","SouthKorea", "Spain", "Sweden","Switzerland","Thailand","Turkey", 
-                           "UnitedKingdom","USA") #<<<--- Paises usados en Pagnottoni
-    }
-  # Si <unico_pais> es NULL, se obtiene una base de datos con los eventos de todos los paises de <countries>
-  # En caso de querer analizar solamente un pais, se escribe en <unico_pais>
-  unico_pais <- NULL
-  
-  # Base de eventos ---------------------------------------------------------
-  
-  # Lectura de y filtros de la base de eventos <emdat_completa>. 
-  if(1){
-    # Lectura de la base de datos <EMDAT>,  en excel, se dejaron los desastres entre el 8-feb-2001 y 31-dic-2019 (fechas usadas en el paper).
-    # Para los eventos que corresponden a CDS se dejaron del primer trimestre de 2004 al tercero del 2022
-    if(!bool_paper){
-      emdat_completa <- openxlsx::read.xlsx(paste0(Dir,"EMDAT_Mapamundi.xlsx"),sheet = "Mapamundi") #<<<--- base de datos 
-    }else{
-      emdat_completa <- openxlsx::read.xlsx(paste0(Dir,'EMDAT_CDS_ORIGINAL.xlsx'),sheet='emdat data') #<<<--- base de datos 
-    }
-    # Correccion del nombre de algunos paises en <emdat_base>
-    emdat_completa <- emdat_completa %>% 
-      mutate(Country = case_when(
-        Country == "United Kingdom of Great Britain and Northern Ireland (the)" ~ "UnitedKingdom",
-        Country == "United States of America (the)" ~ "USA",
-        Country == "Hong Kong" ~ "HongKong",
-        Country == "Netherlands (the)" ~ "Netherlands",
-        Country == "Russian Federation (the)" ~ "Russia",
-        Country == "South Africa" ~ "SouthAfrica",
-        Country == "Korea (the Republic of)" ~ "SouthKorea",
-        TRUE ~ Country
-      ))
-    # Se seleccionan las columnas de interes
-    if(0){
-      #  <Disaster Subgroup>: uno de los cinco subgrupos de desastres: meteorologico, geofisico, hidrologico, climatologico, extraterrestrial
-      #  <Disaster Type>: tipo de desastre
-      #  <Disaster Subtype>: subtipo del desastre
-      #  <Country>: pais donde sucedio el desastre
-      #  <Start Year>: año en que inicio el desastre
-      #  <Start Month>: mes en que inicio el desastre
-      #  <Start Day>: dia en que inicio el desastre
-      #  <End Year>: año en que termino el desastre
-      #  <End Month>: mes en que termino el desastre
-      #  <End Day>: dia en que termino el desastre
-      #  <Total Deaths>: total de muertes 
-      #  <No Injured>: numero de heridos
-      #  <No Affected>: numero de afectados
-      #  <No Homeless>: numero de personas cuya casa fue destruida
-      #  <Total Affected>: total de afectados
-      #  <Damages>: total de daños totales en miles de dolares ajustados al 2021
-    }
-    emdat_base <- emdat_completa %>% 
-      dplyr::select('Disaster.Subgroup','Disaster.Type','Disaster.Subtype','Country','Start.Year','Start.Month','Start.Day','End.Year','End.Month',
-                    'End.Day','Total.Deaths','No.Injured','No.Affected','No.Homeless','Total.Affected',
-                    Damages = "Total.Damages,.Adjusted.('000.US$)")
-    
-    # Generacion de <Start.Date> para cada evento  ---------------------------------------------
-    
-    # Algunas de las fechas tienen NA en el dia, por lo cual se asume que es el primer dia del mes.
-    # En estos casos, la variable dummy <na_start> es igual a 1, o.w. es 0.
-    if(sum(is.na(emdat_base$Start.Day))!=0){
-      warning("Hay dias faltantes en la base de datos! Se va a asumir que el dia de inicio del desastre es el primero del mes")
-      # Creacion de la variable <na_start>
-      emdat_base <- emdat_base %>%
-        mutate(na_start = ifelse(is.na(Start.Day),1,0))
-      # Cambiar valores <NA> por el primer dia del mes
-      emdat_base <- emdat_base %>% 
-        mutate(Start.Day=replace_na(Start.Day,1)) # <replace_na> se utiliza para reemplazar los valores <NA> por <1>
-    }
-    # Generacion de la fecha completa del inicio de evento, <Start.Date>, 
-    # a partir de <Start.Year>, <Start.Month> y <Start.Day>
-    emdat_base <- emdat_base %>% 
-      unite(Start.Date, c(Start.Year, Start.Month, Start.Day), sep = "-",remove=FALSE) %>% 
-      mutate(Start.Date = as.Date(Start.Date))
-    
-    # Vector con los nombres de paises usados para la generacion de la base de eventos
-    if(is.null(unico_pais)){
-      paises.usados <- countries 
-    }else{
-      paises.usados <- unico_pais
-    }
-    
-    # Filtrar la base solo por los paises de <paises.usados>
-    emdat_base <- emdat_base %>% 
-      dplyr::filter(Country %in% paises.usados)
-  }
-  
-  # El codigo anterior genera una base de datos con variables:
-  #    <Country>    : pais donde sucede el evento
-  #    <Start.Date> : fecha de inicio del evento
-  
-  
-  # Filtrar la base de eventos para buscar eventos mas significativos -------
-  
-  # Mas adelante se muestra que la variable con menos observaciones faltantes es <Total.Affected> por lo cual
-  # sera utilizada para medir la signifcancia. Se remueven valores <NA> y menores a 10000
-  filtro.significancia <- T # <T> cuando se quiere filtrar apriori por aquellos eventos con mas de 10000 afectados, <F> si no se desea
-  if(filtro.significancia){
-    emdat_base <- emdat_base %>% 
-      dplyr::filter(!is.na(Total.Affected)) %>% 
-      dplyr::filter(Total.Affected>=10000)
-  }
-  # Este filtrado se realiza post estimacion
-  if(0){
-    # Siguiendo el paper de (Cavallo, Becerra y Acevedo. p 163) se divide la base de datos de desastres
-    # Generando una para incluir solamente los desastres hidrologicos, meteorologicos y geofisicos
-    emdat_filtrado1 <- emdat_base %>% 
-      dplyr::filter(Disaster.Subgroup%in% c('Meteorological', 'Hydrological','Geophysical')) %>% 
-      dplyr::filter(na_start==0)
-    sort(apply(emdat_filtrado1,MARGIN = 2,function(x) round((((sum(is.na(x))))/length(x))*100,1)),decreasing=T)
-    # La variable con menos datos faltantes de <emdat_filtrado1> con la que podemos medir la significancia del 
-    # desastre es <Total.Affected>, a la que solo le falta 12.2% de los datos 
-    # Aparte, en el mismo paper, realizan los procedimientos solamente para tres eventos en especifico: tormentas, 
-    # terremotos e inundaciones
-    emdat_filtrado2 <- emdat_base %>% 
-      dplyr::filter(Disaster.Type %in% c('Storm','Earthquake','Flood')) %>% 
-      dplyr::filter(na_start==0)
-    sort(apply(emdat_filtrado2,MARGIN = 2,function(x) round((((sum(is.na(x))))/length(x))*100,1)),decreasing=T)
-    # Para <emdat_filtrado2> tambien es <Total.Affected> de la cual solamente falta el 8.7% de los datos
-  }
-  # Agregar rezagos a base de datos -----------------------------------------
-  
-  # Se usa la funcion <create.lags>, que toma una base de datos junto a unas variables de interes. Retorna la base de datos inicial junto con 
-  # rezagos de las variables de interes. Si se desea un numero de rezagos en especifico para todas las variables de interes, asignar el numero 
-  # a <number_lags>. Si se desea un numero de rezagos para cada variable de interes, asignar una lista a <number_lags> con los numeros de 
-  # rezagos. Nota: Si se coloca la lista tiene que tener el mismo numero de datos que numero de variables de interes.
-  # Si se desea que se elijan los rezagos siguiendo el criterio de informacion de Akaike, dejar <number_lags> como NULL
-  number_lags <- NULL
-  base_lagged <- create.lags(base = base_Tommaso,interest.vars = indexes,no.lags = number_lags,AR.m = 20)
-  
   # Se eliminan los eventos que no cuentan con la ventana minima de estimacion ni con la ventana minima de evento usando la funcion <drop.events>
   date_col_name <- "Start.Date" #<<<--- Parametro que indica el nombre de la columna clase <Date>, la cual contiene la fecha de eventos
   geo_col_name  <- "Country"    #<<<--- Parametro que indica el nombre de la columna que contiene los paises, o puede ser cualquier otra variable 
                                 #       que se quiera estudiar, como regiones, ciudades, etc
   eventos_filtrado <- drop.events(data.events = emdat_base,base = base_lagged,estimation.start = estimation_start,max.ar=max_abnormal_returns, 
                                   date_col_name, geo_col_name)
-  # Este filtrado se realiza post estimacion
-  if(0){
-    variable.eventos <- 1  #<<<--- <variable.eventos> es una variable para indicar cuales eventos se quieren utilizar. 1 indica que se quieren incluir 
-    # todos los eventos en <emdat.base>, 2 significa que se quieren incluir solamente los de <emdat_filtrado1>
-    # y 3 significa que se quieren incluir solamente los de <emdat_filtrado2>
-    if(variable.eventos==1) eventos_filtrado <- drop.events(data.events = emdat_base,base = base_lagged,estimation.start = estimation_start,max.ar=max_abnormal_returns, 
-                           date_col_name, geo_col_name)
-    if(variable.eventos==2) eventos_filtrado <- drop.events(data.events = emdat_filtrado1,base = base_lagged,estimation.start = estimation_start,max.ar=max_abnormal_returns, 
-                                                            date_col_name, geo_col_name)
-    if(variable.eventos==3) eventos_filtrado <- drop.events(data.events = emdat_filtrado2,base = base_lagged,estimation.start = estimation_start,max.ar=max_abnormal_returns, 
-                                                            date_col_name, geo_col_name)
-  }
   
   # Filtrar la base de datos para solamente dejar los eventos mas significativos, y tambien asegurar que dentro de la 
   # ventana de estimacion no hayan otros eventos.

@@ -63,9 +63,10 @@ if(1){
 
 # Prueba de filtro  -------------------------------------------------------
 directorio.saved        <- paste0(getwd(),'/Resultados_regresion/')
-directorio.guardar      <- paste0(directorio.saved,'Tablas/')
+# directorio.guardar      <- paste0(directorio.saved,'Tablas/') # con cambio de bootstrap las tablas se guardan en otra carpeta
+directorio.guardar      <- paste0(directorio.saved,'Tablas/Nuevas_Tablas_Varianza/') 
 
-ventanas.estimacion <- c(750)
+ventanas.estimacion <- c(500, 750, 1000)
 for(ventana.estimacion in ventanas.estimacion){
   tipo.serie              <- 'CDS'   #<<<--- Puede ser 'CDS' o 'Indices'  
   # ventana.estimacion      <- '750'   #<<<--- Puede ser 200, 300 o 500   (Importante que sea string)
@@ -121,17 +122,17 @@ for(ventana.estimacion in ventanas.estimacion){
   
   # Dataframe con muchas ventanas
   matrix.volatilidad <- matrix(nrow=(vol_ev_window),ncol=(length(v.lista.separada)+1))
-  iteraciones.bool  <- 5000
+  iteraciones.bool  <- 10000
   for(i in seq_along(v.lista.separada)){
     for(j in (1:(vol_ev_window))){
-      prueba <- bootstrap.volatility(v.lista.separada[[i]],as.numeric(ventana.estimacion),j,bootstrap_vol_iterations = iteraciones.bool)
+      prueba <- bootstrap.volatility2(v.lista.separada[[i]],as.numeric(ventana.estimacion),j,bootstrap_vol_iterations = iteraciones.bool)
       matrix.volatilidad[j,i] <- paste(prueba$CAV,prueba$Significancia)
     }
   }
   
   k <- length(v.lista.separada)+1
   for(j in (1:(vol_ev_window))){ 
-    prueba.cav <- bootstrap.volatility(volatility_results,as.numeric(ventana.estimacion),j,bootstrap_vol_iterations = iteraciones.bool)
+    prueba.cav <- bootstrap.volatility2(volatility_results,as.numeric(ventana.estimacion),j,bootstrap_vol_iterations = iteraciones.bool)
     matrix.volatilidad[j,k] <- paste(prueba.cav$CAV,prueba.cav$Significancia)
   }
   colnames(matrix.volatilidad) <- c(names(v.lista.separada),'Todos')

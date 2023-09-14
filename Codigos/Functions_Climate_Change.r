@@ -2889,3 +2889,102 @@ grafico_cav <- function(events.list, es.window.length,ev.window.length){
   abline(a = 0, b = 1, col = "black",lty=2,lwd=1.7)
   abline(h = 0, col = "black", lty=2,lwd = 1.7)
 }
+
+# Revision de la funcion bootstrap.volatility ------------------------------
+bootstrap.volatility2 <- function(volatility.list,es.window.length,ev.window.length,bootstrap_vol_iterations){ 
+  # Detener la funcion si hay algun elemento que no tenga la clase 'ESmean'
+  if (any(!sapply(volatility.list, inherits, "ESVolatility"))) {
+    stop('La lista contiene elementos que no fueron creados con la funcion estimation.event.study.')
+  }
+  
+  # Calculo Mt y CAV --------------------------------------------------------
+  # El calculo de tanto Mt como CAV sale de Bourdeau (2017)
+  # Por simplicidad de calculos, guardar los residuales observados (epsilon) y los pronosticos de la varianza condicional
+  epsilon      <- data.frame(purrr::map(volatility.list, ~ coredata(.x@residuales_evento)))[1:ev.window.length,]
+  sigma_cuad   <- data.frame(purrr::map(volatility.list, ~ coredata(.x@variance_forecast)))[1:ev.window.length,]
+  
+  # <if(0)> porque el codigo fue mejorado en el siguiente  bloque de codigo
+  if(0){
+    Mt <- c()
+    for(i in 1:ev.window.length){
+      termino_sumatoria <- c()
+      for(j in 1:length(volatility.list)){
+        numerador         <- (length(volatility.list)*epsilon[i,j]-sum(epsilon[i,]))^2
+        denominador       <- (length(volatility.list))*(length(volatility.list)-2)*sigma_cuad[i,j]+sum(sigma_cuad[i,])
+        termino_sumatoria <- c(termino_sumatoria, numerador/denominador)
+      }
+      Mt[i] <- (1/(length(volatility.list)-1))*sum(termino_sumatoria)
+    }
+  }
+  
+  # Es el mismo codigo anterior pero con operaciones vectorizadas (chatGPT). Si generan los mismos resultados
+  # El proceso se encuentra en la funcion <mt_function>
+  Mt <- mt_function(epsilon,sigma_cuad)
+  
+  # La volatilidad anormal acumulada (CAV) esta definida como
+  cav <- sum(Mt) - length(Mt)
+  estadistico.bialkowski <- sum(Mt)*(length(volatility.list)-1)
+  pvalue.bialkowski      <- pchisq(estadistico.bialkowski,
+                                   df = ((length(volatility.list)-1)*(ev.window.length+1)),lower.tail = F)
+  
+  # Bootstrap Volatility ----------------------------------------------------
+  
+  # El siguiente procedimiento de bootstrap sigue la formulacion desarrollada por Mnasri y Nechi (2016)
+  # Generar matriz kxN (<es.window.length>x<length(volatility.list>) de los residuales de las ecuaciones GARCH
+  
+  E_matrix <- matrix(nrow=es.window.length,ncol=length(volatility.list)) 
+  for(i in 1:length(volatility.list)) E_matrix[,i] <- coredata(volatility.list[[i]]@res_estandar_estimacion)
+  
+  # Reescalar la matriz para que cada columna tenga media 0 y varianza 1
+  E_matrix <- scale(E_matrix)
+  
+  # Generar un array de <lenght(volatility.list)> matrices, cada una con tamaño 
+  # (<es.window.length>x<ev.window.length>)
+  residual_array <- array(dim=c(es.window.length,ev.window.length,length(volatility.list)))
+  
+  # Multiplicar cada columna de la matriz <E_matrix> por el vector de desviacion estandar condicional estimada
+  for(i in 1:length(volatility.list)){
+    forecasted_sd       <- sqrt(coredata(volatility.list[[i]]@variance_forecast))[1:ev.window.length]
+    residual_array[,,i] <- E_matrix[,i] %*% t(forecasted_sd)
+  }
+  # El codigo anterior genera un array de dimensiones <es.window.length>x<ev.window.length>x<length_volatility.list>
+  # La primera dimension indica el numero de filas de cada matriz, siendo igual a la longitud de la ventana de estimacion
+  # La segunda dimension indica el numero de columnas de cada matriz, siendo igual a la longitud de la ventana de evento
+  # La tercera dimension indica el numero de matrices en el array, siendo igual al numero de eventos
+  
+  # Realizar el bootstrap 
+  cav_empiric_vector <-c()
+  set.seed(15)
+  for(b in 1:bootstrap_vol_iterations){
+    # Seleccionar <length(volatility.list)> numeros aleatorios (no pueden estar dentro de los ultimos <ev.window.length> dias)
+    random_nums <- sample((1:(es.window.length- ev.window.length+1)),length(volatility.list),replace = T)
+    # Seleccionar la <random_num>-esima fila de cada matriz dentro del array y organizarlas en una matriz para calcular Mt
+    epsilon_boot <- matrix(NA,nrow=ev.window.length,ncol=length(volatility.list))
+    for(k in 1:length(volatility.list)){
+      for(u in 0:(nrow(epsilon_boot)-1)) epsilon_boot[(u+1),k] <- residual_array[(random_nums[k]+u),(u+1),k]
+    }
+    Mt_boot  <- mt_function(epsilon_boot,sigma_cuad)
+    cav_boot <- sum(Mt_boot) - length(Mt_boot)
+    cav_empiric_vector <- c(cav_empiric_vector,cav_boot)
+  }
+  
+  # El p-value esta definido por Bourdeau (2017), quien dice que es la proporcion de valores que son mayores al
+  # cav calculado originalmente
+  
+  pvalue_bootstrap <- sum(cav_empiric_vector > cav)/bootstrap_vol_iterations
+  significancia    <- ''
+  if(pvalue_bootstrap<=0.1) significancia <- '*'
+  if(pvalue_bootstrap<=0.05) significancia <- '**'
+  if(pvalue_bootstrap<=0.01) significancia <- '***'
+  
+  significancia.bialkowski <- '/ '
+  if(pvalue.bialkowski<=0.1) significancia.bialkowski <- '/ *'
+  if(pvalue.bialkowski<=0.05) significancia.bialkowski <- '/ **'
+  if(pvalue.bialkowski<=0.01) significancia.bialkowski <- '/ ***'
+  
+  resultado        <- data.frame('CAV'=round(cav,3),'Significancia' = significancia,'p_value'=pvalue_bootstrap,
+                                 'Significanciabialkowski' = significancia.bialkowski)
+  return(resultado)
+}
+
+
