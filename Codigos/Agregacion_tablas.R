@@ -59,7 +59,7 @@ if(1){
 }
 
 # Los siguientes argumentos van a filtrar los resultados y tablas
-serie             <- 'CDS'      #<<<--- puede ser 'Indices' o 'CDS'
+serie             <- 'Indices'      #<<<--- puede ser 'Indices' o 'CDS'
 tipo.estudio      <- 'varianza'     #<<<--- puede ser 'media' o 'varianza'
 regresor.mercado  <- 'PM'    #<<<--- puede ser 'PM' o 'benchmark', para CDS todavia no hay benchmark
 umbrales.evento   <- c(50,100,200)  #<<<--- puede ser 50 100 o 200
@@ -79,11 +79,11 @@ for(i in seq_along(umbrales.evento)){
   for(j in seq_along(es.windows)){
     indice.lista <- indice.lista +1
     estimation.window <- es.windows[j]
-    #load((file=paste0(getwd(),'/Resultados_regresion/Tablas/Tablas_',serie,'_tra',umbral.del.evento,'_est',
-    #                  estimation.window,'_',tipo.estudio,'_',regresor.mercado,'_',columnas.tabla,'.RData')))
+    load((file=paste0(getwd(),'/Resultados_regresion/Tablas/Tablas_',serie,'_tra',umbral.del.evento,'_est',
+                      estimation.window,'_',tipo.estudio,'_',regresor.mercado,'_',columnas.tabla,'.RData')))
     # Cargamos las tablas con el nuevo bootstrap
     load((file=paste0(getwd(),'/Resultados_regresion/Tablas/Nuevas_Tablas_Varianza/Tablas_',serie,'_tra',umbral.del.evento,'_est',
-                      estimation.window,'_',tipo.estudio,'_',regresor.mercado,'_',columnas.tabla,'.RData')))
+                     estimation.window,'_',tipo.estudio,'_',regresor.mercado,'_',columnas.tabla,'.RData')))
     if(tipo.estudio=='media'){
       lista.wilcoxon[[indice.lista]] <- dataframe.wilcoxon 
       names(lista.wilcoxon)[[indice.lista]] <- paste('Estimacion',estimation.window,'traslape',umbral.del.evento,sep='_')
@@ -155,7 +155,7 @@ if(tipo.estudio == 'media'){
 # Tablas para la varianza -------------------------------------------------
 
 if(tipo.estudio == 'varianza'){
-  tipo.evento   <- 'Todos' # Geophysical, Hydrological, Meteorological o Todos 
+  tipo.evento   <- 'Geophysical' # Geophysical, Hydrological, Meteorological o Todos 
   lista.interes <- lista.bootstrap
   dataframe.var     <- purrr::map_dfc(lista.interes, ~.x[,tipo.evento])
   dataframe.var500  <- dataframe.var[,grep('Estimacion_500',colnames(dataframe.var))] # Escoger los datos que se tienen para estimacion con 200 dias
