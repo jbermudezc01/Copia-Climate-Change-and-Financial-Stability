@@ -80,7 +80,7 @@ for(ventana.estimacion in ventanas.estimacion){
   eventos.fecha.exac      <- T  #<<<--- booleano para indicar si se quieren usar solamente los eventos que tengan una fecha exacta
   # <T> en caso de querer solo los que tienen fecha exacta.<F>si se quieren usar tambien aquellos eventos de
   # los que se asumio el dia  
-  columna.agrupar         <- 'Disaster.Subgroup'  #<<<--- Columna del evento por la cual se quiere separar la lista de regresiones para las tablas/graficas
+  columna.agrupar         <- 'Country'  #<<<--- Columna del evento por la cual se quiere separar la lista de regresiones para las tablas/graficas
   # 'Country' la separa por pais donde sucedio el desastre y 'Disaster.Subgroup' por el tipo de desastre
   vol_ev_window           <- 15  #<<<--- Tamaño de la ventana de evento
   
