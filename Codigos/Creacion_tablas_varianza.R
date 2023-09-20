@@ -70,7 +70,7 @@ ventanas.estimacion <- c(500, 750, 1000)
 for(ventana.estimacion in ventanas.estimacion){
   tipo.serie              <- 'CDS'   #<<<--- Puede ser 'CDS' o 'Indices'  
   # ventana.estimacion      <- '750'   #<<<--- Puede ser 200, 300 o 500   (Importante que sea string)
-  ventana.traslape        <- '100'   #<<<--- Puede ser 50, 100 o 200   (Importante que sea string)
+  ventana.traslape        <- '50'   #<<<--- Puede ser 50, 100 o 200   (Importante que sea string)
   tipo.estudio            <- 'varianza' #<<<--- Puede ser de 'media' o 'varianza'
   regresor.mercado        <- 'PM'    #<<<--- Retornos de mercado 'PM' es promedio movil y 'MSCI' es el retorno MSCI Emerging Markets
   
