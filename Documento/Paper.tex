@@ -1,0 +1,84 @@
+\documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{tabularx}
+\usepackage{float}
+\usepackage{blindtext}
+\usepackage{hyperref}
+
+
+\title{Datos y Metodología Paper}
+\author{Juan Pablo Bermudez Cespedes}
+\date{Septiembre 2023}
+
+\begin{document}
+
+\maketitle
+
+\section{Data}
+Since the purpose of this paper is to study the effects of natural disasters on the mean and variance 
+of financial series in emerging economies, we retrieved data from several sources. Firstly, we 
+downloaded the 5-year sovereign Credit Default Swap $(CDS)$ daily series for all the countries of 
+interest: Brazil, Chile, China, Colombia, Indonesia, South Korea, Malaysia, Mexico, Peru, South Africa, and Turkey. 
+The sample we were able to obtain starts on October 10, 2004, and it ends on August 10, 2022. In Table \ref{table:CDS}
+ we present the descriptive statistics of the first difference of all the CDS series. \\
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{rrrrrrr}
+  \hline
+Country & Minimum & Maximum & Mean & Std. Dev. & Skewness & Kurtosis \\ 
+  \hline
+Brazil & -124.91 & 186.53 & -0.03 & 8.45 & 2.01 & 81.53 \\ 
+  Chile & -64.27 & 63.11 & 0.02 & 3.71 & 0.66 & 67.48 \\ 
+  China & -58.91 & 67.47 & 0.01 & 3.52 & 0.63 & 73.61 \\ 
+  Colombia & -126.52 & 180.59 & -0.02 & 8.20 & 1.38 & 83.91 \\ 
+  Indonesia & -223.81 & 324.52 & -0.06 & 13.30 & 3.12 & 170.85 \\ 
+  South Korea & -168.55 & 133.28 & 0.00 & 5.72 & -2.92 & 266.79 \\ 
+  Malaysia & -101.34 & 119.40 & 0.01 & 5.22 & 1.71 & 128.90 \\ 
+  Mexico & -132.96 & 197.20 & 0.01 & 7.31 & 3.82 & 168.49 \\ 
+  Peru & -126.10 & 161.39 & -0.04 & 6.72 & 1.82 & 120.92 \\ 
+  South Africa & -82.36 & 146.45 & 0.03 & 7.99 & 2.25 & 58.39 \\ 
+  Turkey & -131.91 & 166.47 & 0.08 & 10.72 & 1.57 & 48.01 \\ 
+  Moving Average & -11.46 & 20.19 & 0.01 & 1.33 & 3.17 & 50.01 \\ 
+   \hline
+\end{tabular}
+\caption{Descriptive Statistics CDS spreads}
+\label{table:CDS}
+\end{table}
+We also aimed to assess the impact of natural disasters on the major stock indices of various countries. 
+We utilized the following indices: Bovespa for Brazil, S\&P CLXIPSA for Chile, ChinaA50 for China, 
+COLCAP for Colombia, JSX for Indonesia, KOSPI for South Korea, KLCI for Malaysia, S\&P BMVIPC for 
+Mexico, IGBVL for Peru, South Africa Top 40 for South Africa, and BIST100 for Turkey. Table 
+\ref{table:stock} presents the descriptive statistics of the returns for all these stock index 
+series, covering the same sample period as the CDS data, from October 10, 2004, to August 10, 2022. \\
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{rrrrrrr}
+  \hline
+ Stock Index & Min. & Max. & Mean & Std. Dev. & Skewness & Kurtosis \\ 
+  \hline
+BIST100 & -11.06 & 12.13 & 0.06 & 1.59 & -0.53 & 7.53 \\ 
+  Bovespa & -15.99 & 13.68 & 0.03 & 1.68 & -0.43 & 12.70 \\ 
+  ChinaA50 & -9.86 & 9.20 & 0.02 & 1.61 & -0.24 & 7.57 \\ 
+  JSX & -10.95 & 7.62 & 0.05 & 1.22 & -0.62 & 10.39 \\ 
+  KOSPI & -11.17 & 11.28 & 0.02 & 1.20 & -0.47 & 12.30 \\ 
+  S\&P BMVIPC & -7.27 & 10.44 & 0.03 & 1.17 & -0.01 & 9.66 \\ 
+  S\&P CLXIPSA & -15.22 & 11.80 & 0.02 & 1.12 & -0.80 & 23.81 \\ 
+  SouthAfricaTop40 & -10.45 & 9.11 & 0.04 & 1.29 & -0.20 & 8.76 \\ 
+  IGBVL & -117.48 & 230.26 & 0.04 & 4.40 & 23.49 & 1842.97 \\ 
+  KLCI & -9.98 & 6.63 & 0.01 & 0.72 & -0.88 & 17.32 \\ 
+  COLCAP & -16.29 & 14.69 & 0.03 & 1.25 & -0.80 & 26.72 \\ 
+  Moving Average & -1.81 & 0.86 & 0.03 & 0.22 & -1.59 & 12.39 \\ 
+   \hline
+\end{tabular}
+\caption{Descriptive Statistics Stock Indexes Returns}
+\label{table:stock}
+\end{table}
+
+Since our sample have several countries around the world, we decided to use the international Emergency Events
+Database (EM-DAT) published by the Centre for Research on the Epidemiology of Disasters (CRED)\footnote{This database can be 
+accesed in the next link \href{https://www.emdat.be/}{https://www.emdat.be/}}
+
+\end{document}
