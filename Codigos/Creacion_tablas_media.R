@@ -66,7 +66,7 @@ directorio.saved        <- paste0(getwd(),'/Resultados_regresion/')
 directorio.guardar      <- paste0(directorio.saved,'Tablas/')
 
 tipo.serie              <- 'Indices'   #<<<--- Puede ser 'CDS' o 'Indices'  
-ventana.estimacion      <- '500'   #<<<--- Puede ser 200, 300 o 500   (Importante que sea string)
+ventana.estimacion      <- '200'   #<<<--- Puede ser 200, 300 o 500   (Importante que sea string)
 ventana.traslape        <- '50'  #<<<--- Puede ser 50, 100 o 200   (Importante que sea string)
 tipo.estudio            <- 'media' #<<<--- Puede ser de 'media' o 'varianza'
 regresor.mercado        <- 'benchmark'    #<<<--- Retornos de mercado 'PM' es promedio movil y 'benchmark' es el retorno MSCI Emerging Markets
@@ -77,7 +77,7 @@ paises.resultados       <- countries # Seleccionar los paises sobre los cuales s
 eventos.fecha.exac      <- T  #<<<--- booleano para indicar si se quieren usar solamente los eventos que tengan una fecha exacta
                               # <T> en caso de querer solo los que tienen fecha exacta.<F>si se quieren usar tambien aquellos eventos de
                               # los que se asumio el dia
-columna.agrupar          <- 'Disaster.Subgroup'  #<<<--- Columna del evento por la cual se quiere separar la lista de regresiones para las tablas/graficas
+columna.agrupar          <- 'Country'  #<<<--- Columna del evento por la cual se quiere separar la lista de regresiones para las tablas/graficas
                               # 'Country' la separa por pais donde sucedio el desastre y 'Disaster.Subgroup' por el tipo de desastre
 
 max_abnormal_returns     <- 15   #<<<--- No. dias maximos despues del evento para calcular retorno anormal

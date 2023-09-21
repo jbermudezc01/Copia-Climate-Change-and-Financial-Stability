@@ -59,9 +59,9 @@ if(1){
 }
 
 # Los siguientes argumentos van a filtrar los resultados y tablas
-serie             <- 'CDS'      #<<<--- puede ser 'Indices' o 'CDS'
+serie             <- 'Indices'      #<<<--- puede ser 'Indices' o 'CDS'
 tipo.estudio      <- 'varianza'     #<<<--- puede ser 'media' o 'varianza'
-regresor.mercado  <- 'PM'    #<<<--- puede ser 'PM' o 'benchmark', para CDS todavia no hay benchmark
+regresor.mercado  <- 'benchmark'    #<<<--- puede ser 'PM' o 'benchmark', para CDS todavia no hay benchmark
 umbrales.evento   <- c(50,100,200)  #<<<--- puede ser 50 100 o 200
 if(tipo.estudio=='media') es.windows <- c(200,300,500) #<<<--- Para media puede ser 200, 300 o 500. Para varianza solamente 500
 if(tipo.estudio=='varianza') es.windows <- c(500,750,1000)
@@ -100,7 +100,7 @@ for(i in seq_along(umbrales.evento)){
 # Tablas para la media ----------------------------------------------------
 
 if(tipo.estudio == 'media'){
-  tipo.evento   <- 'Meteorological' # Geophysical, Hydrological, Meteorological o Todos 
+  tipo.evento   <- 'Todos' # Geophysical, Hydrological, Meteorological o Todos 
   lista.interes <- lista.wilcoxon
   dataframe.wil     <- purrr::map_dfc(lista.interes, ~.x[,tipo.evento])
   dataframe.wil200  <- dataframe.wil[,grep('Estimacion_200',colnames(dataframe.wil))] # Escoger los datos que se tienen para estimacion con 200 dias
