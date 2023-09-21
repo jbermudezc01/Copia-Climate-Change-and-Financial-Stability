@@ -6,6 +6,7 @@
 \usepackage{hyperref}
 \usepackage{booktabs}
 \usepackage[bottom]{footmisc}  % Place footnotes at the bottom of the page
+\usepackage{tabularx} 
 
 % Customize footnote numbering style
 \renewcommand{\thefootnote}{\arabic{footnote}}  % Use lowercase letters for numbering
@@ -28,7 +29,7 @@ The sample we were able to obtain starts on October 10, 2004, and it ends on Aug
 \begin{table}[H]
 \centering
 \small
-\begin{tabular}{rrrrrrr}
+\begin{tabularx}{\textwidth}{Xrrrrrr}
   \hline
 Country & Minimum & Maximum & Mean & Std. Dev. & Skewness & Kurtosis \\ 
   \hline
@@ -37,15 +38,15 @@ Brazil & -124.91 & 186.53 & -0.03 & 8.45 & 2.01 & 81.53 \\
   China & -58.91 & 67.47 & 0.01 & 3.52 & 0.63 & 73.61 \\ 
   Colombia & -126.52 & 180.59 & -0.02 & 8.20 & 1.38 & 83.91 \\ 
   Indonesia & -223.81 & 324.52 & -0.06 & 13.30 & 3.12 & 170.85 \\ 
-  South Korea & -168.55 & 133.28 & 0.00 & 5.72 & -2.92 & 266.79 \\ 
+  South \par Korea & -168.55 & 133.28 & 0.00 & 5.72 & -2.92 & 266.79 \\ 
   Malaysia & -101.34 & 119.40 & 0.01 & 5.22 & 1.71 & 128.90 \\ 
   Mexico & -132.96 & 197.20 & 0.01 & 7.31 & 3.82 & 168.49 \\ 
   Peru & -126.10 & 161.39 & -0.04 & 6.72 & 1.82 & 120.92 \\ 
   South Africa & -82.36 & 146.45 & 0.03 & 7.99 & 2.25 & 58.39 \\ 
   Turkey & -131.91 & 166.47 & 0.08 & 10.72 & 1.57 & 48.01 \\ 
-  Moving Average & -11.46 & 20.19 & 0.01 & 1.33 & 3.17 & 50.01 \\ 
+  Moving \par Average & -11.46 & 20.19 & 0.01 & 1.33 & 3.17 & 50.01 \\ 
    \hline
-\end{tabular}
+\end{tabularx}
 \caption{Descriptive Statistics CDS spreads}
 \label{table:CDS}
 \end{table}

@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 23.9 NEXT) (preloaded format=pdflatex 2023.9.20)  20 SEP 2023 21:52
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 23.9 NEXT) (preloaded format=pdflatex 2023.9.20)  20 SEP 2023 22:09
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -236,24 +236,24 @@ File: l3backend-pdftex.def 2023-03-30 L3 backend support: PDF output (pdfTeX)
 ) (Paper.aux)
 \openout1 = `Paper.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 17.
-LaTeX Font Info:    ... okay on input line 17.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 17.
-LaTeX Font Info:    ... okay on input line 17.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 17.
-LaTeX Font Info:    ... okay on input line 17.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 17.
-LaTeX Font Info:    ... okay on input line 17.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 17.
-LaTeX Font Info:    ... okay on input line 17.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 17.
-LaTeX Font Info:    ... okay on input line 17.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 17.
-LaTeX Font Info:    ... okay on input line 17.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 17.
-LaTeX Font Info:    ... okay on input line 17.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 17.
-LaTeX Font Info:    ... okay on input line 17.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 18.
+LaTeX Font Info:    ... okay on input line 18.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 18.
+LaTeX Font Info:    ... okay on input line 18.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 18.
+LaTeX Font Info:    ... okay on input line 18.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 18.
+LaTeX Font Info:    ... okay on input line 18.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 18.
+LaTeX Font Info:    ... okay on input line 18.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 18.
+LaTeX Font Info:    ... okay on input line 18.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 18.
+LaTeX Font Info:    ... okay on input line 18.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 18.
+LaTeX Font Info:    ... okay on input line 18.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 18.
+LaTeX Font Info:    ... okay on input line 18.
  (C:\Users\jpber\AppData\Local\Programs\MiKTeX\tex/context/base/mkii\supp-pdf.mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
 \scratchcounter=\count296
@@ -279,130 +279,128 @@ Package grfext Info: Graphics extension search list:
  (C:\Users\jpber\AppData\Local\Programs\MiKTeX\tex/latex/00miktex\epstopdf-sys.cfg
 File: epstopdf-sys.cfg 2021/03/18 v2.0 Configuration of epstopdf for MiKTeX
 ))
-Package hyperref Info: Link coloring OFF on input line 17.
+Package hyperref Info: Link coloring OFF on input line 18.
  (Paper.out) (Paper.out)
 \@outlinefile=\write3
 \openout3 = `Paper.out'.
 
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <12> on input line 20.
+(Font)              <12> on input line 21.
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <8> on input line 20.
+(Font)              <8> on input line 21.
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <6> on input line 20.
+(Font)              <6> on input line 21.
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <7> on input line 24.
+(Font)              <7> on input line 25.
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <5> on input line 24.
-LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <9> on input line 31.
+(Font)              <5> on input line 25.
 
-Overfull \hbox (17.3995pt too wide) in paragraph at lines 31--49
- [][] 
+Underfull \hbox (badness 10000) in paragraph at lines 49--49
+[]|\OT1/cmr/m/n/9 South
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 22--51
+Underfull \hbox (badness 10000) in paragraph at lines 23--52
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 52--58
+Underfull \hbox (badness 10000) in paragraph at lines 53--59
 
  []
 
 [1
 
 {C:/Users/jpber/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}]
-Underfull \hbox (badness 10000) in paragraph at lines 94--94
+Underfull \hbox (badness 10000) in paragraph at lines 95--95
 []|\OT1/cmr/m/n/8 Disaster Sub-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 94--95
+Underfull \hbox (badness 10000) in paragraph at lines 95--96
 []|\OT1/cmr/m/n/8 Disaster Sub-sub
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 105--105
+Underfull \hbox (badness 10000) in paragraph at lines 106--106
 []|\OT1/cmr/m/n/8 Extra-tropical
  []
 
 
-Overfull \hbox (22.07224pt too wide) in paragraph at lines 108--109
+Overfull \hbox (22.07224pt too wide) in paragraph at lines 109--110
 []|\OT1/cmr/m/n/8 Lightning/Thunderstorm| 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 112--113
+Underfull \hbox (badness 10000) in paragraph at lines 113--114
 []|\OT1/cmr/m/n/8 Winter
  []
 
 
-Underfull \hbox (badness 1472) in paragraph at lines 116--116
+Underfull \hbox (badness 1472) in paragraph at lines 117--117
 []|\OT1/cmr/m/n/8 Extreme tem-per-a-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 126--126
+Underfull \hbox (badness 10000) in paragraph at lines 127--127
 []|\OT1/cmr/m/n/8 Avalanche
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 126--126
+Underfull \hbox (badness 10000) in paragraph at lines 127--127
 \OT1/cmr/m/n/8 (snow,debris,
  []
 
-[2]
+[2] [3]
 Overfull \vbox (52.82031pt too high) has occurred while \output is active []
 
- [3]
-Overfull \hbox (3.30615pt too wide) in paragraph at lines 176--187
+ [4]
+Overfull \hbox (3.30615pt too wide) in paragraph at lines 177--188
 []\OT1/cmr/m/n/10 Another method of rep-re-sent-ing the nat-u-ral dis-as-ters in our dataset is through
  []
 
-<Imagenes/climatological.png, id=46, 1028.34187pt x 524.71031pt>
+<Imagenes/climatological.png, id=50, 1028.34187pt x 524.71031pt>
 File: Imagenes/climatological.png Graphic file (type png)
 <use Imagenes/climatological.png>
-Package pdftex.def Info: Imagenes/climatological.png  used on input line 190.
+Package pdftex.def Info: Imagenes/climatological.png  used on input line 191.
 (pdftex.def)             Requested size: 345.0pt x 176.03725pt.
-<Imagenes/geophyisical.png, id=47, 1028.34187pt x 524.71031pt>
+<Imagenes/geophyisical.png, id=51, 1028.34187pt x 524.71031pt>
 File: Imagenes/geophyisical.png Graphic file (type png)
 <use Imagenes/geophyisical.png>
-Package pdftex.def Info: Imagenes/geophyisical.png  used on input line 196.
+Package pdftex.def Info: Imagenes/geophyisical.png  used on input line 197.
 (pdftex.def)             Requested size: 345.0pt x 176.03725pt.
-<Imagenes/Hydrological.png, id=48, 1028.34187pt x 524.71031pt>
+<Imagenes/Hydrological.png, id=52, 1028.34187pt x 524.71031pt>
 File: Imagenes/Hydrological.png Graphic file (type png)
 <use Imagenes/Hydrological.png>
-Package pdftex.def Info: Imagenes/Hydrological.png  used on input line 202.
+Package pdftex.def Info: Imagenes/Hydrological.png  used on input line 203.
 (pdftex.def)             Requested size: 345.0pt x 176.03725pt.
-[4 <./Imagenes/climatological.png>]
-<Imagenes/Meteorological.png, id=59, 1028.34187pt x 524.71031pt>
+[5 <./Imagenes/climatological.png>]
+<Imagenes/Meteorological.png, id=63, 1028.34187pt x 524.71031pt>
 File: Imagenes/Meteorological.png Graphic file (type png)
 <use Imagenes/Meteorological.png>
-Package pdftex.def Info: Imagenes/Meteorological.png  used on input line 208.
+Package pdftex.def Info: Imagenes/Meteorological.png  used on input line 209.
 (pdftex.def)             Requested size: 345.0pt x 176.03725pt.
-<Imagenes/Todos.png, id=60, 1028.34187pt x 524.71031pt>
+<Imagenes/Todos.png, id=64, 1028.34187pt x 524.71031pt>
 File: Imagenes/Todos.png Graphic file (type png)
 <use Imagenes/Todos.png>
-Package pdftex.def Info: Imagenes/Todos.png  used on input line 214.
+Package pdftex.def Info: Imagenes/Todos.png  used on input line 215.
 (pdftex.def)             Requested size: 345.0pt x 176.03725pt.
- [5 <./Imagenes/geophyisical.png> <./Imagenes/Hydrological.png>] [6 <./Imagenes/Meteorological.png> <./Imagenes/Todos.png>] [7] (Paper.aux)
+ [6 <./Imagenes/geophyisical.png> <./Imagenes/Hydrological.png>] [7 <./Imagenes/Meteorological.png> <./Imagenes/Todos.png>] [8] (Paper.aux)
 Package rerunfilecheck Info: File `Paper.out' has not changed.
 (rerunfilecheck)             Checksum: A11EA37CFA35B78134C59E09BF80971A;63.
  ) 
 Here is how much of TeX's memory you used:
- 9149 strings out of 476331
- 149108 string characters out of 5787765
+ 9150 strings out of 476331
+ 149114 string characters out of 5787765
  1886660 words of memory out of 5000000
  29456 multiletter control sequences out of 15000+600000
  517147 words of font info for 48 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 75i,10n,76p,900b,457s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 75i,11n,76p,900b,457s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <C:/Users/jpber/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmbx10.pfb><C:/Users/jpber/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmbx12.pfb><C:/Users/jpber/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Users/jpber/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/jpber/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr12.pfb><C:/Users/jpber/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr17.pfb><C:/Users/jpber/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr6.pfb><C:/Users/jpber/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr7.pfb><C:/Users/jpber/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr8.pfb><C:/Users/jpber/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr9.pfb>
-Output written on Paper.pdf (7 pages, 283079 bytes).
+Output written on Paper.pdf (8 pages, 283618 bytes).
 PDF statistics:
- 129 PDF objects out of 1000 (max. 8388607)
- 20 named destinations out of 1000 (max. 500000)
+ 133 PDF objects out of 1000 (max. 8388607)
+ 21 named destinations out of 1000 (max. 500000)
  34 words of extra memory for PDF output out of 10000 (max. 10000000)
 
