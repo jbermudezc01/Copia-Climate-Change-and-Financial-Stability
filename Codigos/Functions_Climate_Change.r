@@ -2783,6 +2783,9 @@ reducir.eventos <- function(umbral, base, eventos, col.fecha, col.grupo, col.fil
     df <- df[order(df[[col.filtro]], decreasing = TRUE), ]
   })
   
+  # Guardar solamente los df que contegan al menos un evento
+  eventos.separado <- purrr::keep(eventos.separado, ~ nrow(.) > 0)
+  
   # Encontrar los indices de los eventos de cada base de <eventos.separado>
   for(k in seq_along(eventos.separado)){
     indices <- integer()
@@ -2809,13 +2812,15 @@ reducir.eventos <- function(umbral, base, eventos, col.fecha, col.grupo, col.fil
     
     # En orden del numero de afectados, revisar evento por evento si se encuentra entre los umbral dias
     # de algun evento incluido en <indice.eventos>. En caso de no estar, agregar su indice a <indice.eventos>
-    for(k in 2:nrow(eventos.separado[[i]])){
-      # El siguiente codigo verifica si el indice del evento esta dentro del umbral de algun otro
-      # evento ya incluido en <indice.eventos>
-      dentro.de.rango <- any(abs(indice.eventos - eventos.separado[[i]][k,'indices']) <= umbral)
-      if(!dentro.de.rango){
-        indice.eventos <- c(indice.eventos,eventos.separado[[i]][k,'indices'])
-        filas          <- c(filas,k)  
+    if(nrow(eventos.separado[[i]]) > 1){
+      for(k in 2:nrow(eventos.separado[[i]])){
+        # El siguiente codigo verifica si el indice del evento esta dentro del umbral de algun otro
+        # evento ya incluido en <indice.eventos>
+        dentro.de.rango <- any(abs(indice.eventos - eventos.separado[[i]][k,'indices']) <= umbral)
+        if(!dentro.de.rango){
+          indice.eventos <- c(indice.eventos,eventos.separado[[i]][k,'indices'])
+          filas          <- c(filas,k)  
+        }
       }
     }
     # Por ultimo, asegurar que el vector <indice.eventos> tenga menor longitud que <maximo.eventos.por.pais>,
