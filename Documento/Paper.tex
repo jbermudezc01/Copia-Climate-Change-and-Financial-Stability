@@ -4,10 +4,14 @@
 \usepackage{float}
 \usepackage{blindtext}
 \usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage[bottom]{footmisc}  % Place footnotes at the bottom of the page
 
+% Customize footnote numbering style
+\renewcommand{\thefootnote}{\arabic{footnote}}  % Use lowercase letters for numbering
 
 \title{Datos y Metodología Paper}
-\author{Juan Pablo Bermudez Cespedes}
+\author{}
 \date{Septiembre 2023}
 
 \begin{document}
@@ -77,8 +81,143 @@ BIST100 & -11.06 & 12.13 & 0.06 & 1.59 & -0.53 & 7.53 \\
 \label{table:stock}
 \end{table}
 
-Since our sample have several countries around the world, we decided to use the international Emergency Events
-Database (EM-DAT) published by the Centre for Research on the Epidemiology of Disasters (CRED)\footnote{This database can be 
-accesed in the next link \href{https://www.emdat.be/}{https://www.emdat.be/}}
+In light of the diverse range of countries represented in our sample, we have opted to employ the internationally recognized Emergency Events Database (EM-DAT) published by the Centre for Research on the Epidemiology of Disasters (CRED)\footnote{This database can be 
+accesed in the next link \href{https://www.emdat.be/}{https://www.emdat.be/}}. Our data collection focused on cataloging natural disasters occurring within the time frame spanning from October 10, 2004, to August 10, 2022, within our selected countries of interest. While the EM-DAT initially comprised 1400 natural disasters, we excluded three cases due to a lack of information regarding their respective start months. Consequently, we obtained a dataset encompassing 1397 disasters, classified into five distinct and mutually exclusive categories: Biological, Climatological, Geophysical, Hydrological, and Meteorological. \\
+According to the Peril Classification and Hazard Glossary, as defined by the Integrated Research on Disaster Risk (IDRD), geophysical disasters originate from solid earth processes, hydrological disasters stem from occurrences, movements, and distributions of surface and subsurface freshwater and saltwater, meteorological disasters result from \textbf{short-lived} extreme weather conditions, climatological disasters arise from \textbf{long-lived} atmospheric processes, and biological disasters are triggered by exposure to living organisms or their toxic substances, as well as diseases they may carry. In Table \ref{tab:disasters} we provide a breakdown of the disasters corresponding to each disaster type.\\
+Meanwhile, Table \ref{tab:disaster_type} presents the count and the proportion of each type and subtype of disaster within our sample. Notably, our analysis reveals that the most prevalent types of disasters in our sample are hydrological, meteorological, and geophysical. Conversely, the most frequent subtypes of disasters are floods, accounting for $46.81\%$ of the sample, storms at $20.26\%$, and earthquakes at $13.96\%$ of the total sample.
+
+\begin{table}[H]
+    \centering
+    \footnotesize
+    \begin{tabular}{p{2.5cm}p{2.5cm}p{2.5cm}p{2.5cm}}
+    \toprule 
+       Disaster Sub-Group  & Disaster Type & Disaster Sub-Type & Disaster Sub-sub Type  \\
+       \midrule
+        Geophysical & Earthquake & Ground Movement &\\
+        & & Tsunami & \\\cmidrule{2-4}
+        & Volcanic Activity & Ash fall& \\
+        && Lahar&\\
+        && Pyroclastic Flow &\\
+        && Lava Flow &\\ \cmidrule{2-4}
+        & Mass movement & &\\
+    \midrule
+    Meteorological & Storm & Tropical Storm &\\
+    & & Extra-tropical Storm& \\
+    && Convective Storm & Derecho \\
+    && & Hail \\
+    && & Lightning/Thunderstorm \\
+    && & Rain \\
+    && & Tornado \\
+    && & Sand-dust Storm \\
+    && & Winter Storm/Blizzard \\
+    && & Storm/Surge \\
+    && & Wind \\
+    && & Severe storm \\ \cmidrule{2-4}
+    & Extreme temperature & Cold wave &\\
+    && Heat wave & \\
+    && Severe wind conditions & Snow-ice \\
+    &&& Frost/Freeze\\ \cmidrule{2-4}
+    & Fog && \\
+    \midrule
+    Hydrological&Flood&Coastal flood&\\
+    &&Riverine flood&\\
+    &&Flash flood&\\
+    &&Ice jam flood&\\ \cmidrule{2-4}
+    & Landslinde & Avalanche (snow,debris, mudflow, rock fall) &\\
+    \cmidrule{2-4}
+    & Wave action & Rogue wave &\\
+    && Seiche &\\ 
+    \midrule
+    Climatological & Drought & Drought &\\ \cmidrule{2-4}
+    & Glacial Lake Outburst && \\ \cmidrule{2-4}
+    & Wildfire & Forest fires & \\
+    && Land fire: brush, bush, pasture &\\
+    \midrule
+    Biological & Epidemic & Viral diseases &\\
+    && Bacterial diseases & \\
+    && Parasitic diseases & \\
+    && Fungal diseases & \\
+    && Prion diseases & \\ \cmidrule{2-4}
+    & Insect infestation & Locust & \\
+    & & Grasshopper & \\ \cmidrule{2-4}
+    & Animal accident \\
+    \bottomrule
+    \end{tabular}
+    \caption{List of disasters for each type of disaster}
+    \label{tab:disasters}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{llll}
+       Disaster Type & Disaster Subtype & Count & Proportion \\
+       \toprule
+        Biological & Epidemic & 20 & 1.43\%\\
+        & \textbf{Subtotal} & \textbf{20} & \textbf{1.43\%} \\ \cmidrule{2-4}
+        Climatological & Drought& 33 & 2.36\% \\
+        & Wildfire & 28 & 2.00\% \\ 
+        & \textbf{Subtotal} & \textbf{61} & \textbf{4.36\%} \\ \cmidrule{2-4}
+        Geophysical & Earthquake & 195 & 13.96\% \\
+        & Volcanic Activity & 35 & 2.51\% \\
+        & Mass Movement & 4 & 0.29\% \\
+        & \textbf{Subtotal} & \textbf{234} & \textbf{16.76\%} \\ \cmidrule{2-4}
+        Hydrological & Flood& 654 & 46.81\% \\
+        & Landslide & 115 & 8.23\% \\ 
+        & \textbf{Subtotal} & \textbf{769} & \textbf{55.04\%} \\ \cmidrule{2-4}
+        Meteorological & Storm& 283 & 20.26\% \\
+        & Extreme temperature & 30 & 2.15\% \\ 
+        & \textbf{Subtotal} & \textbf{313} & \textbf{22.41\%} \\ \cmidrule{2-4}
+        Total & & 1397 & 100\% \\
+        \bottomrule
+    \end{tabular}
+    \caption{Count and proportion of each disaster type}
+    \label{tab:disaster_type}
+\end{table}
+Another method of representing the natural disasters
+in our dataset is through the use of maps. Figure 
+\ref{fig:climatological} illustrates the number of 
+climatological disasters by country, Figure 
+\ref{fig:geophysical} presents the count of 
+geophysical disasters, Figure \ref{fig:hydrological} 
+provides data on hydrological disasters, Figure 
+\ref{fig:meteorological} showcases meteorological 
+disasters, and Figure \ref{fig:todos} offers a 
+comprehensive overview of all disasters in the 
+sample.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{Imagenes/climatological.png}
+    \caption{Frequency of climatological disasters.}
+    \label{fig:climatological}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{Imagenes/geophyisical.png}
+    \caption{Frequency of geophysical disasters.}
+    \label{fig:geophysical}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{Imagenes/Hydrological.png}
+    \caption{Frequency of hydrological disasters.}
+    \label{fig:hydrological}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{Imagenes/Meteorological.png}
+    \caption{Frequency of meteorological disasters.}
+    \label{fig:meteorological}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{Imagenes/Todos.png}
+    \caption{Frequency of natural disasters.}
+    \label{fig:todos}
+\end{figure}
+As the event study method's effectiveness hinges on the precise identification of the event's commencement date, we opted to exclude the outcomes pertaining to disasters lacking information about their initiation date, accounting for 6.37\% of the data set. By doing this, the number of biological disasters is reduced from 20 to 5, so we decided to drop this category from our analysis. \\
+Conversely, in line with Cavallo, Becerra, and Acevedo\footnote{The Impact of Natural Disasters on Economic Growth}, we chose to eliminate the climatological category from our analysis. This decision was driven by the fact that these disasters tend to be less fatal and have considerably longer durations compared to other types of events.\\
+According to the event study methodology, there is an estimation window, where we estimated the market model to calculate the expected returns after the disaster, and the event window, where we will test the abnormal returns due to the disaster. Subsequently, any disasters failing to meet the criteria of either window are excluded from the analysis. \\
+Lastly, we applied a window to reduce the overlap of the estimation windows, since there were events that started roughly on the same date.This entailed selecting a defined window, such as 50 days, to ensure that within each 50-day period and for each country, only a single event was considered. The selection criteria for this event was based on the one with the highest number of people affected by the disaster.
 
 \end{document}
