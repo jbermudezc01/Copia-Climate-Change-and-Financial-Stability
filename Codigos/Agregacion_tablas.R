@@ -152,3 +152,35 @@ if(tipo.estudio == 'media'){
   # Exportar a latex
   kable(dataframe.final,format='latex', booktabs=T) 
 }
+
+
+# Tablas para la varianza -------------------------------------------------
+
+if(tipo.estudio == 'varianza'){
+  tipo.evento   <- 'Brazil' # Geophysical, Hydrological, Meteorological o Todos 
+  # Brazil,'Chile','China','Colombia','Indonesia','Korea','Malaysia','Mexico','Peru', 'SouthAfrica','Turkey'
+  lista.interes <- lista.bootstrap
+  dataframe.var     <- purrr::map_dfc(lista.interes, ~.x[,tipo.evento])
+  dataframe.var500  <- dataframe.var[,grep('Estimacion_500',colnames(dataframe.var))] # Escoger los datos que se tienen para estimacion con 200 dias
+  dataframe.var750  <- dataframe.var[,grep('Estimacion_750',colnames(dataframe.var))] # Escoger los datos que se tienen para estimacion con 300 dias
+  dataframe.var1000 <- dataframe.var[,grep('Estimacion_1000',colnames(dataframe.var))] # Escoger los datos que se tienen para estimacion con 500 dias
+  # Retirar nombres de columnas para hacer rbind 
+  colnames(dataframe.var500) <- NA
+  colnames(dataframe.var750) <- NA
+  colnames(dataframe.var1000) <- NA
+  # Juntarlos en un gran dataframe
+  dataframe.var.organizado <- rbind(dataframe.var500,dataframe.var750, dataframe.var1000)
+  # Nombres de columnas
+  colnames(dataframe.var.organizado) <- c('50','100','200')
+  # Añadir columna de dias de estimacion
+  dataframe.var.organizado$`Estimacion` <- c(rep(NA,7),500,rep(NA,14),750,rep(NA,14),1000,rep(NA,7)) # se elige asi ya que <dataframe.var200> y <dataframe.var300> son NA
+  # Reordenar las columnas
+  dataframe.var.final <- dataframe.var.organizado %>% 
+    mutate('50'= paste(rep(paste0('[0,',0:14,']'),3),`50`),
+           '100'= paste(rep(paste0('[0,',0:14,']'),3),`100`),
+           '200'= paste(rep(paste0('[0,',0:14,']'),3),`200`)) %>% 
+    dplyr::select(Estimacion,`50`,`100`,`200`)
+  
+  # Exportar a latex
+  kable(dataframe.var.final,format='latex', booktabs=T) 
+}
