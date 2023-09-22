@@ -78,6 +78,34 @@ if(1){
     unite(Start.Date, c(Start.Year, Start.Month, Start.Day), sep = "-",remove=FALSE) %>% 
     mutate(Start.Date = as.Date(Start.Date))
   
+  # Ahora, con el fin de generar una columna con la duracion del desastre, debemos manipular las variables <End.Month> y 
+  # <End.Day>, ya que contienen datos faltantes
+  # Se va a asumir que a los que les falta el mes de finalizacion sera diciembre, es decir, 12
+  emdat_base <- emdat_base %>% 
+    mutate(End.Month=replace_na(End.Month,12))
+  # Realizamos el mismo procedimieto que cuando habian dias de inicio faltantes
+  # Creacion de la variable <na_end>
+  emdat_base <- emdat_base %>%
+    mutate(na_end = ifelse(is.na(End.Day),1,0))
+  # Cambiar valores <NA> por el ultimo dia del mes
+  emdat_base <- emdat_base %>% 
+    mutate(End.Day = ifelse(is.na(End.Day), 
+                            make_date(End.Year, End.Month, 1) %>% ceiling_date(unit = "month") - lubridate::days(1),
+                            End.Day))
+  emdat_base$End.Day <- ifelse(emdat_base$End.Day > 31, day(as.Date(emdat_base$End.Day)), emdat_base$End.Day)
+  # <replace_na> se utiliza para reemplazar los valores <NA> por elultimo dia del mes
+  # Ahora que se asumieron los dias finales y los meses finales, se procede a crear la fecha de fin del desastre
+  emdat_base <- emdat_base %>% 
+    unite(End.Date, c(End.Year, End.Month, End.Day), sep = "-",remove=FALSE) %>% 
+    mutate(End.Date = as.Date(End.Date))
+  
+  # Ahora se crea una columna de duracion del evento, que sera la diferencia entre <End.Date> y <Start.Date>
+  emdat_base <- emdat_base %>% 
+    mutate(Duracion = as.numeric(End.Date - Start.Date))
+  quantile(emdat_base$Duracion, probs = c(seq(from=0.1, to= 0.9, by=0.1),0.95,0.99))
+  # Es posible que la duracion en realidad sea menor, ya que se esta asumiendo el ultimo dia del mes para aquellos de los 
+  # que no se posee informacion
+    
   # Vector con los nombres de paises usados para la generacion de la base de eventos
   if(is.null(unico_pais)){
     paises.usados <- countries 
