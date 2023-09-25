@@ -1,8 +1,13 @@
 if(1){
+  # Generar la clase ESVolatility, para poder manejar los resultados de la estimacion para la varianza
+  setClass("ESVolatility",slots=list(coefficients = "numeric",goodness_of_fit = "numeric",res_estandar_estimacion="xts",
+                                     res_no_estandar_estimacion="xts",variance_forecast="xts",residuales_evento="xts",
+                                     info.evento = 'data.frame'))
+  
   if(Sys.info()["sysname"]=='Windows') Sys.setlocale("LC_TIME","English")
   
   rm(list = ls())
-  if (Sys.info()["sysname"]=='Windows')  setwd('C:/Users/jpber/OneDrive/Documents/Codigo_compartido_Melo/Climate_Change_and_Financial_Stability/Climate-Change-and-Financial-Stability')
+  if (Sys.info()["sysname"]=='Windows')  setwd('C:/Users/jpber/OneDrive/Documents/Codigo_compartido_Melo/Repositorio original/Climate-Change-and-Financial-Stability')
   if (Sys.info()["sysname"]!='Windows')  setwd('/Users/lumelo/archivos/Climate-Change-and-Financial-Stability/Github/Climate-Change-and-Financial-Stability')
   
   cat("\014")
@@ -80,8 +85,9 @@ for(ventana.estimacion in ventanas.estimacion){
   eventos.fecha.exac      <- T  #<<<--- booleano para indicar si se quieren usar solamente los eventos que tengan una fecha exacta
   # <T> en caso de querer solo los que tienen fecha exacta.<F>si se quieren usar tambien aquellos eventos de
   # los que se asumio el dia  
-  columna.agrupar         <- 'Country'  #<<<--- Columna del evento por la cual se quiere separar la lista de regresiones para las tablas/graficas
+  columna.agrupar         <- 'Ambas'  #<<<--- Columna del evento por la cual se quiere separar la lista de regresiones para las tablas/graficas
   # 'Country' la separa por pais donde sucedio el desastre y 'Disaster.Subgroup' por el tipo de desastre
+  # 'Ambas' implica que se va a analizar por ambas columbas, por ejemplo: brazil - hidrologico, brazil - geofisico, ...
   vol_ev_window           <- 15  #<<<--- Tamaño de la ventana de evento
   
   # Volatility event study --------------------------------------------------
@@ -105,10 +111,28 @@ for(ventana.estimacion in ventanas.estimacion){
   table(unlist(purrr::map(volatility_results,~.x@info.evento$Disaster.Subgroup)))
   
   # Separar la lista dependiendo de una columna en especifico introducida por el usuario 
-  v.lista.separada <- split(volatility_results, sapply(volatility_results, function(x) x@info.evento[[columna.agrupar]]))
-  
+  if(columna.agrupar != 'Ambas') v.lista.separada <- split(volatility_results, sapply(volatility_results, function(x) x@info.evento[[columna.agrupar]]))
   # Generar listas distintas para cada valor de la <columna.agrupar>, en caso de querer utilizarlas mas adelante
-  for (i in seq_along(v.lista.separada)) assign(paste0("v.list.", names(v.lista.separada)[i]), v.lista.separada[[i]])
+  # for (i in seq_along(v.lista.separada)) assign(paste0("v.list.", names(v.lista.separada)[i]), v.lista.separada[[i]])
+  # Cuando <columna.agrupar> == <'Ambas'> toca tener un trato especial
+  if(columna.agrupar == 'Ambas'){
+    # En primer lugar por cada desastre se necesita una combinacion del pais y el tipo de desastre
+    # Para eso creamos una funcion, solo para mejor lectura
+    crear.columna <- function(df) {
+      df <- df %>%
+        mutate(Desastre.Pais = paste0(Country, Disaster.Subgroup))
+      return(df)
+    }
+    volatility_results <- purrr::map(volatility_results, function(s4_object) {
+      s4_object@info.evento <- crear.columna(s4_object@info.evento)
+      return(s4_object)
+    })
+    # Ahora si podemos separar <volatility_results> en listas dependiendo del desastre y el pais donde sucedio
+    v.lista.separada <- split(volatility_results, sapply(volatility_results, function(x) x@info.evento[['Desastre.Pais']]))
+    # Por otro lado, como la especificacion de Bialkowski (2008) ecuacion 5 esta hecha para mas de un evento, solamente se van
+    # a guardar los elementos de <v.lista.separada> que contengan mas de un desastre
+    v.lista.separada <- purrr::keep(v.lista.separada, ~(length(.x) > 1))
+  }
   
   # Graficas CAV ------------------------------------------------------------
   for(i in seq_along(v.lista.separada)){
@@ -122,7 +146,7 @@ for(ventana.estimacion in ventanas.estimacion){
   
   # Dataframe con muchas ventanas
   matrix.volatilidad <- matrix(nrow=(vol_ev_window),ncol=(length(v.lista.separada)+1))
-  iteraciones.bool  <- 10000
+  iteraciones.bool  <- 5000
   for(i in seq_along(v.lista.separada)){
     for(j in (1:(vol_ev_window))){
       prueba <- bootstrap.volatility2(v.lista.separada[[i]],as.numeric(ventana.estimacion),j,bootstrap_vol_iterations = iteraciones.bool)
@@ -144,6 +168,7 @@ for(ventana.estimacion in ventanas.estimacion){
   # Guardar las tablas de significancia. No es necesario agregar el tipo de test ya que podemos guardar ambas tablas
   if(columna.agrupar=='Disaster.Subgroup') agrupacion <- 'tipodesastre'
   if(columna.agrupar=='Country') agrupacion <- 'pais'
+  if(columna.agrupar=='Ambas')   agrupacion <- 'paistipodesastre'
   save(dataframe.volatilidad,
        file=paste0(directorio.guardar,'Tablas_',tipo.serie,'_tra',ventana.traslape,'_est',ventana.estimacion,'_',tipo.estudio,'_',regresor.mercado,'_',agrupacion,'.RData'))
 }
