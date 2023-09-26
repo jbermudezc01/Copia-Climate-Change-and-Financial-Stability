@@ -70,30 +70,35 @@ if(1){
 # Creacion objeto tabla.media ---------------------------------------------
 # Se crea un tipo de objeto S4 para guardar la tabla de la media, y aparte el numero de eventos para cada pais
 setClass('Tabla.media', slots = list(dataframe = 'data.frame', no.eventos = 'numeric'))
+# Crear clase de objetos
+setClass("ESmean",slots=list(retornos = "xts",error_estandar = "numeric",res_estandar_estimacion="xts",
+                             res_no_estandar_estimacion="xts",variance_forecast="xts",
+                             evento='data.frame',fit='list'))
 
 # Prueba de filtro  -------------------------------------------------------
 directorio.saved        <- paste0(getwd(),'/Resultados_regresion/')
 directorio.guardar      <- paste0(directorio.saved,'Tablas/')
-tipo.serie              <- 'CDS'   #<<<--- Puede ser 'CDS' o 'Indices'  
+tipo.serie              <- 'Indices'   #<<<--- Puede ser 'CDS' o 'Indices'  
 tipo.estudio            <- 'media' #<<<--- Puede ser de 'media' o 'varianza'
-regresor.mercado        <- 'PM'    #<<<--- Retornos de mercado 'PM' es promedio movil y 'benchmark' es el retorno MSCI Emerging Markets
+regresor.mercado        <- 'benchmark'    #<<<--- Retornos de mercado 'PM' es promedio movil y 'benchmark' es el retorno MSCI Emerging Markets
+tipos.desastre.eliminar <- c('Biological','Climatological') #<<<--- NULL si no se desea eliminar ningun tipo de desastre 
+paises.resultados       <- countries # Seleccionar los paises sobre los cuales se quiere hacer el analisis de resultados. <countries> si se desea
+# de todos los paises de los que se tiene informacion
+eventos.fecha.exac      <- T  #<<<--- booleano para indicar si se quieren usar solamente los eventos que tengan una fecha exacta
+# <T> en caso de querer solo los que tienen fecha exacta.<F>si se quieren usar tambien aquellos eventos de
+# los que se asumio el dia
+columna.agrupar          <- 'Ambas'  #<<<--- Columna del evento por la cual se quiere separar la lista de regresiones para las tablas/graficas
+# 'Country' la separa por pais donde sucedio el desastre y 'Disaster.Subgroup' por el tipo de desastre
+# 'Ambas' implica que se va a analizar por ambas columbas, por ejemplo: brazil - hidrologico, brazil - geofisico, ...
+max_abnormal_returns     <- 15   #<<<--- No. dias maximos despues del evento para calcular retorno anormal
+length_car_window        <- 15   #<<<--- Ventana para calcular el CAR (por ejemplo 5 significa [0,+5], donde 0 es el dia del evento)
+length_event_window      <- length_car_window + 1 # Longitud ventana de evento es 1 mas <length_car_window>
 
 ventanas.estimacion      <- c('200','300','500')   #<<<--- Puede ser 200, 300 o 500   (Importante que sea string)
 ventanas.traslape        <- c('50','100','200')   #<<<--- Puede ser 50, 100 o 200   (Importante que sea string)
+
 for(ventana.estimacion in ventanas.estimacion){
   for(ventana.traslape in ventanas.traslape){
-    tipos.desastre.eliminar <- c('Biological','Climatological') #<<<--- NULL si no se desea eliminar ningun tipo de desastre 
-    paises.resultados       <- countries # Seleccionar los paises sobre los cuales se quiere hacer el analisis de resultados. <countries> si se desea
-    # de todos los paises de los que se tiene informacion
-    eventos.fecha.exac      <- T  #<<<--- booleano para indicar si se quieren usar solamente los eventos que tengan una fecha exacta
-    # <T> en caso de querer solo los que tienen fecha exacta.<F>si se quieren usar tambien aquellos eventos de
-    # los que se asumio el dia
-    columna.agrupar          <- 'Disaster.Subgroup'  #<<<--- Columna del evento por la cual se quiere separar la lista de regresiones para las tablas/graficas
-    # 'Country' la separa por pais donde sucedio el desastre y 'Disaster.Subgroup' por el tipo de desastre
-    
-    max_abnormal_returns     <- 15   #<<<--- No. dias maximos despues del evento para calcular retorno anormal
-    length_car_window        <- 15   #<<<--- Ventana para calcular el CAR (por ejemplo 5 significa [0,+5], donde 0 es el dia del evento)
-    length_event_window      <- length_car_window + 1 # Longitud ventana de evento es 1 mas <length_car_window>
     length_estimation_window <- as.numeric(ventana.estimacion)
     
     # Cargar los resultados de la regresion -----------------------------------
@@ -118,10 +123,29 @@ for(ventana.estimacion in ventanas.estimacion){
     table(unlist(purrr::map(all.events.list,~.x@evento$Disaster.Subgroup)))
     
     # Separar la lista <all.events.list> segun <columna.agrupar>
-    lista.separada <- split(all.events.list, sapply(all.events.list, function(x) x@evento[[columna.agrupar]]))
+    if(columna.agrupar != 'Ambas') lista.separada <- split(all.events.list, sapply(all.events.list, function(x) x@evento[[columna.agrupar]]))
     
     # Generar listas distintas para cada valor de la <columna.agrupar>, en caso de querer utilizarlas mas adelante
-    for(i in seq_along(lista.separada)) assign(paste0("list.", names(lista.separada)[i]), lista.separada[[i]])
+    # for(i in seq_along(lista.separada)) assign(paste0("list.", names(lista.separada)[i]), lista.separada[[i]])
+    # Cuando <columna.agrupar> == <'Ambas'> toca tener un trato especial
+    if(columna.agrupar == 'Ambas'){
+      # En primer lugar por cada desastre se necesita una combinacion del pais y el tipo de desastre
+      # Para eso creamos una funcion, solo para mejor lectura
+      crear.columna <- function(df) {
+        df <- df %>%
+          mutate(Desastre.Pais = paste0(Country, Disaster.Subgroup))
+        return(df)
+      }
+      all.events.list <- purrr::map(all.events.list, function(s4_object) {
+        s4_object@evento <- crear.columna(s4_object@evento)
+        return(s4_object)
+      })
+      # Ahora si podemos separar <volatility_results> en listas dependiendo del desastre y el pais donde sucedio
+      lista.separada <- split(all.events.list, sapply(all.events.list, function(x) x@evento[['Desastre.Pais']]))
+      # Por otro lado, como la especificacion de Bialkowski (2008) ecuacion 5 esta hecha para mas de un evento, solamente se van
+      # a guardar los elementos de <v.lista.separada> que contengan mas de un desastre
+      lista.separada <- purrr::keep(lista.separada, ~(length(.x) > 1))
+    }
     
     # Se observo que generalmente, el dia del evento el retorno es positivo, pero en adelante es negativo. Falta explicar porque podria
     # ser que el retorno en el dia del evento sea positivo,mientras que para el resto de la ventana de evento es negativo.
@@ -194,6 +218,7 @@ for(ventana.estimacion in ventanas.estimacion){
     # Guardar las tablas de significancia. No es necesario agregar el tipo de test ya que podemos guardar ambas tablas
     if(columna.agrupar=='Disaster.Subgroup') agrupacion <- 'tipodesastre'
     if(columna.agrupar=='Country') agrupacion <- 'pais'
+    if(columna.agrupar == 'Ambas') agrupacion <- 'paistipodesastre'
     save(tabla.bmp,
          tabla.wilcoxon,file=paste0(directorio.guardar,'Tablas_',tipo.serie,'_tra',ventana.traslape,'_est',ventana.estimacion,'_',tipo.estudio,'_',regresor.mercado,'_',agrupacion,'.RData'))
     
